@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Video, Heart, Share2, Plus, Layers, Image as ImageIcon, Check } from 'lucide-react';
 import type { OutfitLook, RetailProduct } from '../types/fashion';
 import { OUTFIT_LOOKS, RETAIL_PRODUCTS } from '../data/fashionData';
+import { api } from '../services/api';
 import confetti from 'canvas-confetti';
 
 interface SocialFeedViewProps {
@@ -11,6 +12,7 @@ interface SocialFeedViewProps {
 export const SocialFeedView: React.FC<SocialFeedViewProps> = ({ onSelectProduct }) => {
   const [looks, setLooks] = useState<OutfitLook[]>(OUTFIT_LOOKS);
   const [activeSubTab, setActiveSubTab] = useState<'feed' | 'board-builder'>('feed');
+  const [isPostModalOpen, setIsPostModalOpen] = useState<boolean>(false);
   
   // Board builder state
   const [selectedBoardItems, setSelectedBoardItems] = useState<RetailProduct[]>([
@@ -20,20 +22,30 @@ export const SocialFeedView: React.FC<SocialFeedViewProps> = ({ onSelectProduct 
   const [boardTitle, setBoardTitle] = useState<string>('Autumn Monochrome Smart Casual');
   const [isExported, setIsExported] = useState<boolean>(false);
 
-  const handleToggleLike = (lookId: string) => {
-    setLooks((prev) =>
-      prev.map((l) => {
-        if (l.id === lookId) {
-          const isLiked = !l.userLiked;
-          return {
-            ...l,
-            userLiked: isLiked,
-            likes: l.likes + (isLiked ? 1 : -1),
-          };
-        }
-        return l;
-      })
-    );
+  // New Post Form state
+  const [newPostTitle, setNewPostTitle] = useState('');
+  const [newPostOccasion, setNewPostOccasion] = useState<'Work' | 'Casual' | 'Date night' | 'Formal'>('Casual');
+  const [newPostThumb, setNewPostThumb] = useState('https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=600&q=80');
+
+  useEffect(() => {
+    async function loadSocialFeed() {
+      try {
+        const data = await api.getSocialFeed();
+        setLooks(data);
+      } catch (err) {
+        console.error('Error fetching social feed:', err);
+      }
+    }
+    loadSocialFeed();
+  }, []);
+
+  const handleToggleLike = async (lookId: string) => {
+    try {
+      const updated = await api.toggleLikeOutfitLook(lookId);
+      setLooks((prev) => prev.map((l) => (l.id === lookId ? updated : l)));
+    } catch (err) {
+      console.error('Error toggling like:', err);
+    }
   };
 
   const handleAddItemToBoard = (prod: RetailProduct) => {
@@ -46,10 +58,41 @@ export const SocialFeedView: React.FC<SocialFeedViewProps> = ({ onSelectProduct 
     setSelectedBoardItems(selectedBoardItems.filter((p) => p.id !== prodId));
   };
 
-  const handleExportBoard = () => {
+  const handleExportBoard = async () => {
     confetti({ particleCount: 70, spread: 80 });
-    setIsExported(true);
-    setTimeout(() => setIsExported(false), 3000);
+    try {
+      const created = await api.createOutfitLook({
+        title: boardTitle,
+        occasion: 'Casual',
+        videoThumbnail: selectedBoardItems[0]?.imageUrl || 'https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=600&q=80',
+        taggedProductIds: selectedBoardItems.map((p) => p.id),
+      });
+      setLooks([created, ...looks]);
+      setIsExported(true);
+      setTimeout(() => setIsExported(false), 3000);
+    } catch (err) {
+      console.error('Error exporting outfit board:', err);
+    }
+  };
+
+  const handleCreateNewLook = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPostTitle.trim()) return;
+
+    try {
+      const created = await api.createOutfitLook({
+        title: newPostTitle,
+        occasion: newPostOccasion,
+        videoThumbnail: newPostThumb,
+      });
+
+      setLooks([created, ...looks]);
+      setIsPostModalOpen(false);
+      setNewPostTitle('');
+      confetti({ particleCount: 60, spread: 70 });
+    } catch (err) {
+      console.error('Error publishing new video look:', err);
+    }
   };
 
   return (
@@ -59,40 +102,50 @@ export const SocialFeedView: React.FC<SocialFeedViewProps> = ({ onSelectProduct 
       <div className="glass-panel rounded-3xl p-6 sm:p-8 relative overflow-hidden">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative z-10">
           <div className="space-y-2 max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-xs font-semibold">
-              <Video className="w-3.5 h-3.5" />
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-500/10 border border-orange-500/30 text-orange-600 dark:text-orange-300 text-xs font-semibold">
+              <Video className="w-3.5 h-3.5 text-orange-500 dark:text-orange-400" />
               <span>Social Lookbooks & Tagged Commerce Feed</span>
             </div>
-            <h1 className="text-3xl sm:text-4xl font-serif font-bold text-white tracking-tight">
+            <h1 className="text-3xl sm:text-4xl font-serif font-bold text-theme-heading tracking-tight">
               Social Video Feed & <span className="gradient-text-rose">Outfit Board Builder</span>
             </h1>
-            <p className="text-sm text-slate-300">
+            <p className="text-sm text-theme-secondary">
               Users and creators share video lookbooks tagged with exact products. Share pre-rendered preview cards to IG/TikTok/Pinterest to drive organic referral loops.
             </p>
           </div>
 
-          <div className="flex items-center gap-2 bg-slate-900/80 p-1.5 rounded-2xl border border-white/10">
+          <div className="flex items-center gap-3">
             <button
-              onClick={() => setActiveSubTab('feed')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                activeSubTab === 'feed'
-                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
-                  : 'text-slate-400 hover:text-white'
-              }`}
+              onClick={() => setIsPostModalOpen(true)}
+              className="flex items-center gap-2 bg-gradient-to-r from-orange-500 to-rose-500 text-slate-950 font-bold px-4 py-2.5 rounded-2xl text-xs shadow-lg shadow-orange-500/20 transition-all hover:scale-105"
             >
-              For You Feed
+              <Plus className="w-4 h-4" />
+              <span>Post New Video Lookbook</span>
             </button>
-            <button
-              onClick={() => setActiveSubTab('board-builder')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-                activeSubTab === 'board-builder'
-                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <Layers className="w-3.5 h-3.5" />
-              <span>Flat-Lay Board Builder</span>
-            </button>
+
+            <div className="flex items-center gap-1 bg-surface-theme p-1.5 rounded-2xl border border-theme-main">
+              <button
+                onClick={() => setActiveSubTab('feed')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                  activeSubTab === 'feed'
+                    ? 'bg-gradient-to-r from-orange-500/20 to-rose-500/20 text-slate-900 dark:text-orange-300 border border-orange-500/40 shadow-sm'
+                    : 'text-theme-muted hover:text-theme-heading hover:bg-surface-subtle-theme'
+                }`}
+              >
+                For You Feed
+              </button>
+              <button
+                onClick={() => setActiveSubTab('board-builder')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                  activeSubTab === 'board-builder'
+                    ? 'bg-gradient-to-r from-orange-500/20 to-rose-500/20 text-slate-900 dark:text-orange-300 border border-orange-500/40 shadow-sm'
+                    : 'text-theme-muted hover:text-theme-heading hover:bg-surface-subtle-theme'
+                }`}
+              >
+                <Layers className="w-3.5 h-3.5" />
+                <span>Flat-Lay Board Builder</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -106,18 +159,18 @@ export const SocialFeedView: React.FC<SocialFeedViewProps> = ({ onSelectProduct 
               {/* Video Thumbnail & Hotspot Overlay */}
               <div className="relative h-96 overflow-hidden group">
                 <img src={look.videoThumbnail} alt={look.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/20 to-transparent" />
 
                 {/* Creator Header */}
-                <div className="absolute top-3 left-3 right-3 flex justify-between items-center bg-slate-950/80 backdrop-blur-md p-2 rounded-2xl border border-white/10">
+                <div className="absolute top-3 left-3 right-3 flex justify-between items-center bg-surface-theme/90 backdrop-blur-md p-2 rounded-2xl border border-theme-main">
                   <div className="flex items-center gap-2">
                     <img src={look.creatorAvatar} alt={look.creatorName} className="w-7 h-7 rounded-full object-cover" />
                     <div>
-                      <div className="text-xs font-bold text-white">{look.creatorName}</div>
-                      <div className="text-[10px] text-slate-400">{look.creatorHandle}</div>
+                      <div className="text-xs font-bold text-theme-heading">{look.creatorName}</div>
+                      <div className="text-[10px] text-theme-muted">{look.creatorHandle}</div>
                     </div>
                   </div>
-                  <span className="text-[10px] uppercase font-bold text-cyan-300 bg-cyan-500/10 px-2.5 py-0.5 rounded-full border border-cyan-500/30">
+                  <span className="text-[10px] uppercase font-bold text-orange-600 dark:text-orange-300 bg-orange-500/15 px-2.5 py-0.5 rounded-full border border-orange-500/30">
                     {look.occasion}
                   </span>
                 </div>
@@ -127,14 +180,14 @@ export const SocialFeedView: React.FC<SocialFeedViewProps> = ({ onSelectProduct 
                   <div className="flex items-center gap-3">
                     <button
                       onClick={() => handleToggleLike(look.id)}
-                      className="flex items-center gap-1 bg-slate-950/80 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 text-xs font-bold text-white"
+                      className="flex items-center gap-1 bg-surface-theme/90 backdrop-blur-md px-3 py-1.5 rounded-full border border-theme-main text-xs font-bold text-theme-heading"
                     >
-                      <Heart className={`w-4 h-4 ${look.userLiked ? 'fill-rose-500 text-rose-500' : 'text-slate-300'}`} />
+                      <Heart className={`w-4 h-4 ${look.userLiked ? 'fill-rose-500 text-rose-500' : 'text-theme-muted'}`} />
                       <span>{look.likes.toLocaleString()}</span>
                     </button>
 
-                    <div className="flex items-center gap-1 bg-slate-950/80 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 text-xs font-bold text-white">
-                      <Share2 className="w-4 h-4 text-cyan-400" />
+                    <div className="flex items-center gap-1 bg-surface-theme/90 backdrop-blur-md px-3 py-1.5 rounded-full border border-theme-main text-xs font-bold text-theme-heading">
+                      <Share2 className="w-4 h-4 text-orange-500 dark:text-orange-400" />
                       <span>{look.reshares.toLocaleString()}</span>
                     </div>
                   </div>
@@ -144,23 +197,23 @@ export const SocialFeedView: React.FC<SocialFeedViewProps> = ({ onSelectProduct 
 
               {/* Tagged Products Bar */}
               <div className="p-5 space-y-4">
-                <h3 className="font-serif font-bold text-base text-white">{look.title}</h3>
+                <h3 className="font-serif font-bold text-base text-theme-heading">{look.title}</h3>
 
-                <div className="space-y-2 pt-2 border-t border-white/10">
-                  <span className="text-[10px] uppercase tracking-wider font-bold text-slate-400">
+                <div className="space-y-2 pt-2 border-t border-theme-main">
+                  <span className="text-[10px] uppercase tracking-wider font-bold text-theme-muted">
                     Tagged Items in Video ({look.taggedProducts.length})
                   </span>
                   {look.taggedProducts.map((prod) => (
                     <button
                       key={prod.id}
                       onClick={() => onSelectProduct(prod)}
-                      className="flex items-center justify-between p-2.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-white/10 w-full text-left transition-all"
+                      className="flex items-center justify-between p-2.5 rounded-xl bg-surface-theme hover:bg-surface-subtle-theme border border-theme-main w-full text-left transition-all"
                     >
                       <div className="flex items-center gap-2 overflow-hidden">
                         <img src={prod.imageUrl} alt={prod.title} className="w-8 h-8 rounded-lg object-cover" />
                         <div className="overflow-hidden">
-                          <div className="text-xs font-semibold text-white truncate">{prod.title}</div>
-                          <div className="text-[10px] text-slate-400">{prod.brand}</div>
+                          <div className="text-xs font-semibold text-theme-heading truncate">{prod.title}</div>
+                          <div className="text-[10px] text-theme-muted">{prod.brand}</div>
                         </div>
                       </div>
                       <span className="text-xs font-bold text-amber-300">${prod.price}</span>
@@ -189,7 +242,7 @@ export const SocialFeedView: React.FC<SocialFeedViewProps> = ({ onSelectProduct 
                     type="text"
                     value={boardTitle}
                     onChange={(e) => setBoardTitle(e.target.value)}
-                    className="font-serif font-bold text-2xl text-white bg-transparent border-b border-transparent focus:border-amber-400 outline-none w-full mt-1"
+                    className="font-serif font-bold text-2xl text-theme-heading bg-transparent border-b border-transparent focus:border-amber-400 outline-none w-full mt-1"
                   />
                 </div>
                 <button
@@ -202,15 +255,15 @@ export const SocialFeedView: React.FC<SocialFeedViewProps> = ({ onSelectProduct 
               </div>
 
               {/* Canvas Area */}
-              <div className="min-h-[320px] bg-slate-950/80 rounded-2xl border border-white/10 p-6 flex flex-wrap items-center justify-center gap-6 relative">
+              <div className="min-h-[320px] bg-surface-theme rounded-2xl border border-theme-main p-6 flex flex-wrap items-center justify-center gap-6 relative">
                 {selectedBoardItems.length === 0 ? (
-                  <div className="text-center text-slate-500 space-y-2">
-                    <ImageIcon className="w-8 h-8 mx-auto text-slate-600" />
+                  <div className="text-center text-theme-muted space-y-2">
+                    <ImageIcon className="w-8 h-8 mx-auto text-theme-muted" />
                     <p className="text-xs">Click items from the catalog on the right to build your flat-lay outfit board.</p>
                   </div>
                 ) : (
                   selectedBoardItems.map((prod) => (
-                    <div key={prod.id} className="relative group w-40 glass-card p-3 rounded-2xl border border-white/10 text-center space-y-2 animate-fadeIn">
+                    <div key={prod.id} className="relative group w-40 glass-card p-3 rounded-2xl border border-theme-main text-center space-y-2 animate-fadeIn">
                       <button
                         onClick={() => handleRemoveFromBoard(prod.id)}
                         className="absolute -top-2 -right-2 bg-rose-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
@@ -218,7 +271,7 @@ export const SocialFeedView: React.FC<SocialFeedViewProps> = ({ onSelectProduct 
                         ×
                       </button>
                       <img src={prod.imageUrl} alt={prod.title} className="w-full h-32 object-cover rounded-xl" />
-                      <div className="text-[11px] font-bold text-white truncate">{prod.title}</div>
+                      <div className="text-[11px] font-bold text-theme-heading truncate">{prod.title}</div>
                       <div className="text-[10px] text-amber-400 font-bold">${prod.price}</div>
                     </div>
                   ))
@@ -237,26 +290,26 @@ export const SocialFeedView: React.FC<SocialFeedViewProps> = ({ onSelectProduct 
           {/* Right 5 Cols: Addable Items */}
           <div className="lg:col-span-5 space-y-4">
             <div className="glass-panel rounded-3xl p-6 space-y-4">
-              <h3 className="font-serif font-bold text-lg text-white">Indexed Catalogue Items</h3>
-              <p className="text-xs text-slate-400">Click to add items directly to your canvas</p>
+              <h3 className="font-serif font-bold text-lg text-theme-heading">Indexed Catalogue Items</h3>
+              <p className="text-xs text-theme-muted">Click to add items directly to your canvas</p>
 
               <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
                 {RETAIL_PRODUCTS.map((prod) => (
                   <div
                     key={prod.id}
                     onClick={() => handleAddItemToBoard(prod)}
-                    className="flex items-center justify-between p-3 rounded-2xl bg-slate-950/60 hover:bg-slate-900 border border-white/10 hover:border-amber-400/40 cursor-pointer transition-all"
+                    className="flex items-center justify-between p-3 rounded-2xl bg-surface-theme hover:bg-surface-subtle-theme border border-theme-main hover:border-amber-400/40 cursor-pointer transition-all"
                   >
                     <div className="flex items-center gap-3">
                       <img src={prod.imageUrl} alt={prod.title} className="w-12 h-12 rounded-xl object-cover" />
                       <div>
-                        <div className="text-xs font-bold text-white">{prod.title}</div>
-                        <div className="text-[10px] text-slate-400">{prod.brand}</div>
+                        <div className="text-xs font-bold text-theme-heading">{prod.title}</div>
+                        <div className="text-[10px] text-theme-muted">{prod.brand}</div>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold text-amber-300">${prod.price}</span>
-                      <Plus className="w-4 h-4 text-slate-400" />
+                      <Plus className="w-4 h-4 text-theme-muted" />
                     </div>
                   </div>
                 ))}
@@ -264,6 +317,70 @@ export const SocialFeedView: React.FC<SocialFeedViewProps> = ({ onSelectProduct 
             </div>
           </div>
 
+        </div>
+      )}
+
+      {/* Modal: Post New Video Lookbook */}
+      {isPostModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <div className="bg-modal-theme border border-theme-main rounded-3xl max-w-md w-full p-6 space-y-6 shadow-2xl">
+            <h2 className="text-xl font-serif font-bold text-theme-heading">Publish New Video Lookbook</h2>
+
+            <form onSubmit={handleCreateNewLook} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-theme-muted mb-1">Lookbook Caption & Title</label>
+                <input
+                  type="text"
+                  placeholder="e.g. 3 Ways to Style a Cashmere Blazer ✨"
+                  value={newPostTitle}
+                  onChange={(e) => setNewPostTitle(e.target.value)}
+                  className="w-full bg-surface-theme border border-theme-main rounded-xl px-3 py-2 text-sm text-theme-heading focus:border-orange-400 outline-none"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-theme-muted mb-1">Occasion</label>
+                <select
+                  value={newPostOccasion}
+                  onChange={(e) => setNewPostOccasion(e.target.value as any)}
+                  className="w-full bg-surface-theme border border-theme-main rounded-xl px-3 py-2 text-xs text-theme-heading focus:border-orange-400 outline-none"
+                >
+                  <option value="Casual">Casual</option>
+                  <option value="Work">Work</option>
+                  <option value="Date night">Date night</option>
+                  <option value="Formal">Formal</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-theme-muted mb-1">Video Thumbnail URL</label>
+                <input
+                  type="url"
+                  value={newPostThumb}
+                  onChange={(e) => setNewPostThumb(e.target.value)}
+                  className="w-full bg-surface-theme border border-theme-main rounded-xl px-3 py-2 text-xs text-theme-heading focus:border-orange-400 outline-none"
+                  required
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-theme-main">
+                <button
+                  type="button"
+                  onClick={() => setIsPostModalOpen(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-theme-muted hover:text-theme-heading"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="bg-gradient-to-r from-orange-500 to-rose-500 text-slate-950 font-bold px-5 py-2.5 rounded-xl text-xs shadow-lg shadow-orange-500/20"
+                >
+                  Publish to Community Feed
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 

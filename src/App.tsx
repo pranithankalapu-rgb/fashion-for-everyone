@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Header } from './components/Header';
 import { OnboardingModal } from './components/OnboardingModal';
 import { AIEngineView } from './components/AIEngineView';
@@ -8,6 +8,7 @@ import { CommerceStockView } from './components/CommerceStockView';
 import { SocialFeedView } from './components/SocialFeedView';
 import type { UserProfile, RetailProduct } from './types/fashion';
 import { INITIAL_USER_PROFILE } from './data/fashionData';
+import { api } from './services/api';
 import { X, MapPin, ShoppingBag } from 'lucide-react';
 
 export function App() {
@@ -17,12 +18,24 @@ export function App() {
   const [isOnboardingOpen, setIsOnboardingOpen] = useState<boolean>(false);
   const [selectedProduct, setSelectedProduct] = useState<RetailProduct | null>(null);
 
+  useEffect(() => {
+    async function loadInitialProfile() {
+      try {
+        const p = await api.getProfile();
+        setUserProfile(p);
+      } catch (err) {
+        console.error('Error fetching user profile:', err);
+      }
+    }
+    loadInitialProfile();
+  }, []);
+
   const handleSelectProduct = (product: RetailProduct) => {
     setSelectedProduct(product);
   };
 
   return (
-    <div className="min-h-screen bg-[#090a0f] text-[#e0e2ec] flex flex-col font-sans">
+    <div className="min-h-screen bg-app-theme text-theme-body flex flex-col font-sans transition-colors duration-200">
       
       {/* Top Header */}
       <Header
@@ -73,8 +86,8 @@ export function App() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-white/10 bg-[#07080c] py-8 text-center text-xs text-slate-500 space-y-2">
-        <div className="flex justify-center items-center gap-2 font-serif font-bold text-slate-300 text-sm">
+      <footer className="border-t border-theme-main bg-footer-theme py-8 text-center text-xs text-theme-muted space-y-2">
+        <div className="flex justify-center items-center gap-2 font-serif font-bold text-theme-heading text-sm">
           <span>Fashion for Everyone</span>
           <span>•</span>
           <span className="text-amber-400 font-sans text-xs">Technical & Product Architecture Implementation</span>
@@ -93,40 +106,40 @@ export function App() {
       {/* Product Details & Purchase Modal */}
       {selectedProduct && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
-          <div className="bg-[#0f111a] border border-white/15 rounded-3xl max-w-lg w-full p-6 space-y-6 shadow-2xl relative">
+          <div className="bg-modal-theme border border-theme-main rounded-3xl max-w-lg w-full p-6 space-y-6 shadow-2xl relative">
             <button
               onClick={() => setSelectedProduct(null)}
-              className="absolute top-4 right-4 p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-all"
+              className="absolute top-4 right-4 p-2 rounded-xl bg-surface-theme hover:bg-surface-subtle-theme text-theme-muted hover:text-theme-heading transition-all"
             >
               <X className="w-5 h-5" />
             </button>
 
             <div className="flex gap-4">
-              <img src={selectedProduct.imageUrl} alt={selectedProduct.title} className="w-28 h-36 object-cover rounded-2xl border border-white/10" />
+              <img src={selectedProduct.imageUrl} alt={selectedProduct.title} className="w-28 h-36 object-cover rounded-2xl border border-theme-main" />
               <div className="space-y-1 flex-1">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400">{selectedProduct.brand}</span>
-                <h3 className="font-serif font-bold text-lg text-white">{selectedProduct.title}</h3>
+                <h3 className="font-serif font-bold text-lg text-theme-heading">{selectedProduct.title}</h3>
                 <div className="text-xl font-bold text-amber-300">${selectedProduct.price}</div>
-                <div className="text-xs text-slate-400">{selectedProduct.retailer}</div>
+                <div className="text-xs text-theme-muted">{selectedProduct.retailer}</div>
               </div>
             </div>
 
-            <div className="space-y-2 pt-2 border-t border-white/10">
-              <div className="text-xs font-semibold text-slate-300">Dominant Color Swatches:</div>
+            <div className="space-y-2 pt-2 border-t border-theme-main">
+              <div className="text-xs font-semibold text-theme-secondary">Dominant Color Swatches:</div>
               <div className="flex gap-2">
                 {selectedProduct.colors.map((hex, i) => (
-                  <div key={i} className="w-6 h-6 rounded-full border border-white/20" style={{ backgroundColor: hex }} />
+                  <div key={i} className="w-6 h-6 rounded-full border border-theme-main" style={{ backgroundColor: hex }} />
                 ))}
               </div>
             </div>
 
-            <div className="flex items-center gap-3 pt-4 border-t border-white/10">
+            <div className="flex items-center gap-3 pt-4 border-t border-theme-main">
               <button
                 onClick={() => {
                   setSelectedProduct(null);
                   setActiveTab('stock-locator');
                 }}
-                className="flex-1 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold py-3 rounded-xl text-xs flex items-center justify-center gap-2"
+                className="flex-1 bg-surface-theme hover:bg-surface-subtle-theme border border-theme-main text-theme-heading font-bold py-3 rounded-xl text-xs flex items-center justify-center gap-2"
               >
                 <MapPin className="w-4 h-4 text-emerald-400" />
                 <span>Locate Nearby Stock</span>
