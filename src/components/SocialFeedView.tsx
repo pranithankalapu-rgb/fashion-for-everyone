@@ -7,9 +7,10 @@ import confetti from 'canvas-confetti';
 
 interface SocialFeedViewProps {
   onSelectProduct: (p: RetailProduct) => void;
+  searchQuery?: string;
 }
 
-export const SocialFeedView: React.FC<SocialFeedViewProps> = ({ onSelectProduct }) => {
+export const SocialFeedView: React.FC<SocialFeedViewProps> = ({ onSelectProduct, searchQuery = '' }) => {
   const [looks, setLooks] = useState<OutfitLook[]>(OUTFIT_LOOKS);
   const [activeSubTab, setActiveSubTab] = useState<'feed' | 'board-builder'>('feed');
   const [isPostModalOpen, setIsPostModalOpen] = useState<boolean>(false);
@@ -38,6 +39,17 @@ export const SocialFeedView: React.FC<SocialFeedViewProps> = ({ onSelectProduct 
     }
     loadSocialFeed();
   }, []);
+
+  const filteredLooks = looks.filter((l) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      l.title.toLowerCase().includes(q) ||
+      l.creatorName.toLowerCase().includes(q) ||
+      l.creatorHandle.toLowerCase().includes(q) ||
+      l.occasion.toLowerCase().includes(q)
+    );
+  });
 
   const handleToggleLike = async (lookId: string) => {
     try {
@@ -153,7 +165,7 @@ export const SocialFeedView: React.FC<SocialFeedViewProps> = ({ onSelectProduct 
       {/* Subtab 1: Video Lookbook Stream */}
       {activeSubTab === 'feed' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {looks.map((look) => (
+          {filteredLooks.map((look) => (
             <div key={look.id} className="glass-card rounded-3xl overflow-hidden flex flex-col justify-between">
               
               {/* Video Thumbnail & Hotspot Overlay */}

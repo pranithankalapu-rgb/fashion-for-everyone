@@ -8,12 +8,14 @@ interface AIEngineViewProps {
   userProfile: UserProfile;
   onSelectProduct: (product: RetailProduct) => void;
   onNavigateTab: (tab: string) => void;
+  searchQuery?: string;
 }
 
 export const AIEngineView: React.FC<AIEngineViewProps> = ({
   userProfile,
   onSelectProduct,
   onNavigateTab,
+  searchQuery = '',
 }) => {
   const [selectedOccasion, setSelectedOccasion] = useState<OccasionType>('Work');
   const [combos, setCombos] = useState<ColorCombo[]>(COLOR_COMBINATIONS);
@@ -31,7 +33,16 @@ export const AIEngineView: React.FC<AIEngineViewProps> = ({
     loadAiData();
   }, [userProfile, selectedOccasion]);
 
-  const filteredCombos = combos.filter((c) => c.occasion === selectedOccasion || selectedOccasion === 'Work');
+  const filteredCombos = combos.filter((c) => {
+    const matchOccasion = c.occasion === selectedOccasion || selectedOccasion === 'Work';
+    if (!searchQuery.trim()) return matchOccasion;
+    const q = searchQuery.toLowerCase();
+    return matchOccasion && (
+      c.title.toLowerCase().includes(q) ||
+      c.subType.toLowerCase().includes(q) ||
+      c.occasion.toLowerCase().includes(q)
+    );
+  });
 
   const handleUpvoteCombo = (comboId: string) => {
     setCombos((prev) =>

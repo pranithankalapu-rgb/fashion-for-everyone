@@ -1,5 +1,5 @@
-import type { ColorCombo, Designer, Design, RetailProduct, StoreStock, OutfitLook, UserProfile } from '../types/fashion';
-import { INITIAL_USER_PROFILE, COLOR_COMBINATIONS, DESIGNERS, DESIGNS, RETAIL_PRODUCTS, STORE_STOCKS, OUTFIT_LOOKS } from '../data/fashionData';
+import type { ColorCombo, Designer, Design, RetailProduct, StoreStock, OutfitLook, UserProfile, CustomerOrder } from '../types/fashion';
+import { INITIAL_USER_PROFILE, COLOR_COMBINATIONS, DESIGNERS, DESIGNS, RETAIL_PRODUCTS, STORE_STOCKS, OUTFIT_LOOKS, INITIAL_ORDERS } from '../data/fashionData';
 
 const BASE_URL = '/api';
 
@@ -28,6 +28,10 @@ export const api = {
   // User profile API
   async getProfile(): Promise<UserProfile> {
     return fetchJson<UserProfile>('/profile', undefined, INITIAL_USER_PROFILE);
+  },
+
+  async getOrders(): Promise<CustomerOrder[]> {
+    return fetchJson<CustomerOrder[]>('/orders', undefined, INITIAL_ORDERS);
   },
 
   async updateProfile(profile: Partial<UserProfile>): Promise<UserProfile> {

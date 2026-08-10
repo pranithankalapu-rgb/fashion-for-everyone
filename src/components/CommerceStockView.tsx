@@ -8,11 +8,13 @@ import confetti from 'canvas-confetti';
 interface CommerceStockViewProps {
   selectedProduct: RetailProduct | null;
   onSelectProduct: (p: RetailProduct) => void;
+  searchQuery?: string;
 }
 
 export const CommerceStockView: React.FC<CommerceStockViewProps> = ({
   selectedProduct,
   onSelectProduct,
+  searchQuery = '',
 }) => {
   const [maxBudget, setMaxBudget] = useState<number>(350);
   const [radiusMiles, setRadiusMiles] = useState<number>(5);
@@ -50,7 +52,16 @@ export const CommerceStockView: React.FC<CommerceStockViewProps> = ({
   }, [activeProduct.id]);
 
   const stocksForActiveProduct = storeStocks.filter((s) => s.productId === activeProduct.id || s.productId === 'prod_101');
-  const similarProducts = products.filter((p) => p.price <= maxBudget);
+  const filteredProducts = products.filter((p) => {
+    const matchBudget = p.price <= maxBudget;
+    if (!searchQuery.trim()) return matchBudget;
+    const q = searchQuery.toLowerCase();
+    return matchBudget && (
+      p.title.toLowerCase().includes(q) ||
+      p.brand.toLowerCase().includes(q) ||
+      p.category.toLowerCase().includes(q)
+    );
+  });
 
   const handleConfirmReservation = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -268,7 +279,7 @@ export const CommerceStockView: React.FC<CommerceStockViewProps> = ({
 
         {/* Similar Item Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {similarProducts.map((prod) => (
+          {filteredProducts.map((prod: RetailProduct) => (
             <div key={prod.id} className="glass-card rounded-2xl overflow-hidden flex flex-col justify-between">
               <div className="h-56 relative overflow-hidden group">
                 <img src={prod.imageUrl} alt={prod.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />

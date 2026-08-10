@@ -5,13 +5,18 @@ import { DESIGNERS, DESIGNS } from '../data/fashionData';
 import { api } from '../services/api';
 import confetti from 'canvas-confetti';
 
+import type { UserRole } from './Sidebar';
+
 interface DesignerShowcaseProps {
   onSelectProduct: (product: RetailProduct) => void;
-  userRole: 'individual' | 'designer' | 'retailer';
+  userRole: UserRole;
+  searchQuery?: string;
 }
 
 export const DesignerShowcaseView: React.FC<DesignerShowcaseProps> = ({
   onSelectProduct,
+  userRole,
+  searchQuery = '',
 }) => {
   const [designers, setDesigners] = useState<Designer[]>(DESIGNERS);
   const [designs, setDesigns] = useState<Design[]>(DESIGNS);
@@ -41,6 +46,16 @@ export const DesignerShowcaseView: React.FC<DesignerShowcaseProps> = ({
     }
     loadData();
   }, []);
+
+  const filteredDesigns = designs.filter((d) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      d.title.toLowerCase().includes(q) ||
+      d.designerName.toLowerCase().includes(q) ||
+      d.collection.toLowerCase().includes(q)
+    );
+  });
 
   const handleToggleFollow = (desId: string) => {
     setFollowedDesigners((prev) => {
@@ -104,15 +119,17 @@ export const DesignerShowcaseView: React.FC<DesignerShowcaseProps> = ({
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setIsUploadOpen(true)}
-              className="flex items-center gap-2 bg-gradient-to-r from-purple-500 to-amber-500 hover:from-purple-400 hover:to-amber-400 text-slate-950 font-bold px-5 py-3 rounded-2xl shadow-xl shadow-purple-500/20 text-xs transition-all hover:scale-105"
-            >
-              <Upload className="w-4 h-4" />
-              <span>Upload New Collection Design</span>
-            </button>
-          </div>
+          {userRole === 'designer' && (
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setIsUploadOpen(true)}
+                className="flex items-center gap-2 bg-gradient-to-r from-purple-500 to-amber-500 hover:from-purple-400 hover:to-amber-400 text-slate-950 font-bold px-5 py-3 rounded-2xl shadow-xl shadow-purple-500/20 text-xs transition-all hover:scale-105"
+              >
+                <Upload className="w-4 h-4" />
+                <span>Upload New Collection Design</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -162,7 +179,7 @@ export const DesignerShowcaseView: React.FC<DesignerShowcaseProps> = ({
       {/* Front Page Designs Tab */}
       {activeTab === 'frontpage' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {designs.map((design) => (
+          {filteredDesigns.map((design) => (
             <div key={design.id} className="glass-card rounded-3xl overflow-hidden flex flex-col justify-between">
               
               <div className="relative h-72 overflow-hidden group">

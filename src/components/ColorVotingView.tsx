@@ -5,7 +5,11 @@ import { COLOR_COMBINATIONS } from '../data/fashionData';
 import { api } from '../services/api';
 import confetti from 'canvas-confetti';
 
-export const ColorVotingView: React.FC = () => {
+interface ColorVotingViewProps {
+  searchQuery?: string;
+}
+
+export const ColorVotingView: React.FC<ColorVotingViewProps> = ({ searchQuery = '' }) => {
   const [combos, setCombos] = useState<ColorCombo[]>(COLOR_COMBINATIONS);
   const [selectedOccasion, setSelectedOccasion] = useState<string>('All');
   const [isSubmitOpen, setIsSubmitOpen] = useState<boolean>(false);
@@ -30,9 +34,16 @@ export const ColorVotingView: React.FC = () => {
     loadCombos();
   }, [selectedOccasion]);
 
-  const filtered = combos.filter(
-    (c) => selectedOccasion === 'All' || c.occasion === selectedOccasion
-  );
+  const filtered = combos.filter((c) => {
+    const matchOccasion = selectedOccasion === 'All' || c.occasion === selectedOccasion;
+    if (!searchQuery.trim()) return matchOccasion;
+    const q = searchQuery.toLowerCase();
+    return matchOccasion && (
+      c.title.toLowerCase().includes(q) ||
+      c.subType.toLowerCase().includes(q) ||
+      c.occasion.toLowerCase().includes(q)
+    );
+  });
 
   const handleVote = async (id: string, starRating: number) => {
     confetti({

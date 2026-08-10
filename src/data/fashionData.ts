@@ -1,4 +1,4 @@
-import type { ColorCombo, Designer, Design, RetailProduct, StoreStock, OutfitLook, UserProfile } from '../types/fashion';
+import type { ColorCombo, Designer, Design, RetailProduct, StoreStock, OutfitLook, UserProfile, CustomerOrder } from '../types/fashion';
 
 export const INITIAL_USER_PROFILE: UserProfile = {
   id: 'user_01',
@@ -349,5 +349,98 @@ export const OUTFIT_LOOKS: OutfitLook[] = [
     occasion: 'Date night',
     taggedProducts: [RETAIL_PRODUCTS[3], RETAIL_PRODUCTS[0]],
     userLiked: true,
+  },
+];
+
+export const INITIAL_ORDERS: CustomerOrder[] = [
+  {
+    id: 'ord_1024',
+    orderNumber: 'ORD-1024',
+    date: 'Aug 05, 2026',
+    status: 'Delivered',
+    items: [
+      {
+        productId: 'prod_101',
+        title: 'Classic Beige Jacket',
+        brand: 'Luxe Tailored Co.',
+        imageUrl: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=300&q=80',
+        price: 4999,
+        quantity: 1,
+        size: 'M',
+        color: 'Oatmeal Beige',
+      },
+    ],
+    totalAmount: 4999,
+    currency: '₹',
+    shippingAddress: '42 Fashion Boulevard, Apt 7B, New York, NY 10001',
+    deliveryDate: 'Aug 07, 2026',
+    trackingNumber: 'TRK-948201948',
+  },
+  {
+    id: 'ord_1018',
+    orderNumber: 'ORD-1018',
+    date: 'Jul 28, 2026',
+    status: 'Delivered',
+    items: [
+      {
+        productId: 'prod_102',
+        title: 'Summer Casual Outfit',
+        brand: 'Studio Chic',
+        imageUrl: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=300&q=80',
+        price: 3499,
+        quantity: 2,
+        size: 'S',
+        color: 'Terracotta',
+      },
+    ],
+    totalAmount: 3499,
+    currency: '₹',
+    shippingAddress: '42 Fashion Boulevard, Apt 7B, New York, NY 10001',
+    deliveryDate: 'Jul 30, 2026',
+    trackingNumber: 'TRK-837194820',
+  },
+  {
+    id: 'ord_1009',
+    orderNumber: 'ORD-1009',
+    date: 'Jul 14, 2026',
+    status: 'Shipped',
+    items: [
+      {
+        productId: 'prod_103',
+        title: 'Monochrome Tailored Blazer',
+        brand: 'Atelier Noir',
+        imageUrl: 'https://images.unsplash.com/photo-1487222477894-8943e31ef7b2?auto=format&fit=crop&w=300&q=80',
+        price: 6299,
+        quantity: 1,
+        size: 'M',
+        color: 'Midnight Black',
+      },
+    ],
+    totalAmount: 6299,
+    currency: '₹',
+    shippingAddress: '42 Fashion Boulevard, Apt 7B, New York, NY 10001',
+    deliveryDate: 'Expected Aug 12, 2026',
+    trackingNumber: 'TRK-748392019',
+  },
+  {
+    id: 'ord_0994',
+    orderNumber: 'ORD-0994',
+    date: 'Jun 30, 2026',
+    status: 'Processing',
+    items: [
+      {
+        productId: 'prod_104',
+        title: 'Earthy Silk Slip Dress',
+        brand: 'Maison Luxe',
+        imageUrl: 'https://images.unsplash.com/photo-1554412933-514a83d2f3c8?auto=format&fit=crop&w=300&q=80',
+        price: 2899,
+        quantity: 1,
+        size: 'S',
+        color: 'Golden Olive',
+      },
+    ],
+    totalAmount: 2899,
+    currency: '₹',
+    shippingAddress: '42 Fashion Boulevard, Apt 7B, New York, NY 10001',
   },
 ];

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Header } from './components/Header';
+import { Sidebar, type UserRole } from './components/Sidebar';
 import { OnboardingModal } from './components/OnboardingModal';
 import { AIEngineView } from './components/AIEngineView';
 import { ColorVotingView } from './components/ColorVotingView';
@@ -9,12 +10,13 @@ import { SocialFeedView } from './components/SocialFeedView';
 import type { UserProfile, RetailProduct } from './types/fashion';
 import { INITIAL_USER_PROFILE } from './data/fashionData';
 import { api } from './services/api';
-import { X, MapPin, ShoppingBag } from 'lucide-react';
+import { X, MapPin, ShoppingBag, Heart } from 'lucide-react';
 
 export function App() {
   const [activeTab, setActiveTab] = useState<string>('ai-engine');
   const [userProfile, setUserProfile] = useState<UserProfile>(INITIAL_USER_PROFILE);
-  const [userRole, setUserRole] = useState<'individual' | 'designer' | 'retailer'>('individual');
+  const [userRole, setUserRole] = useState<UserRole>('customer');
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [isOnboardingOpen, setIsOnboardingOpen] = useState<boolean>(false);
   const [selectedProduct, setSelectedProduct] = useState<RetailProduct | null>(null);
 
@@ -39,50 +41,96 @@ export function App() {
       
       {/* Top Header */}
       <Header
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
         userProfile={userProfile}
         onOpenOnboarding={() => setIsOnboardingOpen(true)}
         userRole={userRole}
-        setUserRole={setUserRole}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        activeTab={activeTab}
+        onNavigateTab={setActiveTab}
+        wishlistCount={3}
       />
 
-      {/* Main View Container */}
+      {/* Main View Container with Left Sidebar & Main Content */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        
-        {/* Tab 1: AI Styling Engine */}
-        {activeTab === 'ai-engine' && (
-          <AIEngineView
-            userProfile={userProfile}
-            onSelectProduct={handleSelectProduct}
-            onNavigateTab={setActiveTab}
-          />
-        )}
-
-        {/* Tab 2: Community Color Voting Arena */}
-        {activeTab === 'color-voting' && <ColorVotingView />}
-
-        {/* Tab 3: Designer Showcase & Merit Leaderboard */}
-        {activeTab === 'designer-showcase' && (
-          <DesignerShowcaseView
-            onSelectProduct={handleSelectProduct}
+        <div className="flex flex-col md:flex-row gap-6 items-start">
+          
+          {/* LEFT SIDEBAR / QUICK ACCESS PANEL */}
+          <Sidebar
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
             userRole={userRole}
+            setUserRole={setUserRole}
           />
-        )}
 
-        {/* Tab 4: Stock Locator & Budget Finder */}
-        {activeTab === 'stock-locator' && (
-          <CommerceStockView
-            selectedProduct={selectedProduct}
-            onSelectProduct={handleSelectProduct}
-          />
-        )}
+          {/* MAIN APPLICATION CONTENT */}
+          <div className="flex-1 min-w-0 w-full space-y-4">
+            
+            {/* Tab 1: AI Styling Engine */}
+            {activeTab === 'ai-engine' && (
+              <AIEngineView
+                userProfile={userProfile}
+                onSelectProduct={handleSelectProduct}
+                onNavigateTab={setActiveTab}
+                searchQuery={searchQuery}
+              />
+            )}
 
-        {/* Tab 5: Social Video Feed & Outfit Board Builder */}
-        {activeTab === 'social-feed' && (
-          <SocialFeedView onSelectProduct={handleSelectProduct} />
-        )}
+            {/* Tab 2: Community Color Voting Arena */}
+            {activeTab === 'color-voting' && <ColorVotingView searchQuery={searchQuery} />}
 
+            {/* Tab 3: Designer Showcase & Merit Leaderboard */}
+            {activeTab === 'designer-showcase' && (
+              <DesignerShowcaseView
+                onSelectProduct={handleSelectProduct}
+                userRole={userRole}
+                searchQuery={searchQuery}
+              />
+            )}
+
+            {/* Tab 4: Stock Locator & Budget Finder */}
+            {activeTab === 'stock-locator' && (
+              <CommerceStockView
+                selectedProduct={selectedProduct}
+                onSelectProduct={handleSelectProduct}
+                searchQuery={searchQuery}
+              />
+            )}
+
+            {/* Tab 5: Social Video Feed & Outfit Board Builder */}
+            {activeTab === 'social-feed' && (
+              <SocialFeedView onSelectProduct={handleSelectProduct} searchQuery={searchQuery} />
+            )}
+
+            {/* Tab 6: Saved Wishlist View */}
+            {activeTab === 'wishlist' && (
+              <div className="space-y-6 animate-fadeIn">
+                <div className="glass-panel-gold rounded-3xl p-6 sm:p-8 flex items-center justify-between">
+                  <div>
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs font-semibold mb-2">
+                      <Heart className="w-3.5 h-3.5 fill-rose-500 text-rose-500" />
+                      <span>Curated Favorites</span>
+                    </div>
+                    <h1 className="text-2xl sm:text-3xl font-serif font-bold text-theme-heading">
+                      Saved Wishlist Items (3)
+                    </h1>
+                    <p className="text-xs text-theme-muted mt-1">
+                      Your bookmarked designer outfits, color combinations, and saved store items.
+                    </p>
+                  </div>
+                </div>
+
+                <CommerceStockView
+                  selectedProduct={selectedProduct}
+                  onSelectProduct={handleSelectProduct}
+                  searchQuery={searchQuery}
+                />
+              </div>
+            )}
+
+          </div>
+
+        </div>
       </main>
 
       {/* Footer */}

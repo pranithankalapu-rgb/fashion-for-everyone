@@ -104,3 +104,29 @@ export interface OutfitLook {
   taggedProducts: RetailProduct[];
   userLiked?: boolean;
 }
+
+export type OrderStatus = 'Delivered' | 'Shipped' | 'Processing' | 'Cancelled' | 'Returned';
+
+export interface OrderItem {
+  productId: string;
+  title: string;
+  brand: string;
+  imageUrl: string;
+  price: number;
+  quantity: number;
+  size: string;
+  color?: string;
+}
+
+export interface CustomerOrder {
+  id: string;
+  orderNumber: string;
+  date: string;
+  status: OrderStatus;
+  items: OrderItem[];
+  totalAmount: number;
+  currency: string;
+  shippingAddress: string;
+  deliveryDate?: string;
+  trackingNumber?: string;
+}
