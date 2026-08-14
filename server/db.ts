@@ -23,7 +23,10 @@ export interface DatabaseSchema {
   }>;
 }
 
-const DB_PATH = path.join(process.cwd(), 'server', 'data.json');
+import { validateSafePath } from './security';
+
+const SERVER_DIR = path.resolve(process.cwd(), 'server');
+const DB_PATH = validateSafePath(SERVER_DIR, 'data.json');
 
 const INITIAL_USER_PROFILE: UserProfile = {
   id: 'user_01',

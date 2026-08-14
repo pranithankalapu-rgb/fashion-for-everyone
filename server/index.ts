@@ -2,12 +2,27 @@ import express, { Request, Response } from 'express';
 import cors from 'cors';
 import { getDb, saveDb } from './db';
 import type { ColorCombo, Design, OutfitLook, RetailProduct, UserProfile } from '../src/types/fashion';
+import { sanitizeString, sanitizeObject, escapeRegex, securityHeadersMiddleware, rateLimiter } from './security';
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = Number(process.env.PORT) || 5000;
+const ALLOWED_ORIGIN = process.env.CORS_ORIGIN || '*';
 
-app.use(cors());
-app.use(express.json());
+// Security Headers Middleware
+app.use(securityHeadersMiddleware);
+
+// Rate Limiter
+app.use('/api', rateLimiter);
+
+// CORS configuration
+app.use(cors({
+  origin: ALLOWED_ORIGIN,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
+
+// Body parser with 100kb payload limit (prevents DoS memory overflow)
+app.use(express.json({ limit: '100kb' }));
 
 // Request logging middleware
 app.use((req, res, next) => {
@@ -28,7 +43,8 @@ app.get('/api/profile', (req: Request, res: Response) => {
 
 app.put('/api/profile', (req: Request, res: Response) => {
   const db = getDb();
-  const updatedProfile: UserProfile = { ...db.userProfile, ...req.body };
+  const sanitizedBody = sanitizeObject(req.body);
+  const updatedProfile: UserProfile = { ...db.userProfile, ...sanitizedBody };
   db.userProfile = updatedProfile;
   saveDb(db);
   res.json({ message: 'Profile updated successfully', profile: updatedProfile });
@@ -37,8 +53,9 @@ app.put('/api/profile', (req: Request, res: Response) => {
 // 3. AI Engine & Photo Analysis API
 app.post('/api/ai/styling', (req: Request, res: Response) => {
   const db = getDb();
-  const profile: UserProfile = req.body.profile || db.userProfile;
-  const occasion = req.body.occasion || 'Work';
+  const reqProfile = req.body.profile ? sanitizeObject(req.body.profile) : null;
+  const profile: UserProfile = reqProfile || db.userProfile;
+  const occasion = sanitizeString(req.body.occasion) || 'Work';
 
   // Calculate dynamic AI scoring based on skin tone and body shape
   let colorHarmonyScore = 94;
@@ -61,14 +78,14 @@ app.post('/api/ai/styling', (req: Request, res: Response) => {
     fitScore,
     overallMatch: Math.round((colorHarmonyScore + fitScore) / 2),
     recommendedPalette: ['#1E293B', '#FDFBF7', '#D97706', '#064E3B'],
-    paletteRationale: `Selected for ${profile.skinTone} skin tone and ${profile.undertone} undertones to enhance natural contrast for ${occasion} wear.`,
-    bodyShapeAdvice: `For ${profile.bodyShape} body proportions (Chest: ${profile.measurements.chestCm}cm, Waist: ${profile.measurements.waistCm}cm, Hips: ${profile.measurements.hipsCm}cm), tailored longline jackets and high-waisted silhouettes elongate the torso while defining waistline symmetry.`,
+    paletteRationale: `Selected for ${sanitizeString(profile.skinTone)} skin tone and ${sanitizeString(profile.undertone)} undertones to enhance natural contrast for ${occasion} wear.`,
+    bodyShapeAdvice: `For ${sanitizeString(profile.bodyShape)} body proportions (Chest: ${Number(profile.measurements?.chestCm) || 0}cm, Waist: ${Number(profile.measurements?.waistCm) || 0}cm, Hips: ${Number(profile.measurements?.hipsCm) || 0}cm), tailored longline jackets and high-waisted silhouettes elongate the torso while defining waistline symmetry.`,
     curatedProducts: matchedProducts,
   });
 });
 
 app.post('/api/ai/photo-analysis', (req: Request, res: Response) => {
-  const { photoUrl } = req.body;
+  const photoUrl = sanitizeString(req.body.photoUrl);
   if (!photoUrl) {
     return res.status(400).json({ error: 'Photo URL is required' });
   }
@@ -101,7 +118,7 @@ app.post('/api/ai/photo-analysis', (req: Request, res: Response) => {
 // 4. Color Voting Arena API
 app.get('/api/color-combos', (req: Request, res: Response) => {
   const db = getDb();
-  const occasion = req.query.occasion as string;
+  const occasion = sanitizeString(req.query.occasion as string);
   let combos = db.colorCombos;
   if (occasion && occasion !== 'All') {
     combos = combos.filter(c => c.occasion.toLowerCase() === occasion.toLowerCase());
@@ -111,18 +128,24 @@ app.get('/api/color-combos', (req: Request, res: Response) => {
 
 app.post('/api/color-combos', (req: Request, res: Response) => {
   const db = getDb();
-  const { title, occasion, subType, colors, exampleImageUrl } = req.body;
+  const title = sanitizeString(req.body.title);
+  const occasion = sanitizeString(req.body.occasion);
+  const subType = sanitizeString(req.body.subType);
+  const exampleImageUrl = sanitizeString(req.body.exampleImageUrl);
+  const rawColors = req.body.colors;
 
-  if (!title || !colors || !Array.isArray(colors)) {
+  if (!title || !rawColors || !Array.isArray(rawColors)) {
     return res.status(400).json({ error: 'Title and colors array are required' });
   }
+
+  const sanitizedColors = sanitizeObject(rawColors);
 
   const newCombo: ColorCombo = {
     id: `combo_${Date.now()}`,
     title,
     occasion: occasion || 'Casual',
     subType: subType || 'Custom Palette',
-    colors: colors,
+    colors: sanitizedColors,
     rating: 5.0,
     votesCount: 1,
     trendingScore: 100,
@@ -136,8 +159,8 @@ app.post('/api/color-combos', (req: Request, res: Response) => {
 
 app.post('/api/color-combos/:id/vote', (req: Request, res: Response) => {
   const db = getDb();
-  const { id } = req.params;
-  const { direction } = req.body; // 'up' or 'down'
+  const id = sanitizeString(req.params.id);
+  const direction = sanitizeString(req.body.direction); // 'up' or 'down'
 
   const combo = db.colorCombos.find(c => c.id === id);
   if (!combo) {
@@ -167,7 +190,7 @@ app.get('/api/designers', (req: Request, res: Response) => {
 
 app.get('/api/designs', (req: Request, res: Response) => {
   const db = getDb();
-  const occasion = req.query.occasion as string;
+  const occasion = sanitizeString(req.query.occasion as string);
   let designs = db.designs;
   if (occasion && occasion !== 'All') {
     designs = designs.filter(d => d.occasion.toLowerCase() === occasion.toLowerCase());
@@ -177,11 +200,18 @@ app.get('/api/designs', (req: Request, res: Response) => {
 
 app.post('/api/designs', (req: Request, res: Response) => {
   const db = getDb();
-  const { title, collection, imageUrl, occasion, palette, price } = req.body;
+  const title = sanitizeString(req.body.title);
+  const collection = sanitizeString(req.body.collection);
+  const imageUrl = sanitizeString(req.body.imageUrl);
+  const occasion = sanitizeString(req.body.occasion);
+  const rawPalette = req.body.palette;
+  const price = Number(req.body.price);
 
   if (!title || !imageUrl) {
     return res.status(400).json({ error: 'Title and image URL are required' });
   }
+
+  const sanitizedPalette = Array.isArray(rawPalette) ? rawPalette.map(c => sanitizeString(c)) : ['#1E293B', '#D97706'];
 
   const newDesign: Design = {
     id: `dsg_${Date.now()}`,
@@ -194,8 +224,8 @@ app.post('/api/designs', (req: Request, res: Response) => {
     rating: 5.0,
     votesCount: 1,
     occasion: occasion || 'Casual',
-    palette: palette || ['#1E293B', '#D97706'],
-    price: Number(price) || 290,
+    palette: sanitizedPalette,
+    price: price || 290,
     inStock: true,
     createdAt: new Date().toISOString().split('T')[0],
   };
@@ -207,8 +237,8 @@ app.post('/api/designs', (req: Request, res: Response) => {
 
 app.post('/api/designs/:id/vote', (req: Request, res: Response) => {
   const db = getDb();
-  const { id } = req.params;
-  const { rating } = req.body; // e.g. 5
+  const id = sanitizeString(req.params.id);
+  const rating = Number(req.body.rating);
 
   const design = db.designs.find(d => d.id === id);
   if (!design) {
@@ -226,18 +256,20 @@ app.post('/api/designs/:id/vote', (req: Request, res: Response) => {
 // 6. Commerce Stock Locator & Budget API
 app.get('/api/products', (req: Request, res: Response) => {
   const db = getDb();
-  const { query, category, maxPrice } = req.query;
+  const queryParam = req.query.query ? sanitizeString(req.query.query as string) : '';
+  const categoryParam = req.query.category ? sanitizeString(req.query.category as string) : '';
+  const maxPrice = req.query.maxPrice ? Number(req.query.maxPrice) : null;
   let products = db.products;
 
-  if (query) {
-    const q = (query as string).toLowerCase();
-    products = products.filter(p => p.title.toLowerCase().includes(q) || p.brand.toLowerCase().includes(q));
+  if (queryParam) {
+    const safeRegex = new RegExp(escapeRegex(queryParam), 'i');
+    products = products.filter(p => safeRegex.test(p.title) || safeRegex.test(p.brand));
   }
-  if (category && category !== 'All') {
-    products = products.filter(p => p.category.toLowerCase() === (category as string).toLowerCase());
+  if (categoryParam && categoryParam !== 'All') {
+    products = products.filter(p => p.category.toLowerCase() === categoryParam.toLowerCase());
   }
-  if (maxPrice) {
-    products = products.filter(p => p.price <= Number(maxPrice));
+  if (maxPrice !== null && !isNaN(maxPrice)) {
+    products = products.filter(p => p.price <= maxPrice);
   }
 
   res.json(products);
@@ -245,7 +277,7 @@ app.get('/api/products', (req: Request, res: Response) => {
 
 app.get('/api/stores', (req: Request, res: Response) => {
   const db = getDb();
-  const productId = req.query.productId as string;
+  const productId = sanitizeString(req.query.productId as string);
   let stores = db.storeStocks;
   if (productId) {
     stores = stores.filter(s => s.productId === productId);
@@ -255,7 +287,11 @@ app.get('/api/stores', (req: Request, res: Response) => {
 
 app.post('/api/stores/reserve', (req: Request, res: Response) => {
   const db = getDb();
-  const { storeId, productId, size, customerName, customerPhone } = req.body;
+  const storeId = sanitizeString(req.body.storeId);
+  const productId = sanitizeString(req.body.productId);
+  const size = sanitizeString(req.body.size);
+  const customerName = sanitizeString(req.body.customerName);
+  const customerPhone = sanitizeString(req.body.customerPhone);
 
   if (!storeId || !productId || !size || !customerName) {
     return res.status(400).json({ error: 'Missing required reservation fields' });
@@ -308,13 +344,17 @@ app.get('/api/social-feed', (req: Request, res: Response) => {
 
 app.post('/api/social-feed', (req: Request, res: Response) => {
   const db = getDb();
-  const { title, occasion, videoThumbnail, taggedProductIds } = req.body;
+  const title = sanitizeString(req.body.title);
+  const occasion = sanitizeString(req.body.occasion);
+  const videoThumbnail = sanitizeString(req.body.videoThumbnail);
+  const rawTaggedProductIds = req.body.taggedProductIds;
 
   if (!title || !videoThumbnail) {
     return res.status(400).json({ error: 'Title and video thumbnail are required' });
   }
 
-  const tagged = db.products.filter(p => (taggedProductIds || []).includes(p.id));
+  const taggedProductIds = Array.isArray(rawTaggedProductIds) ? rawTaggedProductIds.map(id => sanitizeString(id)) : [];
+  const tagged = db.products.filter(p => taggedProductIds.includes(p.id));
 
   const newLook: OutfitLook = {
     id: `look_${Date.now()}`,
@@ -338,7 +378,7 @@ app.post('/api/social-feed', (req: Request, res: Response) => {
 
 app.post('/api/social-feed/:id/like', (req: Request, res: Response) => {
   const db = getDb();
-  const { id } = req.params;
+  const id = sanitizeString(req.params.id);
 
   const look = db.outfitLooks.find(l => l.id === id);
   if (!look) {
