@@ -98,7 +98,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
       <div className="bg-modal-theme border border-theme-main rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl shadow-amber-500/10 relative overflow-hidden text-theme-body">
-        
+
         {/* Top Progress Bar */}
         <div className="flex items-center justify-between mb-6 pb-4 border-b border-theme-main">
           <div>
@@ -254,7 +254,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
             <div className="p-4 rounded-2xl bg-surface-theme border border-theme-main flex items-center gap-3">
               <Ruler className="w-5 h-5 text-amber-400 flex-shrink-0" />
               <div className="text-xs text-theme-secondary">
-                Calculated Body Shape Profile: <strong className="text-amber-800 dark:text-amber-300">{profile.bodyShape}</strong>. 
+                Calculated Body Shape Profile: <strong className="text-amber-800 dark:text-amber-300">{profile.bodyShape}</strong>.
                 This adjusts silhouette recommendations (e.g., tapered trousers vs structured blazers).
               </div>
             </div>
@@ -275,11 +275,10 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                   <button
                     key={occ}
                     onClick={() => handleToggleOccasion(occ)}
-                    className={`p-3.5 rounded-2xl border text-left text-xs font-bold transition-all flex items-center justify-between ${
-                      selected
+                    className={`p-3.5 rounded-2xl border text-left text-xs font-bold transition-all flex items-center justify-between ${selected
                         ? 'bg-gradient-to-r from-amber-500/20 to-rose-500/20 border-amber-400 text-slate-900 dark:text-amber-200 shadow-md shadow-amber-500/10'
                         : 'bg-surface-theme border-theme-main text-theme-muted hover:border-amber-400/40 hover:text-theme-heading'
-                    }`}
+                      }`}
                   >
                     <span>{occ}</span>
                     {selected && <Check className="w-4 h-4 text-amber-400" />}
@@ -304,11 +303,10 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                   <button
                     key={vibe}
                     onClick={() => handleToggleVibe(vibe)}
-                    className={`p-3.5 rounded-2xl border text-left text-xs font-bold transition-all flex items-center justify-between ${
-                      selected
+                    className={`p-3.5 rounded-2xl border text-left text-xs font-bold transition-all flex items-center justify-between ${selected
                         ? 'bg-gradient-to-r from-amber-500/20 to-rose-500/20 border-amber-400 text-slate-900 dark:text-amber-200 shadow-md shadow-amber-500/10'
                         : 'bg-surface-theme border-theme-main text-theme-muted hover:border-amber-400/40 hover:text-theme-heading'
-                    }`}
+                      }`}
                   >
                     <span>{vibe}</span>
                     {selected && <Check className="w-4 h-4 text-amber-400" />}

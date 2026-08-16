@@ -7,6 +7,7 @@ import { ColorVotingView } from './components/ColorVotingView';
 import { DesignerShowcaseView } from './components/DesignerShowcaseView';
 import { CommerceStockView } from './components/CommerceStockView';
 import { SocialFeedView } from './components/SocialFeedView';
+import { RetailerView } from './components/RetailerView';
 import type { UserProfile, RetailProduct } from './types/fashion';
 import { INITIAL_USER_PROFILE } from './data/fashionData';
 import { api } from './services/api';
@@ -31,6 +32,21 @@ export function App() {
     }
     loadInitialProfile();
   }, []);
+
+  const handleRoleChange = (role: UserRole) => {
+    setUserRole(role);
+    if (role === 'retailer') {
+      if (!activeTab.startsWith('retailer-')) {
+        setActiveTab('retailer-dashboard');
+      }
+    } else if (role === 'designer') {
+      setActiveTab('designer-showcase');
+    } else {
+      if (activeTab.startsWith('retailer-')) {
+        setActiveTab('ai-engine');
+      }
+    }
+  };
 
   const handleSelectProduct = (product: RetailProduct) => {
     setSelectedProduct(product);
@@ -60,78 +76,90 @@ export function App() {
             activeTab={activeTab}
             setActiveTab={setActiveTab}
             userRole={userRole}
-            setUserRole={setUserRole}
+            setUserRole={handleRoleChange}
           />
 
           {/* MAIN APPLICATION CONTENT */}
           <div className="flex-1 min-w-0 w-full space-y-4">
             
-            {/* Tab 1: AI Styling Engine */}
-            {activeTab === 'ai-engine' && (
-              <AIEngineView
-                userProfile={userProfile}
-                onSelectProduct={handleSelectProduct}
-                onNavigateTab={setActiveTab}
+            {/* Retailer Operational View Hub */}
+            {userRole === 'retailer' ? (
+              <RetailerView
+                activeTab={activeTab}
+                setActiveTab={setActiveTab}
                 searchQuery={searchQuery}
               />
-            )}
+            ) : (
+              <>
+                {/* Tab 1: AI Styling Engine */}
+                {activeTab === 'ai-engine' && (
+                  <AIEngineView
+                    userProfile={userProfile}
+                    onSelectProduct={handleSelectProduct}
+                    onNavigateTab={setActiveTab}
+                    searchQuery={searchQuery}
+                  />
+                )}
 
-            {/* Tab 2: Community Color Voting Arena */}
-            {activeTab === 'color-voting' && <ColorVotingView searchQuery={searchQuery} />}
+                {/* Tab 2: Community Color Voting Arena */}
+                {activeTab === 'color-voting' && <ColorVotingView searchQuery={searchQuery} />}
 
-            {/* Tab 3: Designer Showcase & Merit Leaderboard */}
-            {activeTab === 'designer-showcase' && (
-              <DesignerShowcaseView
-                onSelectProduct={handleSelectProduct}
-                userRole={userRole}
-                searchQuery={searchQuery}
-              />
-            )}
+                {/* Tab 3: Designer Showcase & Merit Leaderboard */}
+                {activeTab === 'designer-showcase' && (
+                  <DesignerShowcaseView
+                    onSelectProduct={handleSelectProduct}
+                    userRole={userRole}
+                    searchQuery={searchQuery}
+                  />
+                )}
 
-            {/* Tab 4: Stock Locator & Budget Finder */}
-            {activeTab === 'stock-locator' && (
-              <CommerceStockView
-                selectedProduct={selectedProduct}
-                onSelectProduct={handleSelectProduct}
-                searchQuery={searchQuery}
-              />
-            )}
+                {/* Tab 4: Stock Locator & Budget Finder */}
+                {activeTab === 'stock-locator' && (
+                  <CommerceStockView
+                    selectedProduct={selectedProduct}
+                    onSelectProduct={handleSelectProduct}
+                    searchQuery={searchQuery}
+                  />
+                )}
 
-            {/* Tab 5: Social Video Feed & Outfit Board Builder */}
-            {activeTab === 'social-feed' && (
-              <SocialFeedView onSelectProduct={handleSelectProduct} searchQuery={searchQuery} />
-            )}
+                {/* Tab 5: Social Video Feed & Outfit Board Builder */}
+                {activeTab === 'social-feed' && (
+                  <SocialFeedView onSelectProduct={handleSelectProduct} searchQuery={searchQuery} />
+                )}
 
-            {/* Tab 6: Saved Wishlist View */}
-            {activeTab === 'wishlist' && (
-              <div className="space-y-6 animate-fadeIn">
-                <div className="glass-panel-gold rounded-3xl p-6 sm:p-8 flex items-center justify-between">
-                  <div>
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs font-semibold mb-2">
-                      <Heart className="w-3.5 h-3.5 fill-rose-500 text-rose-500" />
-                      <span>Curated Favorites</span>
+                {/* Tab 6: Saved Wishlist View */}
+                {activeTab === 'wishlist' && (
+                  <div className="space-y-6 animate-fadeIn">
+                    <div className="glass-panel-gold rounded-3xl p-6 sm:p-8 flex items-center justify-between">
+                      <div>
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs font-semibold mb-2">
+                          <Heart className="w-3.5 h-3.5 fill-rose-500 text-rose-500" />
+                          <span>Curated Favorites</span>
+                        </div>
+                        <h1 className="text-2xl sm:text-3xl font-serif font-bold text-theme-heading">
+                          Saved Wishlist Items (3)
+                        </h1>
+                        <p className="text-xs text-theme-muted mt-1">
+                          Your bookmarked designer outfits, color combinations, and saved store items.
+                        </p>
+                      </div>
                     </div>
-                    <h1 className="text-2xl sm:text-3xl font-serif font-bold text-theme-heading">
-                      Saved Wishlist Items (3)
-                    </h1>
-                    <p className="text-xs text-theme-muted mt-1">
-                      Your bookmarked designer outfits, color combinations, and saved store items.
-                    </p>
-                  </div>
-                </div>
 
-                <CommerceStockView
-                  selectedProduct={selectedProduct}
-                  onSelectProduct={handleSelectProduct}
-                  searchQuery={searchQuery}
-                />
-              </div>
+                    <CommerceStockView
+                      selectedProduct={selectedProduct}
+                      onSelectProduct={handleSelectProduct}
+                      searchQuery={searchQuery}
+                    />
+                  </div>
+                )}
+              </>
             )}
 
           </div>
 
         </div>
       </main>
+
 
       {/* Footer */}
       <footer className="border-t border-theme-main bg-footer-theme py-8 text-center text-xs text-theme-muted space-y-2">

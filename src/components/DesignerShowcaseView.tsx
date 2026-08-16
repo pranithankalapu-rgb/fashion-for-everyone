@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Award, Star, Upload, UserPlus, ShoppingCart, BarChart3, CheckCircle2 } from 'lucide-react';
+import { Star, Upload, UserPlus, ShoppingCart, BarChart3, CheckCircle2, Plus, X, FolderPlus, Check } from 'lucide-react';
 import type { Designer, Design, RetailProduct } from '../types/fashion';
 import { DESIGNERS, DESIGNS } from '../data/fashionData';
 import { api } from '../services/api';
 import confetti from 'canvas-confetti';
+import { DesignerDashboard } from './designer/DesignerDashboard';
 
 import type { UserRole } from './Sidebar';
 
@@ -20,9 +21,14 @@ export const DesignerShowcaseView: React.FC<DesignerShowcaseProps> = ({
 }) => {
   const [designers, setDesigners] = useState<Designer[]>(DESIGNERS);
   const [designs, setDesigns] = useState<Design[]>(DESIGNS);
-  const [activeTab, setActiveTab] = useState<'frontpage' | 'designers' | 'analytics'>('frontpage');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'frontpage' | 'designers' | 'analytics'>(
+    userRole === 'designer' ? 'dashboard' : 'frontpage'
+  );
   const [isUploadOpen, setIsUploadOpen] = useState<boolean>(false);
+  const [isNewCollectionOpen, setIsNewCollectionOpen] = useState<boolean>(false);
+  const [activeCollectionsCount, setActiveCollectionsCount] = useState<number>(5);
   const [followedDesigners, setFollowedDesigners] = useState<{ [key: string]: boolean }>({ des_1: true });
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // New design form state
   const [title, setTitle] = useState('');
@@ -30,6 +36,14 @@ export const DesignerShowcaseView: React.FC<DesignerShowcaseProps> = ({
   const [price, setPrice] = useState(340);
   const [occasion, setOccasion] = useState<'Work' | 'Casual' | 'Date night' | 'Formal'>('Work');
   const [imgUrl, setImgUrl] = useState('https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=600&q=80');
+
+  // New Collection Form State
+  const [colName, setColName] = useState('');
+  const [colSeason, setColSeason] = useState('Autumn 2026');
+  const [colDescription, setColDescription] = useState('');
+  const [colCategory, setColCategory] = useState('Tailoring');
+  const [colCoverUrl, setColCoverUrl] = useState('https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=600&q=80');
+  const [colDesigns, setColDesigns] = useState('');
 
   useEffect(() => {
     async function loadData() {
@@ -95,86 +109,121 @@ export const DesignerShowcaseView: React.FC<DesignerShowcaseProps> = ({
       setIsUploadOpen(false);
       setTitle('');
       confetti({ particleCount: 70, spread: 80 });
+      showToast(`Design "${title}" published successfully!`);
     } catch (err) {
       console.error('Error uploading design:', err);
     }
   };
 
+  const handleCreateCollection = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!colName.trim()) return;
+
+    setActiveCollectionsCount((prev) => prev + 1);
+    setIsNewCollectionOpen(false);
+    confetti({ particleCount: 80, spread: 90 });
+    showToast(`Collection "${colName}" created successfully!`);
+    setColName('');
+    setColDescription('');
+    setColDesigns('');
+  };
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
+
   return (
-    <div className="space-y-8 animate-fadeIn">
+    <div className="space-y-8 animate-fadeIn relative">
       
-      {/* Header Banner */}
-      <div className="glass-panel rounded-3xl p-6 sm:p-8 relative overflow-hidden">
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative z-10">
-          <div className="space-y-2 max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/30 text-purple-300 text-xs font-semibold">
-              <Award className="w-3.5 h-3.5" />
-              <span>Merit-Based Storefront & Leaderboards</span>
-            </div>
-            <h1 className="text-3xl sm:text-4xl font-serif font-bold text-theme-heading tracking-tight">
-              Designer <span className="gradient-text-gold">Showcase & Front Page</span>
-            </h1>
-            <p className="text-sm text-theme-secondary">
-              No paid placement. Front-page eligibility is calculated by nightly job (Min 50 votes AND Avg Rating ≥ 4.2). Monthly leaderboard resets ensure emerging talent gets a fair shot.
-            </p>
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed top-24 right-8 z-50 flex items-center gap-2.5 px-5 py-3 rounded-2xl bg-gradient-to-r from-purple-600 via-pink-600 to-rose-600 text-white font-bold text-xs shadow-2xl animate-fadeIn">
+          <Check className="w-4 h-4 text-emerald-300" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
+      {/* Top Mode Navigation Bar (Shown ONLY in Designer Role) */}
+      {userRole === 'designer' && (
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-theme-main pb-4">
+          {/* Left Navigation Container */}
+          <div className="flex flex-wrap items-center gap-1.5 bg-surface-theme p-1.5 rounded-2xl border border-theme-main">
+            {/* 1. Showcase / Portfolio */}
+            <button
+              onClick={() => setActiveTab('frontpage')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'frontpage'
+                  ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40 shadow-sm'
+                  : 'text-theme-muted hover:text-theme-heading hover:bg-surface-subtle-theme'
+              }`}
+            >
+              Showcase / Portfolio
+            </button>
+
+            {/* 2. Top Designer Leaderboard */}
+            <button
+              onClick={() => setActiveTab('designers')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'designers'
+                  ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40 shadow-sm'
+                  : 'text-theme-muted hover:text-theme-heading hover:bg-surface-subtle-theme'
+              }`}
+            >
+              Top Designer Leaderboard
+            </button>
+
+            {/* 3. Designer Analytics Portal */}
+            <button
+              onClick={() => setActiveTab('analytics')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                activeTab === 'analytics'
+                  ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40 shadow-sm'
+                  : 'text-theme-muted hover:text-theme-heading hover:bg-surface-subtle-theme'
+              }`}
+            >
+              <BarChart3 className="w-3.5 h-3.5" />
+              <span>Designer Analytics Portal</span>
+            </button>
           </div>
 
-          {userRole === 'designer' && (
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setIsUploadOpen(true)}
-                className="flex items-center gap-2 bg-gradient-to-r from-purple-500 to-amber-500 hover:from-purple-400 hover:to-amber-400 text-slate-950 font-bold px-5 py-3 rounded-2xl shadow-xl shadow-purple-500/20 text-xs transition-all hover:scale-105"
-              >
-                <Upload className="w-4 h-4" />
-                <span>Upload New Collection Design</span>
-              </button>
-            </div>
-          )}
+          {/* Right Action Buttons */}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsNewCollectionOpen(true)}
+              className="flex items-center gap-1.5 bg-gradient-to-r from-purple-500 via-pink-500 to-rose-500 hover:from-purple-400 hover:via-pink-400 hover:to-rose-400 text-white font-bold px-4 py-2 rounded-xl shadow-md shadow-pink-500/20 text-xs transition-all cursor-pointer hover:scale-105"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>+ New Collection</span>
+            </button>
+
+            <button
+              onClick={() => setIsUploadOpen(true)}
+              className="flex items-center gap-2 bg-gradient-to-r from-purple-500 to-amber-500 hover:from-purple-400 hover:to-amber-400 text-slate-950 font-bold px-4 py-2 rounded-xl shadow-md text-xs transition-all cursor-pointer"
+            >
+              <Upload className="w-3.5 h-3.5" />
+              <span>Upload Design</span>
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Mode Navigation Tabs */}
-      <div className="flex items-center justify-between border-b border-theme-main pb-4">
-        <div className="flex items-center gap-1 bg-surface-theme p-1.5 rounded-2xl border border-theme-main">
-          <button
-            onClick={() => setActiveTab('frontpage')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-              activeTab === 'frontpage'
-                ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40 shadow-sm'
-                : 'text-theme-muted hover:text-theme-heading hover:bg-surface-subtle-theme'
-            }`}
-          >
-            Front Page Designs (Merit Ranked)
-          </button>
-
-          <button
-            onClick={() => setActiveTab('designers')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-              activeTab === 'designers'
-                ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40 shadow-sm'
-                : 'text-theme-muted hover:text-theme-heading hover:bg-surface-subtle-theme'
-            }`}
-          >
-            Top Designer Leaderboard
-          </button>
-
-          <button
-            onClick={() => setActiveTab('analytics')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-              activeTab === 'analytics'
-                ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40 shadow-sm'
-                : 'text-theme-muted hover:text-theme-heading hover:bg-surface-subtle-theme'
-            }`}
-          >
-            <BarChart3 className="w-3.5 h-3.5" />
-            <span>Designer Analytics Portal</span>
-          </button>
-        </div>
-
-        <div className="text-xs text-theme-muted hidden sm:block">
-          Monthly Leaderboard Reset: <strong className="text-amber-800 dark:text-amber-400">28 Days Left</strong>
-        </div>
-      </div>
+      {/* Tab 0: Designer Dashboard Landing View */}
+      {activeTab === 'dashboard' && (
+        <DesignerDashboard
+          designerProfile={designers[0] || DESIGNERS[0]}
+          designs={designs}
+          activeCollectionsCount={activeCollectionsCount}
+          onNavigateTab={(t) => {
+            if (t === 'showcase') setActiveTab('frontpage');
+            else if (t === 'analytics') setActiveTab('analytics');
+            else if (t === 'designers') setActiveTab('designers');
+          }}
+          onOpenUploadModal={() => setIsUploadOpen(true)}
+          onOpenNewCollectionModal={() => setIsNewCollectionOpen(true)}
+          onSelectProduct={onSelectProduct}
+        />
+      )}
 
       {/* Front Page Designs Tab */}
       {activeTab === 'frontpage' && (
@@ -453,6 +502,125 @@ export const DesignerShowcaseView: React.FC<DesignerShowcaseProps> = ({
                   className="bg-gradient-to-r from-purple-500 to-amber-500 text-slate-950 font-bold px-5 py-2.5 rounded-xl text-xs shadow-lg shadow-purple-500/20"
                 >
                   Publish to Community Review
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Create New Collection Modal */}
+      {isNewCollectionOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+          <div className="bg-modal-theme border border-theme-main rounded-3xl max-w-md w-full p-6 space-y-5 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-theme-main pb-3">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-purple-300">Designer Workspace</span>
+                <h2 className="text-xl font-serif font-bold text-theme-heading flex items-center gap-2">
+                  <FolderPlus className="w-5 h-5 text-pink-400" />
+                  <span>Create New Collection</span>
+                </h2>
+              </div>
+              <button
+                onClick={() => setIsNewCollectionOpen(false)}
+                className="p-2 rounded-xl bg-surface-theme hover:bg-surface-subtle-theme text-theme-muted hover:text-theme-heading cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateCollection} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-theme-muted mb-1">Collection Name *</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Celestial Gala 2027"
+                  value={colName}
+                  onChange={(e) => setColName(e.target.value)}
+                  className="w-full bg-surface-theme border border-theme-main rounded-xl px-3 py-2.5 text-xs text-theme-heading focus:border-pink-400 outline-none"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-theme-muted mb-1">Season *</label>
+                  <select
+                    value={colSeason}
+                    onChange={(e) => setColSeason(e.target.value)}
+                    className="w-full bg-surface-theme border border-theme-main rounded-xl px-3 py-2.5 text-xs text-theme-heading focus:border-pink-400 outline-none"
+                  >
+                    <option value="Spring 2026">Spring 2026</option>
+                    <option value="Summer 2026">Summer 2026</option>
+                    <option value="Autumn 2026">Autumn 2026</option>
+                    <option value="Winter 2026">Winter 2026</option>
+                    <option value="Resort 2027">Resort 2027</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-theme-muted mb-1">Category *</label>
+                  <select
+                    value={colCategory}
+                    onChange={(e) => setColCategory(e.target.value)}
+                    className="w-full bg-surface-theme border border-theme-main rounded-xl px-3 py-2.5 text-xs text-theme-heading focus:border-pink-400 outline-none"
+                  >
+                    <option value="Tailoring">Tailoring</option>
+                    <option value="Eveningwear">Eveningwear</option>
+                    <option value="Casualwear">Casualwear</option>
+                    <option value="Outerwear">Outerwear</option>
+                    <option value="Streetwear">Streetwear</option>
+                    <option value="Sustainable">Sustainable</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-theme-muted mb-1">Collection Description</label>
+                <textarea
+                  rows={3}
+                  value={colDescription}
+                  onChange={(e) => setColDescription(e.target.value)}
+                  placeholder="Describe moodboard themes, fabrics, and silhouette vision..."
+                  className="w-full bg-surface-theme border border-theme-main rounded-xl px-3 py-2 text-xs text-theme-heading focus:border-pink-400 outline-none resize-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-theme-muted mb-1">Cover Image URL</label>
+                <input
+                  type="url"
+                  value={colCoverUrl}
+                  onChange={(e) => setColCoverUrl(e.target.value)}
+                  placeholder="https://images.unsplash.com/..."
+                  className="w-full bg-surface-theme border border-theme-main rounded-xl px-3 py-2 text-xs text-theme-heading focus:border-pink-400 outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-theme-muted mb-1">Add Initial Designs / Garments</label>
+                <input
+                  type="text"
+                  value={colDesigns}
+                  onChange={(e) => setColDesigns(e.target.value)}
+                  placeholder="e.g. Asymmetric Trench, Silk Pleated Gown"
+                  className="w-full bg-surface-theme border border-theme-main rounded-xl px-3 py-2 text-xs text-theme-heading focus:border-pink-400 outline-none"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-theme-main">
+                <button
+                  type="button"
+                  onClick={() => setIsNewCollectionOpen(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-theme-muted hover:text-theme-heading cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="bg-gradient-to-r from-purple-500 via-pink-500 to-rose-500 text-white font-bold px-5 py-2.5 rounded-xl text-xs shadow-lg cursor-pointer hover:brightness-110"
+                >
+                  Save Collection
                 </button>
               </div>
             </form>
