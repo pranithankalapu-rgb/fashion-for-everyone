@@ -8,9 +8,10 @@ import { DesignerShowcaseView } from './components/DesignerShowcaseView';
 import { CommerceStockView } from './components/CommerceStockView';
 import { SocialFeedView } from './components/SocialFeedView';
 import { RetailerView } from './components/RetailerView';
+import { OrderCheckoutModal } from './components/OrderCheckoutModal';
 import type { UserProfile, RetailProduct } from './types/fashion';
 import { INITIAL_USER_PROFILE } from './data/fashionData';
-import { api } from './services/api';
+import { api, setCurrentRole } from './services/api';
 import { X, MapPin, ShoppingBag, Heart } from 'lucide-react';
 
 export function App() {
@@ -20,6 +21,7 @@ export function App() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isOnboardingOpen, setIsOnboardingOpen] = useState<boolean>(false);
   const [selectedProduct, setSelectedProduct] = useState<RetailProduct | null>(null);
+  const [checkoutProduct, setCheckoutProduct] = useState<RetailProduct | null>(null);
 
   useEffect(() => {
     async function loadInitialProfile() {
@@ -35,6 +37,7 @@ export function App() {
 
   const handleRoleChange = (role: UserRole) => {
     setUserRole(role);
+    setCurrentRole(role);
     if (role === 'retailer') {
       if (!activeTab.startsWith('retailer-')) {
         setActiveTab('retailer-dashboard');
@@ -221,19 +224,33 @@ export function App() {
                 <span>Locate Nearby Stock</span>
               </button>
 
-              <a
-                href={selectedProduct.affiliateUrl}
-                target="_blank"
-                rel="noreferrer"
+              <button
+                onClick={() => {
+                  const prod = selectedProduct;
+                  setSelectedProduct(null);
+                  setCheckoutProduct(prod);
+                }}
                 className="flex-1 bg-gradient-to-r from-amber-500 to-rose-500 text-slate-950 font-bold py-3 rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20"
               >
                 <ShoppingBag className="w-4 h-4" />
-                <span>Buy Online</span>
-              </a>
+                <span>Order Now (Checkout)</span>
+              </button>
             </div>
 
           </div>
         </div>
+      )}
+
+      {/* Real Customer Order Checkout Modal */}
+      {checkoutProduct && (
+        <OrderCheckoutModal
+          product={checkoutProduct}
+          userProfile={userProfile}
+          onClose={() => setCheckoutProduct(null)}
+          onOrderSuccess={() => {
+            // Can switch tab or show notification if desired
+          }}
+        />
       )}
 
     </div>

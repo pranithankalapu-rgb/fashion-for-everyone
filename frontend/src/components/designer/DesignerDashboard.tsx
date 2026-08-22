@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   Award,
   Star,
-  Upload,
   Plus,
   FolderPlus,
   Eye,
@@ -478,74 +477,6 @@ export const DesignerDashboard: React.FC<DesignerDashboardProps> = ({
           </div>
         </div>
 
-      </div>
-
-      {/* 7. QUICK ACTIONS HUB (Bottom Action Row) */}
-      <div className="glass-panel rounded-[2rem] p-6 space-y-4 border border-theme-main shadow-xl bg-surface-theme/90 backdrop-blur-xl">
-        <div className="border-b border-theme-subtle pb-3">
-          <h2 className="text-lg font-serif font-bold text-theme-heading">Quick Actions</h2>
-          <p className="text-xs text-theme-muted">Fast studio access to design, collection, and portfolio tools</p>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          
-          {/* Action 1: Create Design */}
-          <button
-            onClick={onOpenUploadModal}
-            className="p-4 rounded-2xl bg-surface-theme hover:bg-surface-subtle-theme border border-theme-main flex items-center gap-3 text-left group transition-all cursor-pointer hover:border-purple-400/40"
-          >
-            <div className="p-3 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20 group-hover:scale-110 transition-transform">
-              <Plus className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="text-xs font-bold text-theme-heading">Create Design</div>
-              <div className="text-[10px] text-theme-muted">Draft a new garment concept</div>
-            </div>
-          </button>
-
-          {/* Action 2: New Collection */}
-          <button
-            onClick={onOpenNewCollectionModal || onOpenUploadModal}
-            className="p-4 rounded-2xl bg-surface-theme hover:bg-surface-subtle-theme border border-theme-main flex items-center gap-3 text-left group transition-all cursor-pointer hover:border-amber-400/40"
-          >
-            <div className="p-3 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20 group-hover:scale-110 transition-transform">
-              <FolderPlus className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="text-xs font-bold text-theme-heading">New Collection</div>
-              <div className="text-[10px] text-theme-muted">Group designs into lookbooks</div>
-            </div>
-          </button>
-
-          {/* Action 3: Upload Design */}
-          <button
-            onClick={onOpenUploadModal}
-            className="p-4 rounded-2xl bg-surface-theme hover:bg-surface-subtle-theme border border-theme-main flex items-center gap-3 text-left group transition-all cursor-pointer hover:border-emerald-400/40"
-          >
-            <div className="p-3 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 group-hover:scale-110 transition-transform">
-              <Upload className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="text-xs font-bold text-theme-heading">Upload Design</div>
-              <div className="text-[10px] text-theme-muted">Publish high-res sketches</div>
-            </div>
-          </button>
-
-          {/* Action 4: View Portfolio */}
-          <button
-            onClick={() => onNavigateTab('showcase')}
-            className="p-4 rounded-2xl bg-surface-theme hover:bg-surface-subtle-theme border border-theme-main flex items-center gap-3 text-left group transition-all cursor-pointer hover:border-blue-400/40"
-          >
-            <div className="p-3 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20 group-hover:scale-110 transition-transform">
-              <Eye className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="text-xs font-bold text-theme-heading">View Portfolio</div>
-              <div className="text-[10px] text-theme-muted">Inspect public showcase page</div>
-            </div>
-          </button>
-
-        </div>
       </div>
 
       {/* Inspect Design Modal */}

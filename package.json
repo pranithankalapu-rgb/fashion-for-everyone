@@ -4,8 +4,10 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "concurrently -k -p \"[{name}]\" -n \"SERVER,CLIENT\" -c \"yellow,cyan\" \"npm run server\" \"vite\"",
-    "server": "tsx watch server/index.ts",
+    "dev": "concurrently -k -p \"[{name}]\" -n \"BACKEND,FRONTEND\" -c \"yellow,cyan\" \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "tsx watch backend/index.ts",
+    "dev:frontend": "vite",
+    "server": "npm run dev:backend",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview"
