@@ -16,16 +16,14 @@ export const OrderCheckoutModal: React.FC<OrderCheckoutModalProps> = ({
   onClose,
   onOrderSuccess,
 }) => {
-  if (!product) return null;
-
-  const [size, setSize] = useState<string>(product.sizes?.[0] || 'M');
-  const [color, setColor] = useState<string>(product.colors?.[0] || 'Default');
+  const [size, setSize] = useState<string>(product?.sizes?.[0] || 'M');
+  const [color, setColor] = useState<string>(product?.colors?.[0] || 'Default');
   const [quantity, setQuantity] = useState<number>(1);
   const [shippingAddress, setShippingAddress] = useState<string>(
     '742 Evergreen Terrace, Suite 4B, Seattle, WA 98103'
   );
   const [customerEmail, setCustomerEmail] = useState<string>(
-    userProfile.name.toLowerCase().replace(/\s+/g, '.') + '@example.com'
+    userProfile?.name ? userProfile.name.toLowerCase().replace(/\s+/g, '.') + '@example.com' : 'customer@example.com'
   );
   const [customerPhone, setCustomerPhone] = useState<string>('+1 (206) 555-0192');
   const [paymentMethod, setPaymentMethod] = useState<string>('Credit Card (Visa)');
@@ -33,6 +31,8 @@ export const OrderCheckoutModal: React.FC<OrderCheckoutModalProps> = ({
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [completedOrder, setCompletedOrder] = useState<CustomerOrder | null>(null);
+
+  if (!product) return null;
 
   const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -148,9 +148,9 @@ export const OrderCheckoutModal: React.FC<OrderCheckoutModalProps> = ({
             </div>
 
             {/* Selection Options */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-theme-secondary mb-1">Select Size</label>
+                <label className="block text-xs font-semibold text-theme-secondary mb-1">Size</label>
                 <select
                   value={size}
                   onChange={(e) => setSize(e.target.value)}
@@ -158,6 +158,19 @@ export const OrderCheckoutModal: React.FC<OrderCheckoutModalProps> = ({
                 >
                   {(product.sizes || ['XS', 'S', 'M', 'L', 'XL']).map((sz) => (
                     <option key={sz} value={sz}>{sz}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-theme-secondary mb-1">Color</label>
+                <select
+                  value={color}
+                  onChange={(e) => setColor(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-surface-theme border border-theme-main text-xs font-medium focus:ring-1 focus:ring-amber-400"
+                >
+                  {(product.colors?.length ? product.colors : ['Default', 'Midnight Navy', 'Warm Tan']).map((col) => (
+                    <option key={col} value={col}>{col}</option>
                   ))}
                 </select>
               </div>

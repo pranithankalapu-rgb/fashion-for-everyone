@@ -47,7 +47,7 @@ export const Header: React.FC<HeaderProps> = ({
   const [orders, setOrders] = useState<CustomerOrder[]>(INITIAL_ORDERS);
   const [selectedOrderModal, setSelectedOrderModal] = useState<CustomerOrder | null>(null);
 
-  const isCustomerView = userRole === 'customer' || userRole === 'individual';
+  const isCustomerView = userRole === 'customer';
   const isWishlistActive = activeTab === 'wishlist';
 
   // Fetch orders from API or fallback

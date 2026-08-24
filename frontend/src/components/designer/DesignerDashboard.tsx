@@ -180,6 +180,15 @@ export const DesignerDashboard: React.FC<DesignerDashboardProps> = ({
 
           {/* Quick Header Buttons */}
           <div className="flex flex-wrap items-center gap-3">
+            {onOpenNewCollectionModal && (
+              <button
+                onClick={onOpenNewCollectionModal}
+                className="px-4 py-3 rounded-2xl bg-gradient-to-r from-purple-500 via-pink-500 to-rose-500 hover:from-purple-400 hover:via-pink-400 hover:to-rose-400 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-pink-500/20 transition-all hover:scale-105 cursor-pointer"
+              >
+                <FolderPlus className="w-4 h-4" />
+                <span>New Collection</span>
+              </button>
+            )}
             <button
               onClick={onOpenUploadModal}
               className="px-4 py-3 rounded-2xl bg-gradient-to-r from-purple-500 to-amber-500 hover:from-purple-400 hover:to-amber-400 text-slate-950 font-bold text-xs flex items-center gap-2 shadow-lg shadow-purple-500/20 transition-all hover:scale-105 cursor-pointer"

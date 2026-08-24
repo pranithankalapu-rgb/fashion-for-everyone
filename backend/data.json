@@ -28,6 +28,27 @@
   },
   "colorCombos": [
     {
+      "id": "combo_1787547822517",
+      "title": "Emerald Forest &amp; Champagne Gold",
+      "occasion": "Formal",
+      "subType": "Custom Palette",
+      "colors": [
+        {
+          "name": "Emerald",
+          "hex": "#064E3B"
+        },
+        {
+          "name": "Champagne",
+          "hex": "#FDFBF7"
+        }
+      ],
+      "rating": 5,
+      "votesCount": 2,
+      "trendingScore": 101,
+      "exampleImageUrl": "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=600&q=80",
+      "userVote": 1
+    },
+    {
       "id": "combo_1",
       "occasion": "Work",
       "subType": "Smart casual",
@@ -147,6 +168,25 @@
   ],
   "designs": [
     {
+      "id": "dsg_1787547822507",
+      "designerId": "des_1",
+      "designerName": "Aria Vance",
+      "designerAvatar": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=200&q=80",
+      "title": "Velvet Sculpted Evening Gown",
+      "collection": "Gala 2027",
+      "imageUrl": "https:&#x2F;&#x2F;images.unsplash.com&#x2F;photo-1539571696357-5a69c17a67c6",
+      "rating": 5,
+      "votesCount": 2,
+      "occasion": "Date night",
+      "palette": [
+        "#1E293B",
+        "#D97706"
+      ],
+      "price": 450,
+      "inStock": true,
+      "createdAt": "2026-08-24"
+    },
+    {
       "id": "dsg_1",
       "designerId": "des_1",
       "designerName": "Aria Vance",
@@ -188,6 +228,30 @@
     }
   ],
   "products": [
+    {
+      "id": "prod_1787547822451",
+      "title": "Bespoke Italian Silk Suit",
+      "brand": "Aria Vance Studio",
+      "category": "Suits",
+      "price": 580,
+      "imageUrl": "https:&#x2F;&#x2F;images.unsplash.com&#x2F;photo-1515886657613-9f3515b0c78f",
+      "colors": [
+        "#1E293B"
+      ],
+      "silhouette": "Tailored",
+      "retailer": "Direct Flagship",
+      "affiliateUrl": "#",
+      "sku": "SKU-1787547822451",
+      "description": "",
+      "status": "Active",
+      "sizes": [
+        "S",
+        "M",
+        "L"
+      ],
+      "stockQuantity": 7,
+      "similarityScore": 95
+    },
     {
       "id": "prod_1787399866523",
       "title": "Italian Cashmere Overcoat",
@@ -365,7 +429,7 @@
       "distanceMiles": 1.2,
       "sizeStock": {
         "XS": 1,
-        "S": 4,
+        "S": 3,
         "M": 2,
         "L": 0
       },
@@ -403,6 +467,44 @@
     }
   ],
   "outfitLooks": [
+    {
+      "id": "look_1787547822526",
+      "creatorName": "Sophia Laurent",
+      "creatorHandle": "@sophialaurent",
+      "creatorAvatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80",
+      "videoThumbnail": "https:&#x2F;&#x2F;images.unsplash.com&#x2F;photo-1483985988355-763728e1935b",
+      "title": "Monochrome Outerwear Styling 2026",
+      "likes": 0,
+      "reshares": 0,
+      "occasion": "Casual",
+      "taggedProducts": [
+        {
+          "id": "prod_1787547822451",
+          "title": "Bespoke Italian Silk Suit",
+          "brand": "Aria Vance Studio",
+          "category": "Suits",
+          "price": 580,
+          "imageUrl": "https:&#x2F;&#x2F;images.unsplash.com&#x2F;photo-1515886657613-9f3515b0c78f",
+          "colors": [
+            "#1E293B"
+          ],
+          "silhouette": "Tailored",
+          "retailer": "Direct Flagship",
+          "affiliateUrl": "#",
+          "sku": "SKU-1787547822451",
+          "description": "",
+          "status": "Active",
+          "sizes": [
+            "S",
+            "M",
+            "L"
+          ],
+          "stockQuantity": 7,
+          "similarityScore": 95
+        }
+      ],
+      "userLiked": false
+    },
     {
       "id": "look_1",
       "creatorName": "Elena Rostova",
@@ -477,6 +579,33 @@
     }
   ],
   "orders": [
+    {
+      "id": "ord_1787547822468",
+      "orderNumber": "ORD-8030",
+      "date": "Aug 24, 2026",
+      "status": "Shipped",
+      "customerName": "Sophia Laurent",
+      "customerEmail": "sophia.laurent@example.com",
+      "customerPhone": "+1 (206) 555-0192",
+      "paymentMethod": "Credit Card (Visa)",
+      "items": [
+        {
+          "productId": "prod_1787547822451",
+          "title": "Bespoke Italian Silk Suit",
+          "brand": "Fashion Brand",
+          "imageUrl": "",
+          "price": 580,
+          "quantity": 1,
+          "size": "M",
+          "color": "Default",
+          "sku": "SKU-prod_1787547822451"
+        }
+      ],
+      "totalAmount": 580,
+      "currency": "$",
+      "shippingAddress": "42 Fashion Blvd, New York, NY 10001",
+      "trackingNumber": "TRK-WA-992019"
+    },
     {
       "id": "ord_1787399866527",
       "orderNumber": "ORD-1327",
@@ -618,10 +747,10 @@
       "name": "Sophia Laurent",
       "email": "sophia.laurent@example.com",
       "phone": "+1 (206) 555-0192",
-      "ordersCount": 10,
-      "totalSpent": 3430,
-      "recentOrderDate": "Aug 22, 2026",
-      "recentOrderId": "ORD-1327",
+      "ordersCount": 11,
+      "totalSpent": 4010,
+      "recentOrderDate": "Aug 24, 2026",
+      "recentOrderId": "ORD-8030",
       "status": "VIP",
       "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80"
     },
@@ -651,6 +780,18 @@
     }
   ],
   "promotions": [
+    {
+      "id": "promo_1787547822490",
+      "code": "AUTUMN2026",
+      "title": "Autumn 25% Off Tailoring",
+      "discountType": "Percentage",
+      "discountValue": 25,
+      "startDate": "2026-08-24",
+      "endDate": "2026-12-31",
+      "usageCount": 0,
+      "maxUses": 500,
+      "status": "Inactive"
+    },
     {
       "id": "promo_1787399866550",
       "code": "LUXURY2026",
@@ -703,7 +844,7 @@
     }
   ],
   "storeSettings": {
-    "storeName": "Nordstrom Flagship Studio",
+    "storeName": "Nordstrom Flagship Seattle",
     "logoUrl": "https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=200&q=80",
     "taxId": "US-WA-948201948",
     "currency": "$",
@@ -719,5 +860,17 @@
     "smsAlerts": true,
     "weeklyReport": true
   },
-  "reservations": []
+  "reservations": [
+    {
+      "id": "RES-353327",
+      "storeId": "store_1",
+      "productId": "prod_101",
+      "productTitle": "Double-Breasted Italian Wool Trench Coat",
+      "size": "S",
+      "customerName": "Sophia Laurent",
+      "customerPhone": "(206) 555-0192",
+      "status": "CONFIRMED",
+      "createdAt": "2026-08-24T05:03:42.465Z"
+    }
+  ]
 }

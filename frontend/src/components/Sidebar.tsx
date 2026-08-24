@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 
-export type UserRole = 'customer' | 'designer' | 'retailer' | 'individual';
+export type UserRole = 'customer' | 'designer' | 'retailer';
 
 interface SidebarProps {
   activeTab: string;

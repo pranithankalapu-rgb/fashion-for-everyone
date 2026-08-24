@@ -1,7 +1,7 @@
 import type { Response } from 'express';
 import type { AuthenticatedRequest } from '../middleware/auth';
 import { getDb, saveDb } from '../db';
-import { sanitizeString, sanitizeObject } from '../security';
+import { sanitizeString } from '../security';
 import type { CustomerOrder, OrderItem, OrderStatus } from '../types/fashion';
 
 export const orderController = {
