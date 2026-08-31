@@ -31,8 +31,14 @@ app.use((req, res, next) => {
   next();
 });
 
+import path from 'path';
+
+// Serve uploaded static files
+app.use('/uploads', express.static(path.resolve(process.cwd(), 'backend', 'uploads')));
+
 // Register API Router under /api
 app.use('/api', apiRouter);
+
 
 // Start Server
 app.listen(PORT, () => {

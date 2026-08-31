@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { PrismaClient } from '@prisma/client';
 import type {
   UserProfile,
   ColorCombo,
@@ -13,6 +14,10 @@ import type {
   Promotion,
   StoreSettings,
 } from './types/fashion';
+
+export const prisma = new PrismaClient();
+
+
 
 export interface DatabaseSchema {
   userProfile: UserProfile;

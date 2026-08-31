@@ -67,7 +67,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
       iconColor: 'text-purple-500 dark:text-purple-400',
       activeGradient: 'bg-gradient-to-r from-purple-500/20 to-amber-500/20 text-theme-heading border-purple-500/40 shadow-sm',
     },
+    {
+      id: 'admin',
+      label: 'Admin Portal',
+      description: 'PostgreSQL inventory & uploads',
+      icon: Settings,
+      iconColor: 'text-emerald-500 dark:text-emerald-400',
+      activeGradient: 'bg-gradient-to-r from-emerald-500/20 to-teal-500/20 text-theme-heading border-emerald-500/40 shadow-sm',
+    },
   ];
+
 
   const retailerNavItems = [
     {
@@ -154,28 +163,28 @@ export const Sidebar: React.FC<SidebarProps> = ({
     icon: React.ElementType;
     iconColor: string;
   }[] = [
-    {
-      id: 'customer',
-      label: 'Customer View',
-      description: 'Personalized styling & shopping',
-      icon: User,
-      iconColor: 'text-amber-500 dark:text-amber-400',
-    },
-    {
-      id: 'designer',
-      label: 'Designer View',
-      description: 'Create & showcase designs',
-      icon: Award,
-      iconColor: 'text-purple-500 dark:text-purple-400',
-    },
-    {
-      id: 'retailer',
-      label: 'Retailer View',
-      description: 'Manage store & business ops',
-      icon: Store,
-      iconColor: 'text-emerald-500 dark:text-emerald-400',
-    },
-  ];
+      {
+        id: 'customer',
+        label: 'Customer View',
+        description: 'Personalized styling & shopping',
+        icon: User,
+        iconColor: 'text-amber-500 dark:text-amber-400',
+      },
+      {
+        id: 'designer',
+        label: 'Designer View',
+        description: 'Create & showcase designs',
+        icon: Award,
+        iconColor: 'text-purple-500 dark:text-purple-400',
+      },
+      {
+        id: 'retailer',
+        label: 'Retailer View',
+        description: 'Manage store & business ops',
+        icon: Store,
+        iconColor: 'text-emerald-500 dark:text-emerald-400',
+      },
+    ];
 
   const isRetailerRole = userRole === 'retailer';
   const isDesignerRole = userRole === 'designer';
@@ -231,9 +240,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Sidebar Content Panel */}
       <div
-        className={`${
-          isMobileOpen ? 'block' : 'hidden'
-        } md:block glass-panel rounded-3xl p-4 shadow-xl border border-theme-main space-y-4 transition-all duration-200`}
+        className={`${isMobileOpen ? 'block' : 'hidden'
+          } md:block glass-panel rounded-3xl p-4 shadow-xl border border-theme-main space-y-4 transition-all duration-200`}
       >
         {/* Section Header */}
         <div className="px-2 pt-1 pb-2 flex items-center justify-between border-b border-theme-subtle">
@@ -258,17 +266,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   setActiveTab(item.id);
                   setIsMobileOpen(false);
                 }}
-                className={`w-full flex items-center justify-between p-2.5 rounded-2xl text-left border transition-all duration-200 group ${
-                  isActive
+                className={`w-full flex items-center justify-between p-2.5 rounded-2xl text-left border transition-all duration-200 group ${isActive
                     ? item.activeGradient
                     : 'border-transparent text-theme-body hover:bg-surface-subtle-theme hover:text-theme-heading'
-                }`}
+                  }`}
               >
                 <div className="flex items-center gap-3 min-w-0">
                   <div
-                    className={`p-2 rounded-xl bg-surface-theme border border-theme-subtle flex-shrink-0 group-hover:scale-105 transition-transform ${
-                      isActive ? 'ring-1 ring-amber-400/40' : ''
-                    }`}
+                    className={`p-2 rounded-xl bg-surface-theme border border-theme-subtle flex-shrink-0 group-hover:scale-105 transition-transform ${isActive ? 'ring-1 ring-amber-400/40' : ''
+                      }`}
                   >
                     <IconComponent className={`w-4 h-4 ${item.iconColor}`} />
                   </div>
@@ -282,11 +288,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   </div>
                 </div>
                 <ChevronRight
-                  className={`w-4 h-4 flex-shrink-0 transition-transform ${
-                    isActive
+                  className={`w-4 h-4 flex-shrink-0 transition-transform ${isActive
                       ? 'text-amber-400 translate-x-0.5'
                       : 'text-theme-muted group-hover:translate-x-1'
-                  }`}
+                    }`}
                 />
               </button>
             );
@@ -311,17 +316,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       setActiveTab(item.id);
                       setIsMobileOpen(false);
                     }}
-                    className={`w-full flex items-center justify-between p-2.5 rounded-2xl text-left border transition-all duration-200 group ${
-                      isActive
+                    className={`w-full flex items-center justify-between p-2.5 rounded-2xl text-left border transition-all duration-200 group ${isActive
                         ? item.activeGradient
                         : 'border-transparent text-theme-body hover:bg-surface-subtle-theme hover:text-theme-heading'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       <div
-                        className={`p-2 rounded-xl bg-surface-theme border border-theme-subtle flex-shrink-0 group-hover:scale-105 transition-transform ${
-                          isActive ? 'ring-1 ring-orange-400/40' : ''
-                        }`}
+                        className={`p-2 rounded-xl bg-surface-theme border border-theme-subtle flex-shrink-0 group-hover:scale-105 transition-transform ${isActive ? 'ring-1 ring-orange-400/40' : ''
+                          }`}
                       >
                         <IconComponent className={`w-4 h-4 ${item.iconColor}`} />
                       </div>
@@ -335,11 +338,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       </div>
                     </div>
                     <ChevronRight
-                      className={`w-4 h-4 flex-shrink-0 transition-transform ${
-                        isActive
+                      className={`w-4 h-4 flex-shrink-0 transition-transform ${isActive
                           ? 'text-orange-400 translate-x-0.5'
                           : 'text-theme-muted group-hover:translate-x-1'
-                      }`}
+                        }`}
                     />
                   </button>
                 );
@@ -360,11 +362,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <div className="grid grid-cols-3 gap-1.5 p-1 bg-surface-theme rounded-2xl border border-theme-main">
             <button
               onClick={() => setTheme('light')}
-              className={`flex items-center justify-center gap-1 py-2 px-1 rounded-xl text-xs font-bold transition-all ${
-                theme === 'light'
+              className={`flex items-center justify-center gap-1 py-2 px-1 rounded-xl text-xs font-bold transition-all ${theme === 'light'
                   ? 'bg-amber-400/20 text-slate-900 dark:text-amber-300 border border-amber-400/40 shadow-sm'
                   : 'text-theme-muted hover:text-theme-heading hover:bg-surface-subtle-theme'
-              }`}
+                }`}
             >
               <Sun className="w-3.5 h-3.5 text-amber-500" />
               <span className="text-[11px]">Light</span>
@@ -372,11 +373,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
             <button
               onClick={() => setTheme('dark')}
-              className={`flex items-center justify-center gap-1 py-2 px-1 rounded-xl text-xs font-bold transition-all ${
-                theme === 'dark'
+              className={`flex items-center justify-center gap-1 py-2 px-1 rounded-xl text-xs font-bold transition-all ${theme === 'dark'
                   ? 'bg-amber-400/20 text-slate-900 dark:text-amber-300 border border-amber-400/40 shadow-sm'
                   : 'text-theme-muted hover:text-theme-heading hover:bg-surface-subtle-theme'
-              }`}
+                }`}
             >
               <Moon className="w-3.5 h-3.5 text-indigo-400" />
               <span className="text-[11px]">Dark</span>
@@ -384,11 +384,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
             <button
               onClick={() => setTheme('system')}
-              className={`flex items-center justify-center gap-1 py-2 px-1 rounded-xl text-xs font-bold transition-all ${
-                theme === 'system'
+              className={`flex items-center justify-center gap-1 py-2 px-1 rounded-xl text-xs font-bold transition-all ${theme === 'system'
                   ? 'bg-amber-400/20 text-slate-900 dark:text-amber-300 border border-amber-400/40 shadow-sm'
                   : 'text-theme-muted hover:text-theme-heading hover:bg-surface-subtle-theme'
-              }`}
+                }`}
             >
               <Laptop className="w-3.5 h-3.5 text-emerald-400" />
               <span className="text-[11px]">System</span>
@@ -409,17 +408,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <button
                   key={mode.id}
                   onClick={() => setUserRole(mode.id)}
-                  className={`w-full flex items-center justify-between p-2.5 rounded-2xl text-left border transition-all duration-200 group ${
-                    isSelected
+                  className={`w-full flex items-center justify-between p-2.5 rounded-2xl text-left border transition-all duration-200 group ${isSelected
                       ? 'bg-surface-subtle-theme border-amber-400/50 shadow-md ring-1 ring-amber-400/30'
                       : 'border-transparent text-theme-body hover:bg-surface-subtle-theme hover:text-theme-heading'
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <div
-                      className={`p-2 rounded-xl bg-surface-theme border border-theme-subtle flex-shrink-0 ${
-                        isSelected ? 'bg-amber-400/10' : ''
-                      }`}
+                      className={`p-2 rounded-xl bg-surface-theme border border-theme-subtle flex-shrink-0 ${isSelected ? 'bg-amber-400/10' : ''
+                        }`}
                     >
                       <IconComponent className={`w-4 h-4 ${mode.iconColor}`} />
                     </div>
@@ -433,11 +430,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     </div>
                   </div>
                   <div
-                    className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center flex-shrink-0 transition-colors ${
-                      isSelected
+                    className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center flex-shrink-0 transition-colors ${isSelected
                         ? 'border-amber-400 bg-amber-400'
                         : 'border-theme-muted'
-                    }`}
+                      }`}
                   >
                     {isSelected && (
                       <div className="w-1.5 h-1.5 rounded-full bg-slate-950" />

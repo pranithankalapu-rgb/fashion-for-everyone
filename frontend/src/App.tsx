@@ -9,19 +9,41 @@ import { CommerceStockView } from './components/CommerceStockView';
 import { SocialFeedView } from './components/SocialFeedView';
 import { RetailerView } from './components/RetailerView';
 import { OrderCheckoutModal } from './components/OrderCheckoutModal';
+import { AdminGuard } from './components/admin/AdminGuard';
+import { AdminDashboard } from './components/admin/AdminDashboard';
+import type { AdminTab } from './components/admin/AdminLayout';
 import type { UserProfile, RetailProduct } from './types/fashion';
 import { INITIAL_USER_PROFILE } from './data/fashionData';
 import { api, setCurrentRole } from './services/api';
 import { X, MapPin, ShoppingBag, Heart } from 'lucide-react';
 
 export function App() {
-  const [activeTab, setActiveTab] = useState<string>('ai-engine');
+  const [activeTab, setActiveTab] = useState<string>(() => {
+    return window.location.pathname === '/admin' ? 'admin' : 'ai-engine';
+  });
+  const [adminSubTab, setAdminSubTab] = useState<AdminTab>('dashboard');
+
   const [userProfile, setUserProfile] = useState<UserProfile>(INITIAL_USER_PROFILE);
   const [userRole, setUserRole] = useState<UserRole>('customer');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isOnboardingOpen, setIsOnboardingOpen] = useState<boolean>(false);
   const [selectedProduct, setSelectedProduct] = useState<RetailProduct | null>(null);
   const [checkoutProduct, setCheckoutProduct] = useState<RetailProduct | null>(null);
+
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(
+    () => !!localStorage.getItem('admin_token')
+  );
+
+  useEffect(() => {
+    const handlePopState = () => {
+      if (window.location.pathname === '/admin') {
+        setActiveTab('admin');
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
 
   useEffect(() => {
     async function loadInitialProfile() {
@@ -155,8 +177,26 @@ export function App() {
                     />
                   </div>
                 )}
+
+                {/* Admin Portal Root */}
+                {(activeTab === 'admin' || activeTab.startsWith('admin-')) && (
+                  <AdminGuard
+                    activeTab={adminSubTab}
+                    setActiveTab={(tab) => {
+                      setAdminSubTab(tab);
+                      setActiveTab(`admin-${tab}`);
+                    }}
+                  >
+                    {adminSubTab === 'dashboard' && (
+                      <AdminDashboard onLogout={() => {}} />
+                    )}
+                  </AdminGuard>
+                )}
               </>
             )}
+
+
+
 
           </div>
 

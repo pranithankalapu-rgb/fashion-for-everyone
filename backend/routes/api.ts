@@ -12,8 +12,12 @@ import { sanitizeString } from '../security';
 
 const router = Router();
 
+import { upload } from '../middleware/upload';
+
 // Apply role authentication middleware across all API routes
 router.use(authenticateRole);
+
+import adminAuthRouter from './admin/authRoutes';
 
 // Health check
 router.get('/health', (req, res) => {
@@ -23,6 +27,10 @@ router.get('/health', (req, res) => {
     service: 'Fashion for Everyone Backend API Engine',
   });
 });
+
+// Admin Auth Routes under /api/admin/auth
+router.use('/admin/auth', adminAuthRouter);
+
 
 // Profile Routes
 router.get('/profile', profileController.getProfile);
@@ -35,10 +43,11 @@ router.post('/ai/photo-analysis', aiController.analyzePhoto);
 // Product Management Routes
 router.get('/products', productController.getAll);
 router.get('/products/:id', productController.getById);
-router.post('/products', requireRole(['retailer', 'designer']), productController.create);
-router.put('/products/:id', requireRole(['retailer', 'designer']), productController.update);
-router.delete('/products/:id', requireRole(['retailer', 'designer']), productController.delete);
-router.patch('/products/:id/stock', requireRole(['retailer']), productController.updateStock);
+router.post('/products', upload.single('image'), productController.create);
+router.put('/products/:id', upload.single('image'), productController.update);
+router.delete('/products/:id', productController.delete);
+router.patch('/products/:id/stock', productController.updateStock);
+
 
 // Store Stock Locations & Pickup Reservations
 router.get('/stores', (req, res) => {

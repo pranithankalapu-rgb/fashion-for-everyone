@@ -1,0 +1,210 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model UserProfile {
+  id                  String   @id @default(uuid())
+  name                String
+  avatar              String
+  photoUrl            String?
+  skinTone            String
+  undertone           String
+  hairColor           String
+  bodyShape           String
+  measurements        Json
+  selectedOccasions   String[]
+  styleVibes          String[]
+  completedOnboarding Boolean  @default(true)
+}
+
+model ColorCombo {
+  id              String  @id @default(uuid())
+  occasion        String
+  subType         String
+  title           String
+  colors          Json
+  rating          Float   @default(5.0)
+  votesCount      Int     @default(0)
+  userVote        Int?
+  trendingScore   Int     @default(0)
+  exampleImageUrl String
+}
+
+model Designer {
+  id         String   @id @default(uuid())
+  name       String
+  handle     String
+  avatar     String
+  bio        String
+  followers  Int      @default(0)
+  avgRating  Float    @default(5.0)
+  totalVotes Int      @default(0)
+  badges     String[]
+  verified   Boolean  @default(false)
+  designs    Design[]
+}
+
+model Design {
+  id             String    @id @default(uuid())
+  designerId     String
+  designerName   String
+  designerAvatar String
+  title          String
+  collection     String
+  imageUrl       String
+  rating         Float     @default(5.0)
+  votesCount     Int       @default(0)
+  occasion       String
+  palette        String[]
+  price          Float
+  inStock        Boolean   @default(true)
+  createdAt      String
+  designer       Designer? @relation(fields: [designerId], references: [id], onDelete: Cascade)
+}
+
+model RetailProduct {
+  id              String       @id @default(uuid())
+  title           String
+  brand           String
+  category        String
+  price           Float
+  originalPrice   Float?
+  imageUrl        String
+  colors          String[]
+  silhouette      String
+  retailer        String
+  affiliateUrl    String
+  similarityScore Float?
+  sku             String?
+  status          String?
+  description     String?
+  sizes           String[]
+  occasion        String?
+  discountPercent Float?
+  stockQuantity   Int?
+  storeStocks     StoreStock[]
+  orderItems      OrderItem[]
+}
+
+model StoreStock {
+  id            String         @id @default(uuid())
+  productId     String
+  storeName     String
+  retailer      String
+  address       String
+  distanceMiles Float
+  sizeStock     Json
+  canReserve    Boolean        @default(true)
+  product       RetailProduct? @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model OutfitLook {
+  id             String   @id @default(uuid())
+  creatorName    String
+  creatorHandle  String
+  creatorAvatar  String
+  videoThumbnail String
+  title          String
+  likes          Int      @default(0)
+  reshares       Int      @default(0)
+  occasion       String
+  taggedProducts Json
+  userLiked      Boolean?
+}
+
+model CustomerOrder {
+  id              String      @id @default(uuid())
+  orderNumber     String      @unique
+  date            String
+  status          String
+  totalAmount     Float
+  currency        String      @default("$")
+  shippingAddress String
+  deliveryDate    String?
+  trackingNumber  String?
+  customerName    String?
+  customerEmail   String?
+  customerPhone   String?
+  paymentMethod   String?
+  items           OrderItem[]
+}
+
+model OrderItem {
+  id        String         @id @default(uuid())
+  orderId   String
+  productId String
+  title     String
+  brand     String
+  imageUrl  String
+  price     Float
+  quantity  Int            @default(1)
+  size      String
+  color     String?
+  sku       String?
+  order     CustomerOrder  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product   RetailProduct? @relation(fields: [productId], references: [id], onDelete: SetNull)
+}
+
+model RetailerCustomer {
+  id             String  @id @default(uuid())
+  name           String
+  email          String
+  phone          String
+  ordersCount    Int     @default(0)
+  totalSpent     Float   @default(0)
+  recentOrderDate String
+  recentOrderId  String
+  status         String
+  avatar         String?
+}
+
+model Promotion {
+  id            String  @id @default(uuid())
+  code          String  @unique
+  title         String
+  discountType  String
+  discountValue Float
+  category      String?
+  productId     String?
+  startDate     String
+  endDate       String
+  usageCount    Int     @default(0)
+  maxUses       Int     @default(100)
+  status        String  @default("Active")
+}
+
+model StoreSettings {
+  id                 String  @id @default("default")
+  storeName          String
+  logoUrl            String
+  taxId              String
+  currency           String  @default("$")
+  managerName        String
+  managerEmail       String
+  managerPhone       String
+  address            String
+  supportEmail       String
+  supportPhone       String
+  autoFulfill        Boolean @default(false)
+  lowStockThreshold  Int     @default(5)
+  emailNotifications Boolean @default(true)
+  smsAlerts          Boolean @default(true)
+  weeklyReport       Boolean @default(true)
+}
+
+model Reservation {
+  id            String   @id @default(uuid())
+  storeId       String
+  productId     String
+  productTitle  String
+  size          String
+  customerName  String
+  customerPhone String
+  status        String   @default("CONFIRMED")
+  createdAt     DateTime @default(now())
+}
