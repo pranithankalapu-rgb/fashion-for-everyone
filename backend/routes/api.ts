@@ -18,6 +18,7 @@ import { upload } from '../middleware/upload';
 router.use(authenticateRole);
 
 import adminAuthRouter from './admin/authRoutes';
+import adminOrderRouter from './admin/orderRoutes';
 
 // Health check
 router.get('/health', async (req, res) => {
@@ -42,6 +43,9 @@ router.get('/health', async (req, res) => {
 
 // Admin Auth Routes under /api/admin/auth
 router.use('/admin/auth', adminAuthRouter);
+
+// Admin Orders Management Routes under /api/admin/orders
+router.use('/admin/orders', adminOrderRouter);
 
 
 // Profile Routes

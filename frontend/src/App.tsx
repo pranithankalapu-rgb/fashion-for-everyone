@@ -10,6 +10,7 @@ import { SocialFeedView } from './components/SocialFeedView';
 import { RetailerView } from './components/RetailerView';
 import { OrderCheckoutModal } from './components/OrderCheckoutModal';
 import { AdminGuard } from './components/admin/AdminGuard';
+import { AdminOrders } from './components/admin/AdminOrders';
 import { AdminDashboard } from './components/admin/AdminDashboard';
 import type { AdminTab } from './components/admin/AdminLayout';
 import type { UserProfile, RetailProduct } from './types/fashion';
@@ -19,9 +20,16 @@ import { X, MapPin, ShoppingBag, Heart } from 'lucide-react';
 
 export function App() {
   const [activeTab, setActiveTab] = useState<string>(() => {
-    return window.location.pathname === '/admin' ? 'admin' : 'ai-engine';
+    const path = window.location.pathname;
+    if (path === '/admin/orders' || path === '/admin/orders/') return 'admin-orders';
+    if (path.startsWith('/admin')) return 'admin';
+    return 'ai-engine';
   });
-  const [adminSubTab, setAdminSubTab] = useState<AdminTab>('dashboard');
+  const [adminSubTab, setAdminSubTab] = useState<AdminTab>(() => {
+    const path = window.location.pathname;
+    if (path === '/admin/orders' || path === '/admin/orders/') return 'orders';
+    return 'dashboard';
+  });
 
   const [userProfile, setUserProfile] = useState<UserProfile>(INITIAL_USER_PROFILE);
   const [userRole, setUserRole] = useState<UserRole>('customer');
@@ -32,8 +40,13 @@ export function App() {
 
   useEffect(() => {
     const handlePopState = () => {
-      if (window.location.pathname === '/admin') {
+      const path = window.location.pathname;
+      if (path === '/admin/orders' || path === '/admin/orders/') {
+        setActiveTab('admin-orders');
+        setAdminSubTab('orders');
+      } else if (path.startsWith('/admin')) {
         setActiveTab('admin');
+        setAdminSubTab('dashboard');
       }
     };
     window.addEventListener('popstate', handlePopState);
@@ -181,10 +194,49 @@ export function App() {
                     setActiveTab={(tab) => {
                       setAdminSubTab(tab);
                       setActiveTab(`admin-${tab}`);
+                      if (tab === 'orders') {
+                        window.history.pushState(null, '', '/admin/orders');
+                      } else {
+                        window.history.pushState(null, '', '/admin');
+                      }
                     }}
                   >
-                    {adminSubTab === 'dashboard' && (
+                    {adminSubTab === 'orders' && <AdminOrders />}
+                    {(adminSubTab === 'dashboard' || adminSubTab === 'products') && (
                       <AdminDashboard onLogout={() => {}} />
+                    )}
+                    {adminSubTab !== 'orders' && adminSubTab !== 'dashboard' && adminSubTab !== 'products' && (
+                      <div className="glass-panel rounded-3xl p-8 text-center space-y-3 border border-theme-main">
+                        <div className="inline-flex p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-400">
+                          <ShoppingBag className="w-6 h-6" />
+                        </div>
+                        <h3 className="text-xl font-serif font-bold text-theme-heading capitalize">{adminSubTab} Management</h3>
+                        <p className="text-xs text-theme-muted">
+                          Select{' '}
+                          <button
+                            onClick={() => {
+                              setAdminSubTab('orders');
+                              setActiveTab('admin-orders');
+                              window.history.pushState(null, '', '/admin/orders');
+                            }}
+                            className="text-amber-400 underline font-bold cursor-pointer"
+                          >
+                            Orders Management
+                          </button>{' '}
+                          or{' '}
+                          <button
+                            onClick={() => {
+                              setAdminSubTab('dashboard');
+                              setActiveTab('admin-dashboard');
+                              window.history.pushState(null, '', '/admin');
+                            }}
+                            className="text-amber-400 underline font-bold cursor-pointer"
+                          >
+                            Products Inventory
+                          </button>{' '}
+                          to manage live PostgreSQL data.
+                        </p>
+                      </div>
                     )}
                   </AdminGuard>
                 )}

@@ -182,6 +182,53 @@ async function testAll() {
     return res.status === 200 && inDb === null;
   });
 
+  // 5b. Admin Orders Management
+  await assertTest('Admin Orders: Reject unauthorized access', async () => {
+    const res = await fetch(`${BASE_URL}/admin/orders`);
+    return res.status === 401;
+  });
+
+  await assertTest('Admin Orders: GET all orders & stats with Admin Token', async () => {
+    const res = await fetch(`${BASE_URL}/admin/orders`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
+    const data = await res.json();
+    return res.status === 200 && Array.isArray(data.orders) && typeof data.stats?.totalOrders === 'number';
+  });
+
+  await assertTest('Admin Orders: GET single order by ID with Admin Token', async () => {
+    const res = await fetch(`${BASE_URL}/admin/orders/ord_1028`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
+    const data = await res.json();
+    return res.status === 200 && (data.orderNumber === 'ORD-1028' || data.id === 'ord_1028');
+  });
+
+  await assertTest('Admin Orders: PATCH order status with tracking number', async () => {
+    const res = await fetch(`${BASE_URL}/admin/orders/ord_1028/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+      body: JSON.stringify({ status: 'Processing', trackingNumber: 'TRK-ADMIN-99' }),
+    });
+    const data = await res.json();
+    // restore
+    await fetch(`${BASE_URL}/admin/orders/ord_1028/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+      body: JSON.stringify({ status: 'Pending' }),
+    });
+    return res.status === 200 && data.order?.status === 'Processing' && data.order?.trackingNumber === 'TRK-ADMIN-99';
+  });
+
+  await assertTest('Admin Orders: Reject invalid order status', async () => {
+    const res = await fetch(`${BASE_URL}/admin/orders/ord_1028/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+      body: JSON.stringify({ status: 'BadStatus' }),
+    });
+    return res.status === 400;
+  });
+
   // 6. Retailer CRM Customers
   let createdCustId = '';
   await assertTest('Get Retailer Customers from PostgreSQL', async () => {

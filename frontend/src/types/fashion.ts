@@ -109,6 +109,8 @@ export type OrderStatus = 'Pending' | 'Processing' | 'Shipped' | 'Delivered' | '
 export type ProductStatus = 'Active' | 'Draft' | 'Low Stock' | 'Out of Stock' | 'Archived';
 
 export interface OrderItem {
+  id?: string;
+  orderId?: string;
   productId: string;
   title: string;
   brand: string;
@@ -118,6 +120,19 @@ export interface OrderItem {
   size: string;
   color?: string;
   sku?: string;
+  product?: RetailProduct;
+}
+
+export interface AdminOrderStats {
+  totalOrders: number;
+  totalRevenue: number;
+  pendingCount: number;
+  processingCount: number;
+  shippedCount: number;
+  deliveredCount: number;
+  cancelledCount: number;
+  returnedCount: number;
+  avgOrderValue: number;
 }
 
 export interface CustomerOrder {

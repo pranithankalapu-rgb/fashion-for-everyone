@@ -11,6 +11,7 @@ import type {
   Promotion,
   StoreSettings,
   OrderStatus,
+  AdminOrderStats,
 } from '../types/fashion';
 
 const BASE_URL = '/api';
@@ -101,6 +102,47 @@ export const api = {
     return fetchJson<{ message: string }>(`/orders/${id}`, {
       method: 'DELETE',
     });
+  },
+
+  // --- ADMIN ORDERS MANAGEMENT API ---
+  async getAdminOrders(params?: {
+    status?: string;
+    search?: string;
+    sortBy?: 'date' | 'totalAmount' | 'orderNumber' | 'status';
+    sortOrder?: 'asc' | 'desc';
+  }): Promise<{ orders: CustomerOrder[]; stats: AdminOrderStats; total: number }> {
+    const query = new URLSearchParams();
+    if (params?.status && params.status !== 'All') query.append('status', params.status);
+    if (params?.search) query.append('search', params.search);
+    if (params?.sortBy) query.append('sortBy', params.sortBy);
+    if (params?.sortOrder) query.append('sortOrder', params.sortOrder);
+    const q = query.toString() ? `?${query.toString()}` : '';
+    return fetchJson<{ orders: CustomerOrder[]; stats: AdminOrderStats; total: number }>(`/admin/orders${q}`);
+  },
+
+  async getAdminOrderById(id: string): Promise<CustomerOrder> {
+    return fetchJson<CustomerOrder>(`/admin/orders/${id}`);
+  },
+
+  async updateAdminOrderStatus(
+    id: string,
+    status: OrderStatus,
+    trackingNumber?: string
+  ): Promise<{ success: boolean; message: string; order: CustomerOrder }> {
+    return fetchJson<{ success: boolean; message: string; order: CustomerOrder }>(`/admin/orders/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status, trackingNumber }),
+    });
+  },
+
+  async deleteAdminOrder(id: string): Promise<{ success: boolean; message: string; deletedOrder: CustomerOrder }> {
+    return fetchJson<{ success: boolean; message: string; deletedOrder: CustomerOrder }>(`/admin/orders/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  async getAdminOrderStats(): Promise<AdminOrderStats> {
+    return fetchJson<AdminOrderStats>('/admin/orders/stats');
   },
 
   // --- RETAIL PRODUCTS API ---
