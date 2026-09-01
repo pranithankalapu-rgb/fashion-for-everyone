@@ -1,3 +1,11 @@
+if (typeof process.loadEnvFile === 'function') {
+  try {
+    process.loadEnvFile();
+  } catch (e) {
+    // .env may not exist or already loaded
+  }
+}
+
 import express from 'express';
 import cors from 'cors';
 import apiRouter from './routes/api';

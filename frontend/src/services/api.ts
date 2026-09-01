@@ -310,6 +310,10 @@ export const api = {
     return fetchJson<OutfitLook[]>('/social-feed');
   },
 
+  async getLookById(id: string): Promise<OutfitLook> {
+    return fetchJson<OutfitLook>(`/social-feed/${id}`);
+  },
+
   async createOutfitLook(data: {
     title: string;
     occasion?: string;
@@ -325,6 +329,12 @@ export const api = {
   async toggleLikeOutfitLook(id: string): Promise<OutfitLook> {
     return fetchJson<OutfitLook>(`/social-feed/${id}/like`, {
       method: 'POST',
+    });
+  },
+
+  async deleteOutfitLook(id: string): Promise<{ success: boolean; id: string }> {
+    return fetchJson<{ success: boolean; id: string }>(`/social-feed/${id}`, {
+      method: 'DELETE',
     });
   },
 

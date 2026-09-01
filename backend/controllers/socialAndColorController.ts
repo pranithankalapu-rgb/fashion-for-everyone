@@ -3,6 +3,8 @@ import type { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
 import { sanitizeString, sanitizeObject } from '../security';
 
+import { socialFeedService } from '../services/socialFeedService';
+
 export const socialAndColorController = {
   // --- COLOR COMBOS ---
   async getColorCombos(req: AuthenticatedRequest, res: Response) {
@@ -97,16 +99,30 @@ export const socialAndColorController = {
     }
   },
 
-  // --- SOCIAL FEED ---
+  // --- SOCIAL OUTFIT LOOKBOOK FEED ---
   async getSocialFeed(req: AuthenticatedRequest, res: Response) {
     try {
-      const looks = await prisma.outfitLook.findMany({
-        orderBy: { likes: 'desc' },
-      });
+      const occasion = sanitizeString(req.query.occasion as string);
+      const search = sanitizeString(req.query.search as string);
+      const looks = await socialFeedService.getSocialFeed(occasion, search);
       res.json(looks);
     } catch (err) {
-      console.error('Error fetching social feed:', err);
+      console.error('Error fetching social feed via Prisma:', err);
       res.status(500).json({ error: 'Failed to fetch social feed' });
+    }
+  },
+
+  async getLookById(req: AuthenticatedRequest, res: Response) {
+    try {
+      const id = sanitizeString(req.params.id);
+      const look = await socialFeedService.getLookById(id);
+      if (!look) {
+        return res.status(404).json({ error: 'Outfit look not found' });
+      }
+      res.json(look);
+    } catch (err) {
+      console.error('Error fetching outfit look by id:', err);
+      res.status(500).json({ error: 'Failed to fetch outfit look' });
     }
   },
 
@@ -116,48 +132,27 @@ export const socialAndColorController = {
       const occasion = sanitizeString(req.body.occasion);
       const videoThumbnail = sanitizeString(req.body.videoThumbnail);
       const rawTaggedProductIds = req.body.taggedProductIds;
+      const userId = (req as any).userId || (req.headers['x-user-id'] as string) || 'user_01';
 
       if (!title || !videoThumbnail) {
         return res.status(400).json({ error: 'Title and video thumbnail are required' });
       }
 
-      // Fetch user profile for creator info
-      const userId = (req as any).userId || 'user_01';
-      const userProfile = await prisma.userProfile.findFirst({ where: { id: userId } });
+      const taggedProductIds = Array.isArray(rawTaggedProductIds)
+        ? rawTaggedProductIds.map((id: string) => sanitizeString(id))
+        : [];
 
-      // Fetch tagged products
-      const taggedProductIds = Array.isArray(rawTaggedProductIds) ? rawTaggedProductIds.map((id: string) => sanitizeString(id)) : [];
-      let taggedProducts: any[] = [];
-      if (taggedProductIds.length > 0) {
-        taggedProducts = await prisma.retailProduct.findMany({
-          where: { id: { in: taggedProductIds } },
-        });
-      }
-      if (taggedProducts.length === 0) {
-        const firstProduct = await prisma.retailProduct.findFirst();
-        if (firstProduct) taggedProducts = [firstProduct];
-      }
-
-      const creatorName = userProfile?.name || 'Fashion User';
-
-      const newLook = await prisma.outfitLook.create({
-        data: {
-          creatorName,
-          creatorHandle: `@${creatorName.toLowerCase().replace(/\s+/g, '')}`,
-          creatorAvatar: userProfile?.avatar || '',
-          videoThumbnail,
-          title,
-          likes: 1,
-          reshares: 0,
-          occasion: occasion || 'Casual',
-          taggedProducts: taggedProducts,
-          userLiked: true,
-        },
+      const newLook = await socialFeedService.createOutfitLook({
+        title,
+        occasion,
+        videoThumbnail,
+        taggedProductIds,
+        userId,
       });
 
       res.status(201).json(newLook);
     } catch (err) {
-      console.error('Error creating outfit look:', err);
+      console.error('Error creating outfit look in PostgreSQL:', err);
       res.status(500).json({ error: 'Failed to create outfit look' });
     }
   },
@@ -165,25 +160,25 @@ export const socialAndColorController = {
   async toggleLikeOutfitLook(req: AuthenticatedRequest, res: Response) {
     try {
       const id = sanitizeString(req.params.id);
-
-      const look = await prisma.outfitLook.findUnique({ where: { id } });
-      if (!look) {
+      const updated = await socialFeedService.toggleLikeOutfitLook(id);
+      res.json(updated);
+    } catch (err: any) {
+      console.error('Error liking outfit look in PostgreSQL:', err);
+      if (err.message === 'Outfit look not found') {
         return res.status(404).json({ error: 'Outfit look not found' });
       }
-
-      const newLiked = !look.userLiked;
-      const updated = await prisma.outfitLook.update({
-        where: { id },
-        data: {
-          userLiked: newLiked,
-          likes: newLiked ? look.likes + 1 : Math.max(0, look.likes - 1),
-        },
-      });
-
-      res.json(updated);
-    } catch (err) {
-      console.error('Error liking outfit look:', err);
       res.status(500).json({ error: 'Failed to update like status' });
+    }
+  },
+
+  async deleteOutfitLook(req: AuthenticatedRequest, res: Response) {
+    try {
+      const id = sanitizeString(req.params.id);
+      const result = await socialFeedService.deleteOutfitLook(id);
+      res.json(result);
+    } catch (err) {
+      console.error('Error deleting outfit look:', err);
+      res.status(500).json({ error: 'Failed to delete outfit look' });
     }
   },
 };

@@ -1,5 +1,17 @@
 import fs from 'fs';
 import path from 'path';
+
+if (typeof process.loadEnvFile === 'function') {
+  try {
+    process.loadEnvFile();
+  } catch (e) {
+    // .env may not exist or already loaded
+  }
+}
+if (!process.env.DATABASE_URL) {
+  process.env.DATABASE_URL = 'postgresql://postgres:postgres@localhost:5432/fashion_db?schema=public';
+}
+
 import { PrismaClient } from '@prisma/client';
 import type {
   UserProfile,

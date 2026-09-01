@@ -114,7 +114,11 @@ model OutfitLook {
   reshares       Int      @default(0)
   occasion       String
   taggedProducts Json
-  userLiked      Boolean?
+  userLiked      Boolean? @default(false)
+  createdAt      DateTime @default(now())
+
+  @@index([occasion])
+  @@index([likes])
 }
 
 model CustomerOrder {

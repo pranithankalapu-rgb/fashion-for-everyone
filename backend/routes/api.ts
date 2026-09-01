@@ -179,7 +179,10 @@ router.post('/color-combos', socialAndColorController.createColorCombo);
 router.post('/color-combos/:id/vote', socialAndColorController.voteColorCombo);
 
 router.get('/social-feed', socialAndColorController.getSocialFeed);
+router.get('/social-feed/:id', socialAndColorController.getLookById);
 router.post('/social-feed', socialAndColorController.createOutfitLook);
 router.post('/social-feed/:id/like', socialAndColorController.toggleLikeOutfitLook);
+router.delete('/social-feed/:id', socialAndColorController.deleteOutfitLook);
 
 export default router;
+
