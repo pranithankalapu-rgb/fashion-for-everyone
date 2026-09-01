@@ -7,7 +7,7 @@ import { orderController } from '../controllers/orderController';
 import { retailerController } from '../controllers/retailerController';
 import { designerController } from '../controllers/designerController';
 import { socialAndColorController } from '../controllers/socialAndColorController';
-import { getDb, saveDb } from '../db';
+import { prisma } from '../db';
 import { sanitizeString } from '../security';
 
 const router = Router();
@@ -20,12 +20,24 @@ router.use(authenticateRole);
 import adminAuthRouter from './admin/authRoutes';
 
 // Health check
-router.get('/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    service: 'Fashion for Everyone Backend API Engine',
-  });
+router.get('/health', async (req, res) => {
+  try {
+    // Test database connectivity
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      service: 'Fashion for Everyone Backend API Engine',
+      database: 'connected',
+    });
+  } catch (err) {
+    res.json({
+      status: 'degraded',
+      timestamp: new Date().toISOString(),
+      service: 'Fashion for Everyone Backend API Engine',
+      database: 'disconnected',
+    });
+  }
 });
 
 // Admin Auth Routes under /api/admin/auth
@@ -49,65 +61,86 @@ router.delete('/products/:id', productController.delete);
 router.patch('/products/:id/stock', productController.updateStock);
 
 
-// Store Stock Locations & Pickup Reservations
-router.get('/stores', (req, res) => {
-  const db = getDb();
-  const productId = sanitizeString(req.query.productId as string);
-  let stores = db.storeStocks || [];
-  if (productId) {
-    stores = stores.filter(s => s.productId === productId);
+// Store Stock Locations & Pickup Reservations (migrated to Prisma)
+router.get('/stores', async (req, res) => {
+  try {
+    const productId = sanitizeString(req.query.productId as string);
+
+    const whereClause: any = {};
+    if (productId) {
+      whereClause.productId = productId;
+    }
+
+    const stores = await prisma.storeStock.findMany({
+      where: whereClause,
+    });
+    res.json(stores);
+  } catch (err) {
+    console.error('Error fetching store stocks:', err);
+    res.status(500).json({ error: 'Failed to fetch store locations' });
   }
-  res.json(stores);
 });
 
-router.post('/stores/reserve', (req, res) => {
-  const db = getDb();
-  const storeId = sanitizeString(req.body.storeId);
-  const productId = sanitizeString(req.body.productId);
-  const size = sanitizeString(req.body.size);
-  const customerName = sanitizeString(req.body.customerName);
-  const customerPhone = sanitizeString(req.body.customerPhone);
+router.post('/stores/reserve', async (req, res) => {
+  try {
+    const storeId = sanitizeString(req.body.storeId);
+    const productId = sanitizeString(req.body.productId);
+    const size = sanitizeString(req.body.size);
+    const customerName = sanitizeString(req.body.customerName);
+    const customerPhone = sanitizeString(req.body.customerPhone);
 
-  if (!storeId || !productId || !size || !customerName) {
-    return res.status(400).json({ error: 'Missing required reservation fields' });
+    if (!storeId || !productId || !size || !customerName) {
+      return res.status(400).json({ error: 'Missing required reservation fields' });
+    }
+
+    const store = await prisma.storeStock.findUnique({ where: { id: storeId } });
+    const product = await prisma.retailProduct.findUnique({ where: { id: productId } });
+
+    if (!store || !product) {
+      return res.status(404).json({ error: 'Store or Product not found' });
+    }
+
+    const sizeStock = store.sizeStock as Record<string, number>;
+    if ((sizeStock[size] || 0) <= 0) {
+      return res.status(400).json({ error: `Size ${size} is currently out of stock at this location` });
+    }
+
+    // Use a transaction: update store stock + create reservation
+    const result = await prisma.$transaction(async (tx) => {
+      // Decrement size stock
+      const updatedSizeStock = { ...sizeStock, [size]: sizeStock[size] - 1 };
+      await tx.storeStock.update({
+        where: { id: storeId },
+        data: { sizeStock: updatedSizeStock },
+      });
+
+      // Create reservation
+      const reservation = await tx.reservation.create({
+        data: {
+          storeId,
+          productId,
+          productTitle: product.title,
+          size,
+          customerName,
+          customerPhone: customerPhone || 'Not provided',
+          status: 'CONFIRMED',
+        },
+      });
+
+      return reservation;
+    });
+
+    res.status(201).json({
+      message: 'Store reservation confirmed!',
+      reservation: result,
+      storeName: store.storeName,
+      address: store.address,
+      pickupWindowHours: 48,
+    });
+  } catch (err) {
+    console.error('Error creating reservation:', err);
+    res.status(500).json({ error: 'Failed to create reservation' });
   }
-
-  const store = db.storeStocks.find(s => s.id === storeId);
-  const product = db.products.find(p => p.id === productId);
-
-  if (!store || !product) {
-    return res.status(404).json({ error: 'Store or Product not found' });
-  }
-
-  if ((store.sizeStock[size] || 0) <= 0) {
-    return res.status(400).json({ error: `Size ${size} is currently out of stock at this location` });
-  }
-
-  store.sizeStock[size] -= 1;
-
-  const reservationId = `RES-${Math.floor(100000 + Math.random() * 900000)}`;
-  const newReservation = {
-    id: reservationId,
-    storeId,
-    productId,
-    productTitle: product.title,
-    size,
-    customerName,
-    customerPhone: customerPhone || 'Not provided',
-    status: 'CONFIRMED' as const,
-    createdAt: new Date().toISOString(),
-  };
-
-  db.reservations.push(newReservation);
-  saveDb(db);
-
-  res.status(201).json({
-    message: 'Store reservation confirmed!',
-    reservation: newReservation,
-    storeName: store.storeName,
-    address: store.address,
-    pickupWindowHours: 48,
-  });
 });
 
 // Order Routes (Customer placement & Retailer management)

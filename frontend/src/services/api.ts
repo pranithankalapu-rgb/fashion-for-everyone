@@ -12,19 +12,6 @@ import type {
   StoreSettings,
   OrderStatus,
 } from '../types/fashion';
-import {
-  INITIAL_USER_PROFILE,
-  COLOR_COMBINATIONS,
-  DESIGNERS,
-  DESIGNS,
-  RETAIL_PRODUCTS,
-  STORE_STOCKS,
-  OUTFIT_LOOKS,
-  INITIAL_ORDERS,
-  INITIAL_RETAILER_CUSTOMERS,
-  INITIAL_PROMOTIONS,
-  INITIAL_STORE_SETTINGS,
-} from '../data/fashionData';
 
 const BASE_URL = '/api';
 
@@ -34,55 +21,45 @@ export function setCurrentRole(role: 'customer' | 'designer' | 'retailer') {
   currentActiveRole = role;
 }
 
-async function fetchJson<T>(url: string, options?: RequestInit, fallback?: T): Promise<T> {
-  try {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      'x-user-role': currentActiveRole,
-      'x-user-id': 'user_01',
-      ...(options?.headers as Record<string, string>),
-    };
+async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
+  const token = localStorage.getItem('admin_jwt_token');
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'x-user-role': currentActiveRole,
+    'x-user-id': 'user_01',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(options?.headers as Record<string, string>),
+  };
 
-    const res = await fetch(`${BASE_URL}${url}`, {
-      ...options,
-      headers,
-    });
+  const res = await fetch(`${BASE_URL}${url}`, {
+    ...options,
+    headers,
+  });
 
-    if (!res.ok) {
-      const errorData = await res.json().catch(() => ({}));
-      throw new Error(errorData.error || errorData.message || `API error ${res.status}: ${res.statusText}`);
-    }
-    return await res.json();
-  } catch (err) {
-    console.warn(`[API Call] ${url} request fallback:`, err);
-    if (fallback !== undefined) {
-      return fallback;
-    }
-    throw err;
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.error || errorData.message || `API error ${res.status}: ${res.statusText}`);
   }
+  return await res.json();
 }
 
 export const api = {
   // --- USER PROFILE API ---
   async getProfile(): Promise<UserProfile> {
-    return fetchJson<UserProfile>('/profile', undefined, INITIAL_USER_PROFILE);
+    return fetchJson<UserProfile>('/profile');
   },
 
   async updateProfile(profile: Partial<UserProfile>): Promise<UserProfile> {
-    const res = await fetchJson<{ message: string; profile: UserProfile }>(
-      '/profile',
-      {
-        method: 'PUT',
-        body: JSON.stringify(profile),
-      },
-      { message: 'Updated', profile: { ...INITIAL_USER_PROFILE, ...profile } }
-    );
+    const res = await fetchJson<{ message: string; profile: UserProfile }>('/profile', {
+      method: 'PUT',
+      body: JSON.stringify(profile),
+    });
     return res.profile;
   },
 
   // --- ORDERS API (Customer & Retailer) ---
   async getOrders(): Promise<CustomerOrder[]> {
-    return fetchJson<CustomerOrder[]>('/orders', undefined, INITIAL_ORDERS);
+    return fetchJson<CustomerOrder[]>('/orders');
   },
 
   async getOrderById(id: string): Promise<CustomerOrder> {
@@ -133,7 +110,7 @@ export const api = {
     if (category) params.append('category', category);
     if (maxPrice) params.append('maxPrice', maxPrice.toString());
     const q = params.toString() ? `?${params.toString()}` : '';
-    return fetchJson<RetailProduct[]>(`/products${q}`, undefined, RETAIL_PRODUCTS);
+    return fetchJson<RetailProduct[]>(`/products${q}`);
   },
 
   async getProductById(id: string): Promise<RetailProduct> {
@@ -169,7 +146,7 @@ export const api = {
 
   // --- RETAILER CRM CUSTOMERS API ---
   async getRetailerCustomers(): Promise<RetailerCustomer[]> {
-    return fetchJson<RetailerCustomer[]>('/retailer/customers', undefined, INITIAL_RETAILER_CUSTOMERS);
+    return fetchJson<RetailerCustomer[]>('/retailer/customers');
   },
 
   async createRetailerCustomer(customerData: Partial<RetailerCustomer>): Promise<RetailerCustomer> {
@@ -194,7 +171,7 @@ export const api = {
 
   // --- RETAILER PROMOTIONS API ---
   async getPromotions(): Promise<Promotion[]> {
-    return fetchJson<Promotion[]>('/promotions', undefined, INITIAL_PROMOTIONS);
+    return fetchJson<Promotion[]>('/promotions');
   },
 
   async createPromotion(promoData: Partial<Promotion>): Promise<Promotion> {
@@ -225,7 +202,7 @@ export const api = {
 
   // --- STORE SETTINGS API ---
   async getStoreSettings(): Promise<StoreSettings> {
-    return fetchJson<StoreSettings>('/store-settings', undefined, INITIAL_STORE_SETTINGS);
+    return fetchJson<StoreSettings>('/store-settings');
   },
 
   async updateStoreSettings(settings: Partial<StoreSettings>): Promise<{ message: string; settings: StoreSettings }> {
@@ -237,12 +214,12 @@ export const api = {
 
   // --- DESIGNERS & DESIGNS API ---
   async getDesigners(): Promise<Designer[]> {
-    return fetchJson<Designer[]>('/designers', undefined, DESIGNERS);
+    return fetchJson<Designer[]>('/designers');
   },
 
   async getDesigns(occasion?: string): Promise<Design[]> {
     const q = occasion && occasion !== 'All' ? `?occasion=${encodeURIComponent(occasion)}` : '';
-    return fetchJson<Design[]>(`/designs${q}`, undefined, DESIGNS);
+    return fetchJson<Design[]>(`/designs${q}`);
   },
 
   async createDesign(data: {
@@ -252,6 +229,7 @@ export const api = {
     occasion?: string;
     palette?: string[];
     price?: number;
+    designerId?: string;
   }): Promise<Design> {
     return fetchJson<Design>('/designs', {
       method: 'POST',
@@ -269,7 +247,7 @@ export const api = {
   // --- STORES & RESERVATIONS API ---
   async getStoreStocks(productId?: string): Promise<StoreStock[]> {
     const q = productId ? `?productId=${encodeURIComponent(productId)}` : '';
-    return fetchJson<StoreStock[]>(`/stores${q}`, undefined, STORE_STOCKS);
+    return fetchJson<StoreStock[]>(`/stores${q}`);
   },
 
   async reserveStoreStock(data: {
@@ -304,7 +282,7 @@ export const api = {
   // --- COLOR COMBINATIONS API ---
   async getColorCombos(occasion?: string): Promise<ColorCombo[]> {
     const q = occasion && occasion !== 'All' ? `?occasion=${encodeURIComponent(occasion)}` : '';
-    return fetchJson<ColorCombo[]>(`/color-combos${q}`, undefined, COLOR_COMBINATIONS);
+    return fetchJson<ColorCombo[]>(`/color-combos${q}`);
   },
 
   async createColorCombo(data: {
@@ -329,7 +307,7 @@ export const api = {
 
   // --- SOCIAL FEED API ---
   async getSocialFeed(): Promise<OutfitLook[]> {
-    return fetchJson<OutfitLook[]>('/social-feed', undefined, OUTFIT_LOOKS);
+    return fetchJson<OutfitLook[]>('/social-feed');
   },
 
   async createOutfitLook(data: {
@@ -360,22 +338,10 @@ export const api = {
       paletteRationale: string;
       bodyShapeAdvice: string;
       curatedProducts: RetailProduct[];
-    }>(
-      '/ai/styling',
-      {
-        method: 'POST',
-        body: JSON.stringify({ profile, occasion }),
-      },
-      {
-        colorHarmonyScore: 96,
-        fitScore: 95,
-        overallMatch: 95,
-        recommendedPalette: ['#1E293B', '#FDFBF7', '#D97706'],
-        paletteRationale: `Tailored for ${profile.skinTone} skin tone and ${profile.bodyShape} silhouette.`,
-        bodyShapeAdvice: `Structured waist definition and clean longline contrast to balance ${profile.bodyShape} frame.`,
-        curatedProducts: RETAIL_PRODUCTS,
-      }
-    );
+    }>('/ai/styling', {
+      method: 'POST',
+      body: JSON.stringify({ profile, occasion }),
+    });
   },
 
   async analyzePhoto(photoUrl: string) {
@@ -387,21 +353,9 @@ export const api = {
       bodyShape: UserProfile['bodyShape'];
       estimatedMeasurements: UserProfile['measurements'];
       message: string;
-    }>(
-      '/ai/photo-analysis',
-      {
-        method: 'POST',
-        body: JSON.stringify({ photoUrl }),
-      },
-      {
-        confidence: 0.96,
-        skinTone: 'Warm Golden',
-        undertone: 'Warm',
-        hairColor: 'Warm Chestnut Brown',
-        bodyShape: 'Hourglass',
-        estimatedMeasurements: { heightCm: 172, chestCm: 88, waistCm: 68, hipsCm: 94 },
-        message: 'Analysis complete',
-      }
-    );
+    }>('/ai/photo-analysis', {
+      method: 'POST',
+      body: JSON.stringify({ photoUrl }),
+    });
   },
 };

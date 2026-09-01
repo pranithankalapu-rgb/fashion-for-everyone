@@ -30,10 +30,6 @@ export function App() {
   const [selectedProduct, setSelectedProduct] = useState<RetailProduct | null>(null);
   const [checkoutProduct, setCheckoutProduct] = useState<RetailProduct | null>(null);
 
-  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(
-    () => !!localStorage.getItem('admin_token')
-  );
-
   useEffect(() => {
     const handlePopState = () => {
       if (window.location.pathname === '/admin') {

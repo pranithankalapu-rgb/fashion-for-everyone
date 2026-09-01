@@ -8,7 +8,6 @@ import {
   Store,
   Award,
   LogOut,
-  ChevronRight,
 } from 'lucide-react';
 
 export type AdminTab = 'dashboard' | 'products' | 'orders' | 'users' | 'retailers' | 'designers';

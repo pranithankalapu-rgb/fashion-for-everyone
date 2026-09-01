@@ -14,7 +14,6 @@ import {
   Tag,
   Package,
   Layers,
-  DollarSign,
   X,
 } from 'lucide-react';
 

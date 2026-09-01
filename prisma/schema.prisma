@@ -208,3 +208,25 @@ model Reservation {
   status        String   @default("CONFIRMED")
   createdAt     DateTime @default(now())
 }
+
+model AiAnalysisRequest {
+  id                    String   @id @default(uuid())
+  userId                String?
+  photoUrl              String
+  occasion              String?
+  confidence            Float?
+  detectedSkinTone      String?
+  detectedUndertone     String?
+  detectedHairColor     String?
+  detectedBodyShape     String?
+  estimatedMeasurements Json?
+  recommendedPalette    String[]
+  paletteRationale      String?
+  bodyShapeAdvice       String?
+  colorHarmonyScore     Float?
+  fitScore              Float?
+  overallMatch          Float?
+  providerUsed          String   @default("rule-based")
+  status                String   @default("completed")
+  createdAt             DateTime @default(now())
+}

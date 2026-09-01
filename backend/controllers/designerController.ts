@@ -1,30 +1,35 @@
 import type { Response } from 'express';
 import type { AuthenticatedRequest } from '../middleware/auth';
-import { getDb, saveDb } from '../db';
+import { prisma } from '../db';
 import { sanitizeString } from '../security';
-import type { Design } from '../types/fashion';
 
 export const designerController = {
-  getDesigners(req: AuthenticatedRequest, res: Response) {
+  async getDesigners(req: AuthenticatedRequest, res: Response) {
     try {
-      const db = getDb();
-      const sorted = [...db.designers].sort((a, b) => b.avgRating - a.avgRating);
-      res.json(sorted);
+      const designers = await prisma.designer.findMany({
+        orderBy: { avgRating: 'desc' },
+        include: { designs: true },
+      });
+      res.json(designers);
     } catch (err) {
       console.error('Error fetching designers:', err);
       res.status(500).json({ error: 'Failed to fetch designers' });
     }
   },
 
-  getDesigns(req: AuthenticatedRequest, res: Response) {
+  async getDesigns(req: AuthenticatedRequest, res: Response) {
     try {
-      const db = getDb();
       const occasion = sanitizeString(req.query.occasion as string);
-      let designs = db.designs || [];
 
+      const whereClause: any = {};
       if (occasion && occasion !== 'All') {
-        designs = designs.filter(d => d.occasion.toLowerCase() === occasion.toLowerCase());
+        whereClause.occasion = { equals: occasion, mode: 'insensitive' };
       }
+
+      const designs = await prisma.design.findMany({
+        where: whereClause,
+        orderBy: { rating: 'desc' },
+      });
       res.json(designs);
     } catch (err) {
       console.error('Error fetching designs:', err);
@@ -32,41 +37,50 @@ export const designerController = {
     }
   },
 
-  createDesign(req: AuthenticatedRequest, res: Response) {
+  async createDesign(req: AuthenticatedRequest, res: Response) {
     try {
-      const db = getDb();
       const title = sanitizeString(req.body.title);
       const collection = sanitizeString(req.body.collection);
       const imageUrl = sanitizeString(req.body.imageUrl);
       const occasion = sanitizeString(req.body.occasion);
       const rawPalette = req.body.palette;
       const price = Number(req.body.price);
+      const designerId = sanitizeString(req.body.designerId) || 'des_1';
 
       if (!title || !imageUrl) {
         return res.status(400).json({ error: 'Title and image URL are required' });
       }
 
-      const sanitizedPalette = Array.isArray(rawPalette) ? rawPalette.map(c => sanitizeString(c)) : ['#1E293B', '#D97706'];
+      const sanitizedPalette = Array.isArray(rawPalette) ? rawPalette.map((c: string) => sanitizeString(c)) : ['#1E293B', '#D97706'];
 
-      const newDesign: Design = {
-        id: `dsg_${Date.now()}`,
-        designerId: 'des_1',
-        designerName: 'Aria Vance',
-        designerAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=200&q=80',
-        title,
-        collection: collection || 'Spring / Summer Collection',
-        imageUrl,
-        rating: 5.0,
-        votesCount: 1,
-        occasion: (occasion as any) || 'Casual',
-        palette: sanitizedPalette,
-        price: price || 290,
-        inStock: true,
-        createdAt: new Date().toISOString().split('T')[0],
-      };
+      // Look up the designer to populate denormalized fields
+      const designer = await prisma.designer.findUnique({ where: { id: designerId } });
 
-      db.designs.unshift(newDesign);
-      saveDb(db);
+      const newDesign = await prisma.design.create({
+        data: {
+          designerId,
+          designerName: designer?.name || 'Unknown Designer',
+          designerAvatar: designer?.avatar || '',
+          title,
+          collection: collection || 'Spring / Summer Collection',
+          imageUrl,
+          rating: 5.0,
+          votesCount: 1,
+          occasion: occasion || 'Casual',
+          palette: sanitizedPalette,
+          price: price || 290,
+          inStock: true,
+          createdAt: new Date().toISOString().split('T')[0],
+        },
+      });
+
+      // Update designer's total votes
+      if (designer) {
+        await prisma.designer.update({
+          where: { id: designerId },
+          data: { totalVotes: { increment: 1 } },
+        });
+      }
 
       res.status(201).json(newDesign);
     } catch (err) {
@@ -75,23 +89,46 @@ export const designerController = {
     }
   },
 
-  voteDesign(req: AuthenticatedRequest, res: Response) {
+  async voteDesign(req: AuthenticatedRequest, res: Response) {
     try {
-      const db = getDb();
       const id = sanitizeString(req.params.id);
       const rating = Number(req.body.rating);
 
-      const design = db.designs.find(d => d.id === id);
+      const design = await prisma.design.findUnique({ where: { id } });
       if (!design) {
         return res.status(404).json({ error: 'Design not found' });
       }
 
       const totalPoints = design.rating * design.votesCount + (rating || 5);
-      design.votesCount += 1;
-      design.rating = Number((totalPoints / design.votesCount).toFixed(2));
+      const newVotesCount = design.votesCount + 1;
+      const newRating = Number((totalPoints / newVotesCount).toFixed(2));
 
-      saveDb(db);
-      res.json(design);
+      const updated = await prisma.design.update({
+        where: { id },
+        data: {
+          votesCount: newVotesCount,
+          rating: newRating,
+        },
+      });
+
+      // Also update the designer's aggregate stats
+      if (design.designerId) {
+        const designerDesigns = await prisma.design.findMany({
+          where: { designerId: design.designerId },
+        });
+        const totalDesignerVotes = designerDesigns.reduce((sum, d) => sum + d.votesCount, 0);
+        const avgDesignerRating = designerDesigns.reduce((sum, d) => sum + d.rating * d.votesCount, 0) / Math.max(totalDesignerVotes, 1);
+
+        await prisma.designer.update({
+          where: { id: design.designerId },
+          data: {
+            totalVotes: totalDesignerVotes,
+            avgRating: Number(avgDesignerRating.toFixed(2)),
+          },
+        });
+      }
+
+      res.json(updated);
     } catch (err) {
       console.error('Error voting design:', err);
       res.status(500).json({ error: 'Failed to submit vote' });

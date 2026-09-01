@@ -399,9 +399,8 @@ async function migrateData() {
       stats['Promotion'] = 0;
       for (const item of data.promotions) {
         await prisma.promotion.upsert({
-          where: { id: item.id },
+          where: { code: item.code },
           update: {
-            code: item.code,
             title: item.title,
             discountType: item.discountType,
             discountValue: item.discountValue,
@@ -414,7 +413,7 @@ async function migrateData() {
             status: item.status || 'Active',
           },
           create: {
-            id: item.id,
+            id: item.id || `promo_${Date.now()}`,
             code: item.code,
             title: item.title,
             discountType: item.discountType,
