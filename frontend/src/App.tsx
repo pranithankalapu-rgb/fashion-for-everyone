@@ -10,12 +10,6 @@ import { SocialFeedView } from './components/SocialFeedView';
 import { RetailerView } from './components/RetailerView';
 import { OrderCheckoutModal } from './components/OrderCheckoutModal';
 import { AdminGuard } from './components/admin/AdminGuard';
-import { AdminOrders } from './components/admin/AdminOrders';
-import { AdminUsers } from './components/admin/AdminUsers';
-import { AdminRetailers } from './components/admin/AdminRetailers';
-import { AdminDesigners } from './components/admin/AdminDesigners';
-import { AdminDashboard } from './components/admin/AdminDashboard';
-import { AdminProducts } from './components/admin/AdminProducts';
 import type { AdminTab } from './components/admin/AdminLayout';
 import type { UserProfile, RetailProduct } from './types/fashion';
 import { INITIAL_USER_PROFILE } from './data/fashionData';
@@ -232,26 +226,7 @@ export function App() {
                         window.history.pushState(null, '', '/admin/dashboard');
                       }
                     }}
-<<<<<<< HEAD
-                  >
-                    {adminSubTab === 'dashboard' && (
-                      <AdminDashboard
-                        onNavigateTab={(tab) => {
-                          setAdminSubTab(tab);
-                          setActiveTab(`admin-${tab}`);
-                          window.history.pushState(null, '', `/admin/${tab}`);
-                        }}
-                      />
-                    )}
-                    {adminSubTab === 'retailers' && <AdminRetailers />}
-                    {adminSubTab === 'designers' && <AdminDesigners />}
-                    {adminSubTab === 'users' && <AdminUsers />}
-                    {adminSubTab === 'orders' && <AdminOrders />}
-                    {adminSubTab === 'products' && <AdminProducts />}
-                  </AdminGuard>
-=======
                   />
->>>>>>> 47b41f8 (feat: complete admin control views for orders, users, retailers, designers, social feed & AI logs)
                 )}
               </>
             )}
