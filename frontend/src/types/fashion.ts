@@ -2,15 +2,20 @@ export type OccasionType = 'Work' | 'Casual' | 'Date night' | 'Formal' | 'Athlet
 
 export type StyleVibe = 'Classic' | 'Streetwear' | 'Minimalist' | 'Bold' | 'Boho' | 'Smart casual';
 
+export type UserApprovalStatus = 'Pending' | 'Approved' | 'Rejected';
+export type UserAccountStatus = 'Active' | 'Inactive' | 'Suspended';
+export type UserRole = 'customer' | 'designer' | 'retailer' | 'admin';
+
 export interface UserProfile {
   id: string;
   name: string;
+  email?: string | null;
   avatar: string;
-  photoUrl?: string;
-  skinTone: 'Warm Golden' | 'Cool Rose' | 'Deep Rich' | 'Olive Neutral' | 'Fair Porcelain';
-  undertone: 'Warm' | 'Cool' | 'Neutral';
+  photoUrl?: string | null;
+  skinTone: 'Warm Golden' | 'Cool Rose' | 'Deep Rich' | 'Olive Neutral' | 'Fair Porcelain' | string;
+  undertone: 'Warm' | 'Cool' | 'Neutral' | string;
   hairColor: string;
-  bodyShape: 'Hourglass' | 'Rectangle' | 'Inverted Triangle' | 'Pear' | 'Oval';
+  bodyShape: 'Hourglass' | 'Rectangle' | 'Inverted Triangle' | 'Pear' | 'Oval' | string;
   measurements: {
     heightCm: number;
     chestCm: number;
@@ -20,6 +25,209 @@ export interface UserProfile {
   selectedOccasions: OccasionType[];
   styleVibes: StyleVibe[];
   completedOnboarding: boolean;
+  role?: UserRole;
+  approvalStatus?: UserApprovalStatus;
+  status?: UserAccountStatus;
+  requestedRole?: string | null;
+  rejectionReason?: string | null;
+  phone?: string | null;
+  bio?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface AdminUser {
+  id: string;
+  name: string;
+  email: string | null;
+  avatar: string;
+  photoUrl?: string | null;
+  skinTone?: string;
+  undertone?: string;
+  hairColor?: string;
+  bodyShape?: string;
+  measurements?: any;
+  selectedOccasions?: string[];
+  styleVibes?: string[];
+  completedOnboarding?: boolean;
+  role: UserRole;
+  approvalStatus: UserApprovalStatus;
+  status: UserAccountStatus;
+  requestedRole?: string | null;
+  rejectionReason?: string | null;
+  phone?: string | null;
+  bio?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  designerProfile?: Designer | null;
+  ordersCount?: number;
+}
+
+export interface AdminUserStats {
+  totalUsers: number;
+  pendingApprovals: number;
+  approvedCount: number;
+  rejectedCount: number;
+  activeCount: number;
+  inactiveCount: number;
+  roleCounts: {
+    customer: number;
+    designer: number;
+    retailer: number;
+    admin: number;
+  };
+}
+
+export interface AdminRetailer {
+  id: string;
+  storeName: string;
+  logoUrl: string;
+  taxId: string;
+  currency: string;
+  managerName: string;
+  managerEmail: string;
+  managerPhone: string;
+  address: string;
+  supportEmail: string;
+  supportPhone: string;
+  autoFulfill: boolean;
+  lowStockThreshold: number;
+  emailNotifications: boolean;
+  smsAlerts: boolean;
+  weeklyReport: boolean;
+  approvalStatus: 'Pending' | 'Approved' | 'Rejected';
+  status: 'Active' | 'Inactive' | 'Suspended';
+  rejectionReason?: string | null;
+  businessType?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  storeStocksCount?: number;
+  totalProductsStocked?: number;
+}
+
+export interface AdminRetailerStats {
+  totalStores: number;
+  approvedCount: number;
+  pendingCount: number;
+  rejectedCount: number;
+  activeCount: number;
+  inactiveCount: number;
+  totalStockLocations: number;
+}
+
+export interface AdminDesigner {
+  id: string;
+  name: string;
+  handle: string;
+  avatar: string;
+  bio: string;
+  followers: number;
+  avgRating: number;
+  totalVotes: number;
+  badges: string[];
+  verified: boolean;
+  approvalStatus: 'Pending' | 'Approved' | 'Rejected';
+  status: 'Active' | 'Inactive' | 'Suspended';
+  email?: string | null;
+  rejectionReason?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  designsCount?: number;
+  designs?: Design[];
+}
+
+export interface AdminDesignSubmission {
+  id: string;
+  designerId: string;
+  designerName: string;
+  designerAvatar: string;
+  title: string;
+  collection: string;
+  imageUrl: string;
+  rating: number;
+  votesCount: number;
+  occasion: string;
+  palette: string[];
+  price: number;
+  inStock: boolean;
+  approvalStatus: 'Pending' | 'Approved' | 'Rejected';
+  rejectionReason?: string | null;
+  status: 'Active' | 'Inactive';
+  createdAt: string;
+  submittedAt: string;
+}
+
+export interface AdminDesignerStats {
+  totalDesigners: number;
+  verifiedDesigners: number;
+  pendingDesignerApprovals: number;
+  rejectedDesigners: number;
+  totalDesigns: number;
+  approvedDesigns: number;
+  pendingDesignApprovals: number;
+  rejectedDesigns: number;
+  totalShowcaseVotes: number;
+}
+
+export interface AdminActivityItem {
+  id: string;
+  type: 'order' | 'user' | 'store' | 'designer' | 'design' | 'reservation';
+  title: string;
+  subtitle: string;
+  timestamp: string;
+  status?: string;
+  badgeColor?: string;
+}
+
+export interface AdminPendingQueueItem {
+  id: string;
+  category: 'retailer' | 'designer' | 'design' | 'user';
+  title: string;
+  subtitle: string;
+  timestamp: string;
+  requestedAction: string;
+  linkTab: string;
+}
+
+export interface AdminDashboardOverview {
+  summary: {
+    totalRevenue: number;
+    totalOrders: number;
+    avgOrderValue: number;
+    totalUsers: number;
+    activeUsers: number;
+    totalRetailers: number;
+    approvedRetailers: number;
+    totalDesigners: number;
+    verifiedDesigners: number;
+    totalDesigns: number;
+    totalProducts: number;
+    lowStockProducts: number;
+    pendingApprovalsTotal: number;
+  };
+  pendingBreakdown: {
+    users: number;
+    retailers: number;
+    designers: number;
+    designs: number;
+  };
+  roleBreakdown: {
+    customer: number;
+    designer: number;
+    retailer: number;
+    admin: number;
+  };
+  orderStatusBreakdown: {
+    pending: number;
+    processing: number;
+    shipped: number;
+    delivered: number;
+    cancelled: number;
+    returned: number;
+  };
+  recentActivity: AdminActivityItem[];
+  recentOrders: CustomerOrder[];
+  pendingQueue: AdminPendingQueueItem[];
 }
 
 export interface ColorCombo {

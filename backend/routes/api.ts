@@ -19,6 +19,10 @@ router.use(authenticateRole);
 
 import adminAuthRouter from './admin/authRoutes';
 import adminOrderRouter from './admin/orderRoutes';
+import adminUserRouter from './admin/userRoutes';
+import adminRetailerRouter from './admin/retailerRoutes';
+import adminDesignerRouter from './admin/designerRoutes';
+import adminDashboardRouter from './admin/dashboardRoutes';
 
 // Health check
 router.get('/health', async (req, res) => {
@@ -46,6 +50,18 @@ router.use('/admin/auth', adminAuthRouter);
 
 // Admin Orders Management Routes under /api/admin/orders
 router.use('/admin/orders', adminOrderRouter);
+
+// Admin Users & Role Approvals Routes under /api/admin/users
+router.use('/admin/users', adminUserRouter);
+
+// Admin Retailer Store Approvals Routes under /api/admin/retailers
+router.use('/admin/retailers', adminRetailerRouter);
+
+// Admin Designer Submissions Approval Routes under /api/admin/designers
+router.use('/admin/designers', adminDesignerRouter);
+
+// Admin Executive Dashboard Routes under /api/admin/dashboard
+router.use('/admin/dashboard', adminDashboardRouter);
 
 
 // Profile Routes

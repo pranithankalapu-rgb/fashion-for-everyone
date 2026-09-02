@@ -10,16 +10,26 @@ datasource db {
 model UserProfile {
   id                  String   @id @default(uuid())
   name                String
+  email               String?  @unique
   avatar              String
   photoUrl            String?
-  skinTone            String
-  undertone           String
-  hairColor           String
-  bodyShape           String
-  measurements        Json
-  selectedOccasions   String[]
-  styleVibes          String[]
+  skinTone            String   @default("Warm Golden")
+  undertone           String   @default("Warm")
+  hairColor           String   @default("Chestnut Brown")
+  bodyShape           String   @default("Hourglass")
+  measurements        Json     @default("{\"heightCm\": 170, \"chestCm\": 88, \"waistCm\": 68, \"hipsCm\": 94}")
+  selectedOccasions   String[] @default([])
+  styleVibes          String[] @default([])
   completedOnboarding Boolean  @default(true)
+  role                String   @default("customer")
+  approvalStatus      String   @default("Approved")
+  status              String   @default("Active")
+  requestedRole       String?
+  rejectionReason     String?
+  phone               String?
+  bio                 String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @default(now()) @updatedAt
 }
 
 model ColorCombo {
@@ -36,35 +46,45 @@ model ColorCombo {
 }
 
 model Designer {
-  id         String   @id @default(uuid())
-  name       String
-  handle     String
-  avatar     String
-  bio        String
-  followers  Int      @default(0)
-  avgRating  Float    @default(5.0)
-  totalVotes Int      @default(0)
-  badges     String[]
-  verified   Boolean  @default(false)
-  designs    Design[]
+  id              String   @id @default(uuid())
+  name            String
+  handle          String
+  avatar          String
+  bio             String
+  followers       Int      @default(0)
+  avgRating       Float    @default(5.0)
+  totalVotes      Int      @default(0)
+  badges          String[]
+  verified        Boolean  @default(false)
+  approvalStatus  String   @default("Approved")
+  status          String   @default("Active")
+  email           String?
+  rejectionReason String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @default(now()) @updatedAt
+  designs         Design[]
 }
 
 model Design {
-  id             String    @id @default(uuid())
-  designerId     String
-  designerName   String
-  designerAvatar String
-  title          String
-  collection     String
-  imageUrl       String
-  rating         Float     @default(5.0)
-  votesCount     Int       @default(0)
-  occasion       String
-  palette        String[]
-  price          Float
-  inStock        Boolean   @default(true)
-  createdAt      String
-  designer       Designer? @relation(fields: [designerId], references: [id], onDelete: Cascade)
+  id              String    @id @default(uuid())
+  designerId      String
+  designerName    String
+  designerAvatar  String
+  title           String
+  collection      String
+  imageUrl        String
+  rating          Float     @default(5.0)
+  votesCount      Int       @default(0)
+  occasion        String
+  palette         String[]
+  price           Float
+  inStock         Boolean   @default(true)
+  approvalStatus  String    @default("Approved")
+  rejectionReason String?
+  status          String    @default("Active")
+  createdAt       String
+  submittedAt     DateTime  @default(now())
+  designer        Designer? @relation(fields: [designerId], references: [id], onDelete: Cascade)
 }
 
 model RetailProduct {
@@ -183,22 +203,28 @@ model Promotion {
 }
 
 model StoreSettings {
-  id                 String  @id @default("default")
+  id                 String   @id @default(uuid())
   storeName          String
-  logoUrl            String
-  taxId              String
-  currency           String  @default("$")
+  logoUrl            String   @default("https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=300&q=80")
+  taxId              String   @default("TAX-998877")
+  currency           String   @default("$")
   managerName        String
   managerEmail       String
   managerPhone       String
   address            String
-  supportEmail       String
-  supportPhone       String
-  autoFulfill        Boolean @default(false)
-  lowStockThreshold  Int     @default(5)
-  emailNotifications Boolean @default(true)
-  smsAlerts          Boolean @default(true)
-  weeklyReport       Boolean @default(true)
+  supportEmail       String   @default("support@store.com")
+  supportPhone       String   @default("+1 (555) 000-0000")
+  autoFulfill        Boolean  @default(false)
+  lowStockThreshold  Int      @default(5)
+  emailNotifications Boolean  @default(true)
+  smsAlerts          Boolean  @default(true)
+  weeklyReport       Boolean  @default(true)
+  approvalStatus     String   @default("Approved")
+  status             String   @default("Active")
+  rejectionReason    String?
+  businessType       String?  @default("Boutique Flagship")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @default(now()) @updatedAt
 }
 
 model Reservation {

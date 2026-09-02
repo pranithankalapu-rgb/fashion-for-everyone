@@ -11,7 +11,11 @@ import { RetailerView } from './components/RetailerView';
 import { OrderCheckoutModal } from './components/OrderCheckoutModal';
 import { AdminGuard } from './components/admin/AdminGuard';
 import { AdminOrders } from './components/admin/AdminOrders';
+import { AdminUsers } from './components/admin/AdminUsers';
+import { AdminRetailers } from './components/admin/AdminRetailers';
+import { AdminDesigners } from './components/admin/AdminDesigners';
 import { AdminDashboard } from './components/admin/AdminDashboard';
+import { AdminProducts } from './components/admin/AdminProducts';
 import type { AdminTab } from './components/admin/AdminLayout';
 import type { UserProfile, RetailProduct } from './types/fashion';
 import { INITIAL_USER_PROFILE } from './data/fashionData';
@@ -22,12 +26,20 @@ export function App() {
   const [activeTab, setActiveTab] = useState<string>(() => {
     const path = window.location.pathname;
     if (path === '/admin/orders' || path === '/admin/orders/') return 'admin-orders';
+    if (path === '/admin/users' || path === '/admin/users/') return 'admin-users';
+    if (path === '/admin/retailers' || path === '/admin/retailers/') return 'admin-retailers';
+    if (path === '/admin/designers' || path === '/admin/designers/') return 'admin-designers';
+    if (path === '/admin/products' || path === '/admin/products/') return 'admin-products';
     if (path.startsWith('/admin')) return 'admin';
     return 'ai-engine';
   });
   const [adminSubTab, setAdminSubTab] = useState<AdminTab>(() => {
     const path = window.location.pathname;
     if (path === '/admin/orders' || path === '/admin/orders/') return 'orders';
+    if (path === '/admin/users' || path === '/admin/users/') return 'users';
+    if (path === '/admin/retailers' || path === '/admin/retailers/') return 'retailers';
+    if (path === '/admin/designers' || path === '/admin/designers/') return 'designers';
+    if (path === '/admin/products' || path === '/admin/products/') return 'products';
     return 'dashboard';
   });
 
@@ -44,6 +56,18 @@ export function App() {
       if (path === '/admin/orders' || path === '/admin/orders/') {
         setActiveTab('admin-orders');
         setAdminSubTab('orders');
+      } else if (path === '/admin/users' || path === '/admin/users/') {
+        setActiveTab('admin-users');
+        setAdminSubTab('users');
+      } else if (path === '/admin/retailers' || path === '/admin/retailers/') {
+        setActiveTab('admin-retailers');
+        setAdminSubTab('retailers');
+      } else if (path === '/admin/designers' || path === '/admin/designers/') {
+        setActiveTab('admin-designers');
+        setAdminSubTab('designers');
+      } else if (path === '/admin/products' || path === '/admin/products/') {
+        setActiveTab('admin-products');
+        setAdminSubTab('products');
       } else if (path.startsWith('/admin')) {
         setActiveTab('admin');
         setAdminSubTab('dashboard');
@@ -196,48 +220,33 @@ export function App() {
                       setActiveTab(`admin-${tab}`);
                       if (tab === 'orders') {
                         window.history.pushState(null, '', '/admin/orders');
+                      } else if (tab === 'users') {
+                        window.history.pushState(null, '', '/admin/users');
+                      } else if (tab === 'retailers') {
+                        window.history.pushState(null, '', '/admin/retailers');
+                      } else if (tab === 'designers') {
+                        window.history.pushState(null, '', '/admin/designers');
+                      } else if (tab === 'products') {
+                        window.history.pushState(null, '', '/admin/products');
                       } else {
-                        window.history.pushState(null, '', '/admin');
+                        window.history.pushState(null, '', '/admin/dashboard');
                       }
                     }}
                   >
+                    {adminSubTab === 'dashboard' && (
+                      <AdminDashboard
+                        onNavigateTab={(tab) => {
+                          setAdminSubTab(tab);
+                          setActiveTab(`admin-${tab}`);
+                          window.history.pushState(null, '', `/admin/${tab}`);
+                        }}
+                      />
+                    )}
+                    {adminSubTab === 'retailers' && <AdminRetailers />}
+                    {adminSubTab === 'designers' && <AdminDesigners />}
+                    {adminSubTab === 'users' && <AdminUsers />}
                     {adminSubTab === 'orders' && <AdminOrders />}
-                    {(adminSubTab === 'dashboard' || adminSubTab === 'products') && (
-                      <AdminDashboard onLogout={() => {}} />
-                    )}
-                    {adminSubTab !== 'orders' && adminSubTab !== 'dashboard' && adminSubTab !== 'products' && (
-                      <div className="glass-panel rounded-3xl p-8 text-center space-y-3 border border-theme-main">
-                        <div className="inline-flex p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-400">
-                          <ShoppingBag className="w-6 h-6" />
-                        </div>
-                        <h3 className="text-xl font-serif font-bold text-theme-heading capitalize">{adminSubTab} Management</h3>
-                        <p className="text-xs text-theme-muted">
-                          Select{' '}
-                          <button
-                            onClick={() => {
-                              setAdminSubTab('orders');
-                              setActiveTab('admin-orders');
-                              window.history.pushState(null, '', '/admin/orders');
-                            }}
-                            className="text-amber-400 underline font-bold cursor-pointer"
-                          >
-                            Orders Management
-                          </button>{' '}
-                          or{' '}
-                          <button
-                            onClick={() => {
-                              setAdminSubTab('dashboard');
-                              setActiveTab('admin-dashboard');
-                              window.history.pushState(null, '', '/admin');
-                            }}
-                            className="text-amber-400 underline font-bold cursor-pointer"
-                          >
-                            Products Inventory
-                          </button>{' '}
-                          to manage live PostgreSQL data.
-                        </p>
-                      </div>
-                    )}
+                    {adminSubTab === 'products' && <AdminProducts />}
                   </AdminGuard>
                 )}
               </>
