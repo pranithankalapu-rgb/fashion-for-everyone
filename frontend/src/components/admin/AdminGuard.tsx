@@ -1,12 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { AdminLoginPage } from './pages/AdminLoginPage';
 import { AdminLayout, type AdminTab } from './AdminLayout';
+import { AdminDashboard } from './AdminDashboard';
+import { AdminOrdersView } from './AdminOrdersView';
+import { AdminUsersView } from './AdminUsersView';
+import { AdminRetailersView } from './AdminRetailersView';
+import { AdminDesignersView } from './AdminDesignersView';
+import { AdminSocialAndAiView } from './AdminSocialAndAiView';
 import { RefreshCw } from 'lucide-react';
 
 interface AdminGuardProps {
   activeTab: AdminTab;
   setActiveTab: (tab: AdminTab) => void;
-  children: React.ReactNode;
+  children?: React.ReactNode;
 }
 
 export const AdminGuard: React.FC<AdminGuardProps> = ({
@@ -76,6 +82,26 @@ export const AdminGuard: React.FC<AdminGuardProps> = ({
     return <AdminLoginPage onLoginSuccess={handleLoginSuccess} />;
   }
 
+  const renderActiveAdminView = () => {
+    switch (activeTab) {
+      case 'dashboard':
+      case 'products':
+        return <AdminDashboard onLogout={handleLogout} />;
+      case 'orders':
+        return <AdminOrdersView onLogout={handleLogout} />;
+      case 'users':
+        return <AdminUsersView />;
+      case 'retailers':
+        return <AdminRetailersView />;
+      case 'designers':
+        return <AdminDesignersView />;
+      case 'social-ai':
+        return <AdminSocialAndAiView />;
+      default:
+        return <AdminDashboard onLogout={handleLogout} />;
+    }
+  };
+
   return (
     <AdminLayout
       activeTab={activeTab}
@@ -83,7 +109,8 @@ export const AdminGuard: React.FC<AdminGuardProps> = ({
       adminEmail={adminEmail}
       onLogout={handleLogout}
     >
-      {children}
+      {renderActiveAdminView()}
     </AdminLayout>
   );
 };
+

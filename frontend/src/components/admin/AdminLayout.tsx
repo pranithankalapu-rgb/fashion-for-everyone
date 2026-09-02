@@ -7,10 +7,18 @@ import {
   Users,
   Store,
   Award,
+  Sparkles,
   LogOut,
 } from 'lucide-react';
 
-export type AdminTab = 'dashboard' | 'products' | 'orders' | 'users' | 'retailers' | 'designers';
+export type AdminTab =
+  | 'dashboard'
+  | 'products'
+  | 'orders'
+  | 'users'
+  | 'retailers'
+  | 'designers'
+  | 'social-ai';
 
 interface AdminLayoutProps {
   activeTab: AdminTab;
@@ -28,12 +36,12 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
   children,
 }) => {
   const navItems: { id: AdminTab; label: string; icon: React.ElementType }[] = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'products', label: 'Products', icon: Package },
-    { id: 'orders', label: 'Orders', icon: ShoppingCart },
-    { id: 'users', label: 'Users', icon: Users },
-    { id: 'retailers', label: 'Retailers', icon: Store },
-    { id: 'designers', label: 'Designers', icon: Award },
+    { id: 'dashboard', label: 'Products Inventory', icon: Package },
+    { id: 'orders', label: 'Customer Orders', icon: ShoppingCart },
+    { id: 'users', label: 'User Profiles', icon: Users },
+    { id: 'retailers', label: 'Retailer Operations & CRM', icon: Store },
+    { id: 'designers', label: 'Designers & Merit', icon: Award },
+    { id: 'social-ai', label: 'Color, Social & AI Control', icon: Sparkles },
   ];
 
   return (

@@ -112,7 +112,7 @@ export function App() {
 
   return (
     <div className="min-h-screen bg-app-theme text-theme-body flex flex-col font-sans transition-colors duration-200">
-      
+
       {/* Top Header */}
       <Header
         userProfile={userProfile}
@@ -128,7 +128,7 @@ export function App() {
       {/* Main View Container with Left Sidebar & Main Content */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex flex-col md:flex-row gap-6 items-start">
-          
+
           {/* LEFT SIDEBAR / QUICK ACCESS PANEL */}
           <Sidebar
             activeTab={activeTab}
@@ -139,7 +139,7 @@ export function App() {
 
           {/* MAIN APPLICATION CONTENT */}
           <div className="flex-1 min-w-0 w-full space-y-4">
-            
+
             {/* Retailer Operational View Hub */}
             {userRole === 'retailer' ? (
               <RetailerView
@@ -232,6 +232,7 @@ export function App() {
                         window.history.pushState(null, '', '/admin/dashboard');
                       }
                     }}
+<<<<<<< HEAD
                   >
                     {adminSubTab === 'dashboard' && (
                       <AdminDashboard
@@ -248,6 +249,9 @@ export function App() {
                     {adminSubTab === 'orders' && <AdminOrders />}
                     {adminSubTab === 'products' && <AdminProducts />}
                   </AdminGuard>
+=======
+                  />
+>>>>>>> 47b41f8 (feat: complete admin control views for orders, users, retailers, designers, social feed & AI logs)
                 )}
               </>
             )}
