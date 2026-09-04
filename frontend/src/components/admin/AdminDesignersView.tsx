@@ -10,7 +10,6 @@ import {
   Star,
   Users,
   X,
-  Palette,
   Check,
 } from 'lucide-react';
 

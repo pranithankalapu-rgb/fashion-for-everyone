@@ -1,7 +1,6 @@
 import React from 'react';
 import {
   ShieldCheck,
-  LayoutDashboard,
   Package,
   ShoppingCart,
   Users,

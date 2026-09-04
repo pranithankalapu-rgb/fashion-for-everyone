@@ -18,7 +18,6 @@ interface AdminGuardProps {
 export const AdminGuard: React.FC<AdminGuardProps> = ({
   activeTab,
   setActiveTab,
-  children,
 }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [adminEmail, setAdminEmail] = useState<string>('');

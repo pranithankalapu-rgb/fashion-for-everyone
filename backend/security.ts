@@ -2,16 +2,25 @@ import type { Request, Response, NextFunction } from 'express';
 import path from 'path';
 
 /**
- * Escapes HTML entity characters to mitigate Cross-Site Scripting (XSS).
+ * Sanitizes a string by stripping dangerous XSS patterns.
+ * NOTE: Does NOT HTML-encode characters like & or / — data is stored in the
+ * database and served as JSON (encoding happens at the browser render level).
  */
 export function sanitizeString(input: unknown): string {
   if (typeof input !== 'string') return '';
   return input
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#x27;');
+    // Remove <script> tags and their content
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    // Remove dangerous event handler attributes (onclick=, onload=, etc.)
+    .replace(/\bon\w+\s*=\s*["'][^"']*["']/gi, '')
+    .replace(/\bon\w+\s*=\s*[^\s>]*/gi, '')
+    // Remove javascript: protocol URIs
+    .replace(/javascript\s*:/gi, '')
+    // Remove data:text/html URIs (XSS vector)
+    .replace(/data\s*:\s*text\/html/gi, '')
+    // Remove null bytes
+    .replace(/\0/g, '')
+    .trim();
 }
 
 /**

@@ -17,7 +17,6 @@ import {
   DollarSign,
   Building,
   Mail,
-  Phone,
 } from 'lucide-react';
 
 export const AdminRetailersView: React.FC = () => {

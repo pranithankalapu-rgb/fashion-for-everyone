@@ -230,6 +230,10 @@ export const productController = {
         return res.status(404).json({ error: 'Product not found' });
       }
 
+      // Cleanly delete associated store stocks and order items before deleting the product
+      await prisma.storeStock.deleteMany({ where: { productId: id } });
+      await prisma.orderItem.deleteMany({ where: { productId: id } });
+
       const deleted = await prisma.retailProduct.delete({
         where: { id },
       });
