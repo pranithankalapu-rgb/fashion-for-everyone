@@ -27,14 +27,32 @@ import type {
 
 const BASE_URL = '/api';
 
-let currentActiveRole: 'customer' | 'designer' | 'retailer' = 'customer';
+let currentActiveRole: 'customer' | 'designer' | 'retailer' | 'admin' = 'customer';
 
-export function setCurrentRole(role: 'customer' | 'designer' | 'retailer') {
+export function setCurrentRole(role: 'customer' | 'designer' | 'retailer' | 'admin') {
   currentActiveRole = role;
 }
 
+export function getCurrentRole(): string {
+  return currentActiveRole;
+}
+
+export function setAuthToken(token: string | null) {
+  if (token) {
+    localStorage.setItem('auth_token', token);
+    localStorage.setItem('admin_jwt_token', token);
+  } else {
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('admin_jwt_token');
+  }
+}
+
+export function getAuthToken(): string | null {
+  return localStorage.getItem('auth_token') || localStorage.getItem('admin_jwt_token');
+}
+
 async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
-  const token = localStorage.getItem('admin_jwt_token');
+  const token = getAuthToken();
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     'x-user-role': currentActiveRole,
@@ -45,6 +63,7 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
 
   const res = await fetch(`${BASE_URL}${url}`, {
     ...options,
+    credentials: 'include',
     headers,
   });
 
@@ -56,6 +75,53 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
 }
 
 export const api = {
+  // --- AUTHENTICATION API ---
+  async register(data: { name: string; email: string; password: string; role?: string; phone?: string }) {
+    const res = await fetchJson<{
+      success: boolean;
+      user: any;
+      accessToken: string;
+      refreshToken: string;
+    }>('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    if (res.accessToken) {
+      setAuthToken(res.accessToken);
+    }
+    return res;
+  },
+
+  async login(credentials: { emailOrUsername: string; password: string; role?: string }) {
+    const res = await fetchJson<{
+      success: boolean;
+      user: any;
+      token?: string;
+      accessToken?: string;
+      refreshToken?: string;
+    }>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify(credentials),
+    });
+    const token = res.accessToken || res.token;
+    if (token) {
+      setAuthToken(token);
+    }
+    return res;
+  },
+
+  async logout() {
+    try {
+      await fetchJson('/auth/logout', { method: 'POST' });
+    } finally {
+      setAuthToken(null);
+    }
+  },
+
+  async getMe() {
+    return fetchJson<{ success: boolean; user: any }>('/auth/me');
+  },
+
   // --- USER PROFILE API ---
   async getProfile(): Promise<UserProfile> {
     return fetchJson<UserProfile>('/profile');
@@ -69,7 +135,7 @@ export const api = {
     return res.profile;
   },
 
-  // --- ORDERS API (Customer & Retailer) ---
+  // --- ORDERS & PAYMENTS API ---
   async getOrders(): Promise<CustomerOrder[]> {
     return fetchJson<CustomerOrder[]>('/orders');
   },
@@ -84,6 +150,7 @@ export const api = {
     customerPhone: string;
     shippingAddress: string;
     paymentMethod: string;
+    paymentGateway?: string;
     items: Array<{
       productId: string;
       title: string;
@@ -95,18 +162,40 @@ export const api = {
       color?: string;
       sku?: string;
     }>;
-  }): Promise<{ message: string; order: CustomerOrder }> {
-    return fetchJson<{ message: string; order: CustomerOrder }>('/orders', {
+  }): Promise<{ message: string; order: CustomerOrder; paymentIntent?: any }> {
+    return fetchJson<{ message: string; order: CustomerOrder; paymentIntent?: any }>('/orders', {
       method: 'POST',
       body: JSON.stringify(orderData),
     });
   },
 
-  async updateOrderStatus(id: string, status: OrderStatus, trackingNumber?: string): Promise<CustomerOrder> {
-    return fetchJson<CustomerOrder>(`/orders/${id}/status`, {
-      method: 'PATCH',
-      body: JSON.stringify({ status, trackingNumber }),
+  async createPaymentIntent(data: {
+    orderId: string;
+    amount: number;
+    currency?: string;
+    gateway?: string;
+    customerEmail?: string;
+    customerPhone?: string;
+  }) {
+    return fetchJson<any>('/payments/create-intent', {
+      method: 'POST',
+      body: JSON.stringify(data),
     });
+  },
+
+  async verifyPayment(data: { paymentIntentId: string; gateway?: string; signature?: string; paymentId?: string }) {
+    return fetchJson<{ success: boolean; status: string }>('/payments/verify', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async updateOrderStatus(id: string, status: string): Promise<CustomerOrder> {
+    const res = await fetchJson<{ message: string; order: CustomerOrder }>(`/orders/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    });
+    return res.order;
   },
 
   async deleteOrder(id: string): Promise<{ message: string }> {
@@ -115,317 +204,57 @@ export const api = {
     });
   },
 
-  // --- ADMIN ORDERS MANAGEMENT API ---
-  async getAdminOrders(params?: {
-    status?: string;
-    search?: string;
-    sortBy?: 'date' | 'totalAmount' | 'orderNumber' | 'status';
-    sortOrder?: 'asc' | 'desc';
-  }): Promise<{ orders: CustomerOrder[]; stats: AdminOrderStats; total: number }> {
-    const query = new URLSearchParams();
-    if (params?.status && params.status !== 'All') query.append('status', params.status);
-    if (params?.search) query.append('search', params.search);
-    if (params?.sortBy) query.append('sortBy', params.sortBy);
-    if (params?.sortOrder) query.append('sortOrder', params.sortOrder);
-    const q = query.toString() ? `?${query.toString()}` : '';
-    return fetchJson<{ orders: CustomerOrder[]; stats: AdminOrderStats; total: number }>(`/admin/orders${q}`);
-  },
-
-  async getAdminOrderById(id: string): Promise<CustomerOrder> {
-    return fetchJson<CustomerOrder>(`/admin/orders/${id}`);
-  },
-
-  async updateAdminOrderStatus(
-    id: string,
-    status: OrderStatus,
-    trackingNumber?: string
-  ): Promise<{ success: boolean; message: string; order: CustomerOrder }> {
-    return fetchJson<{ success: boolean; message: string; order: CustomerOrder }>(`/admin/orders/${id}/status`, {
-      method: 'PATCH',
-      body: JSON.stringify({ status, trackingNumber }),
-    });
-  },
-
-  async deleteAdminOrder(id: string): Promise<{ success: boolean; message: string; deletedOrder: CustomerOrder }> {
-    return fetchJson<{ success: boolean; message: string; deletedOrder: CustomerOrder }>(`/admin/orders/${id}`, {
-      method: 'DELETE',
-    });
-  },
-
-  async getAdminOrderStats(): Promise<AdminOrderStats> {
-    return fetchJson<AdminOrderStats>('/admin/orders/stats');
-  },
-
-  // --- ADMIN USERS & ROLE APPROVALS API ---
-  async getAdminUsers(params?: {
-    role?: string;
-    approvalStatus?: string;
-    status?: string;
-    search?: string;
-    sortBy?: 'createdAt' | 'name' | 'email' | 'role' | 'approvalStatus' | 'status';
-    sortOrder?: 'asc' | 'desc';
-  }): Promise<{ users: AdminUser[]; stats: AdminUserStats; total: number }> {
-    const query = new URLSearchParams();
-    if (params?.role && params.role !== 'All') query.append('role', params.role);
-    if (params?.approvalStatus && params.approvalStatus !== 'All') query.append('approvalStatus', params.approvalStatus);
-    if (params?.status && params.status !== 'All') query.append('status', params.status);
-    if (params?.search) query.append('search', params.search);
-    if (params?.sortBy) query.append('sortBy', params.sortBy);
-    if (params?.sortOrder) query.append('sortOrder', params.sortOrder);
-    const q = query.toString() ? `?${query.toString()}` : '';
-    return fetchJson<{ users: AdminUser[]; stats: AdminUserStats; total: number }>(`/admin/users${q}`);
-  },
-
-  async getAdminUserById(id: string): Promise<AdminUser> {
-    return fetchJson<AdminUser>(`/admin/users/${id}`);
-  },
-
-  async updateAdminUserApproval(
-    id: string,
-    approvalStatus: UserApprovalStatus,
-    rejectionReason?: string,
-    approvedRole?: UserRole
-  ): Promise<{ success: boolean; message: string; user: AdminUser }> {
-    return fetchJson<{ success: boolean; message: string; user: AdminUser }>(`/admin/users/${id}/approval`, {
-      method: 'PATCH',
-      body: JSON.stringify({ approvalStatus, rejectionReason, approvedRole }),
-    });
-  },
-
-  async updateAdminUserRole(
-    id: string,
-    role: UserRole
-  ): Promise<{ success: boolean; message: string; user: AdminUser }> {
-    return fetchJson<{ success: boolean; message: string; user: AdminUser }>(`/admin/users/${id}/role`, {
-      method: 'PATCH',
-      body: JSON.stringify({ role }),
-    });
-  },
-
-  async updateAdminUserStatus(
-    id: string,
-    status: UserAccountStatus
-  ): Promise<{ success: boolean; message: string; user: AdminUser }> {
-    return fetchJson<{ success: boolean; message: string; user: AdminUser }>(`/admin/users/${id}/status`, {
-      method: 'PATCH',
-      body: JSON.stringify({ status }),
-    });
-  },
-
-  async createAdminUser(
-    userData: Partial<AdminUser>
-  ): Promise<{ success: boolean; message: string; user: AdminUser }> {
-    return fetchJson<{ success: boolean; message: string; user: AdminUser }>('/admin/users', {
-      method: 'POST',
-      body: JSON.stringify(userData),
-    });
-  },
-
-  async updateAdminUser(
-    id: string,
-    userData: Partial<AdminUser>
-  ): Promise<{ success: boolean; message: string; user: AdminUser }> {
-    return fetchJson<{ success: boolean; message: string; user: AdminUser }>(`/admin/users/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(userData),
-    });
-  },
-
-  async deleteAdminUser(id: string): Promise<{ success: boolean; message: string; user: AdminUser }> {
-    return fetchJson<{ success: boolean; message: string; user: AdminUser }>(`/admin/users/${id}`, {
-      method: 'DELETE',
-    });
-  },
-
-  async getAdminUserStats(): Promise<AdminUserStats> {
-    return fetchJson<AdminUserStats>('/admin/users/stats');
-  },
-
-  // --- ADMIN RETAILER STORE APPROVALS API ---
-  async getAdminRetailers(params?: {
-    approvalStatus?: string;
-    status?: string;
-    search?: string;
-    sortBy?: 'createdAt' | 'storeName' | 'managerName' | 'approvalStatus' | 'status';
-    sortOrder?: 'asc' | 'desc';
-  }): Promise<{ retailers: AdminRetailer[]; stats: AdminRetailerStats; total: number }> {
-    const query = new URLSearchParams();
-    if (params?.approvalStatus && params.approvalStatus !== 'All') query.append('approvalStatus', params.approvalStatus);
-    if (params?.status && params.status !== 'All') query.append('status', params.status);
-    if (params?.search) query.append('search', params.search);
-    if (params?.sortBy) query.append('sortBy', params.sortBy);
-    if (params?.sortOrder) query.append('sortOrder', params.sortOrder);
-    const q = query.toString() ? `?${query.toString()}` : '';
-    return fetchJson<{ retailers: AdminRetailer[]; stats: AdminRetailerStats; total: number }>(`/admin/retailers${q}`);
-  },
-
-  async getAdminRetailerById(id: string): Promise<AdminRetailer> {
-    return fetchJson<AdminRetailer>(`/admin/retailers/${id}`);
-  },
-
-  async updateAdminRetailerApproval(
-    id: string,
-    approvalStatus: 'Approved' | 'Rejected',
-    rejectionReason?: string
-  ): Promise<{ success: boolean; message: string; retailer: AdminRetailer }> {
-    return fetchJson<{ success: boolean; message: string; retailer: AdminRetailer }>(`/admin/retailers/${id}/approval`, {
-      method: 'PATCH',
-      body: JSON.stringify({ approvalStatus, rejectionReason }),
-    });
-  },
-
-  async updateAdminRetailerStatus(
-    id: string,
-    status: 'Active' | 'Inactive' | 'Suspended'
-  ): Promise<{ success: boolean; message: string; retailer: AdminRetailer }> {
-    return fetchJson<{ success: boolean; message: string; retailer: AdminRetailer }>(`/admin/retailers/${id}/status`, {
-      method: 'PATCH',
-      body: JSON.stringify({ status }),
-    });
-  },
-
-  async createAdminRetailer(
-    data: Partial<AdminRetailer>
-  ): Promise<{ success: boolean; message: string; retailer: AdminRetailer }> {
-    return fetchJson<{ success: boolean; message: string; retailer: AdminRetailer }>('/admin/retailers', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  },
-
-  async updateAdminRetailer(
-    id: string,
-    data: Partial<AdminRetailer>
-  ): Promise<{ success: boolean; message: string; retailer: AdminRetailer }> {
-    return fetchJson<{ success: boolean; message: string; retailer: AdminRetailer }>(`/admin/retailers/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    });
-  },
-
-  async deleteAdminRetailer(id: string): Promise<{ success: boolean; message: string; retailer: AdminRetailer }> {
-    return fetchJson<{ success: boolean; message: string; retailer: AdminRetailer }>(`/admin/retailers/${id}`, {
-      method: 'DELETE',
-    });
-  },
-
-  async getAdminRetailerStats(): Promise<AdminRetailerStats> {
-    return fetchJson<AdminRetailerStats>('/admin/retailers/stats');
-  },
-
-  // --- ADMIN DESIGNER SUBMISSIONS APPROVAL API ---
-  async getAdminDesigners(params?: {
-    type?: 'all' | 'designers' | 'designs';
-    approvalStatus?: string;
-    search?: string;
-    sortBy?: 'createdAt' | 'name' | 'rating' | 'approvalStatus' | 'title';
-    sortOrder?: 'asc' | 'desc';
-  }): Promise<{ designers: AdminDesigner[]; designs: AdminDesignSubmission[]; stats: AdminDesignerStats; total: number }> {
-    const query = new URLSearchParams();
-    if (params?.type) query.append('type', params.type);
-    if (params?.approvalStatus && params.approvalStatus !== 'All') query.append('approvalStatus', params.approvalStatus);
-    if (params?.search) query.append('search', params.search);
-    if (params?.sortBy) query.append('sortBy', params.sortBy);
-    if (params?.sortOrder) query.append('sortOrder', params.sortOrder);
-    const q = query.toString() ? `?${query.toString()}` : '';
-    return fetchJson<{ designers: AdminDesigner[]; designs: AdminDesignSubmission[]; stats: AdminDesignerStats; total: number }>(`/admin/designers${q}`);
-  },
-
-  async getAdminDesignerById(id: string): Promise<AdminDesigner> {
-    return fetchJson<AdminDesigner>(`/admin/designers/${id}`);
-  },
-
-  async getAdminDesignById(id: string): Promise<AdminDesignSubmission> {
-    return fetchJson<AdminDesignSubmission>(`/admin/designers/designs/${id}`);
-  },
-
-  async updateAdminDesignerApproval(
-    id: string,
-    approvalStatus: 'Approved' | 'Rejected',
-    rejectionReason?: string
-  ): Promise<{ success: boolean; message: string; designer: AdminDesigner }> {
-    return fetchJson<{ success: boolean; message: string; designer: AdminDesigner }>(`/admin/designers/${id}/approval`, {
-      method: 'PATCH',
-      body: JSON.stringify({ approvalStatus, rejectionReason }),
-    });
-  },
-
-  async updateAdminDesignApproval(
-    id: string,
-    approvalStatus: 'Approved' | 'Rejected',
-    rejectionReason?: string
-  ): Promise<{ success: boolean; message: string; design: AdminDesignSubmission }> {
-    return fetchJson<{ success: boolean; message: string; design: AdminDesignSubmission }>(`/admin/designers/designs/${id}/approval`, {
-      method: 'PATCH',
-      body: JSON.stringify({ approvalStatus, rejectionReason }),
-    });
-  },
-
-  async createAdminDesigner(
-    data: Partial<AdminDesigner>
-  ): Promise<{ success: boolean; message: string; designer: AdminDesigner }> {
-    return fetchJson<{ success: boolean; message: string; designer: AdminDesigner }>('/admin/designers', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  },
-
-  async updateAdminDesigner(
-    id: string,
-    data: Partial<AdminDesigner>
-  ): Promise<{ success: boolean; message: string; designer: AdminDesigner }> {
-    return fetchJson<{ success: boolean; message: string; designer: AdminDesigner }>(`/admin/designers/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    });
-  },
-
-  async deleteAdminDesigner(id: string): Promise<{ success: boolean; message: string; designer: AdminDesigner }> {
-    return fetchJson<{ success: boolean; message: string; designer: AdminDesigner }>(`/admin/designers/${id}`, {
-      method: 'DELETE',
-    });
-  },
-
-  async deleteAdminDesign(id: string): Promise<{ success: boolean; message: string; design: AdminDesignSubmission }> {
-    return fetchJson<{ success: boolean; message: string; design: AdminDesignSubmission }>(`/admin/designers/designs/${id}`, {
-      method: 'DELETE',
-    });
-  },
-
-  async getAdminDesignerStats(): Promise<AdminDesignerStats> {
-    return fetchJson<AdminDesignerStats>('/admin/designers/stats');
-  },
-
-  // --- ADMIN EXECUTIVE DASHBOARD OVERVIEW API ---
-  async getAdminDashboardOverview(): Promise<AdminDashboardOverview> {
-    return fetchJson<AdminDashboardOverview>('/admin/dashboard/overview');
-  },
-
-  // --- RETAIL PRODUCTS API ---
-  async getProducts(query?: string, category?: string, maxPrice?: number): Promise<RetailProduct[]> {
-    const params = new URLSearchParams();
-    if (query) params.append('query', query);
-    if (category) params.append('category', category);
-    if (maxPrice) params.append('maxPrice', maxPrice.toString());
-    const q = params.toString() ? `?${params.toString()}` : '';
-    return fetchJson<RetailProduct[]>(`/products${q}`);
+  // --- PRODUCTS API ---
+  async getProducts(params?: { query?: string; category?: string; maxPrice?: number }): Promise<RetailProduct[]> {
+    const q = new URLSearchParams();
+    if (params?.query) q.append('query', params.query);
+    if (params?.category) q.append('category', params.category);
+    if (params?.maxPrice) q.append('maxPrice', String(params.maxPrice));
+    const qs = q.toString() ? `?${q.toString()}` : '';
+    return fetchJson<RetailProduct[]>(`/products${qs}`);
   },
 
   async getProductById(id: string): Promise<RetailProduct> {
     return fetchJson<RetailProduct>(`/products/${id}`);
   },
 
-  async createProduct(productData: Partial<RetailProduct>): Promise<RetailProduct> {
+  async createProduct(data: FormData | Partial<RetailProduct>): Promise<RetailProduct> {
+    if (data instanceof FormData) {
+      const token = getAuthToken();
+      const res = await fetch(`${BASE_URL}/products`, {
+        method: 'POST',
+        headers: {
+          'x-user-role': currentActiveRole,
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: data,
+      });
+      if (!res.ok) throw new Error('Failed to create product');
+      return await res.json();
+    }
     return fetchJson<RetailProduct>('/products', {
       method: 'POST',
-      body: JSON.stringify(productData),
+      body: JSON.stringify(data),
     });
   },
 
-  async updateProduct(id: string, productData: Partial<RetailProduct>): Promise<RetailProduct> {
+  async updateProduct(id: string, data: FormData | Partial<RetailProduct>): Promise<RetailProduct> {
+    if (data instanceof FormData) {
+      const token = getAuthToken();
+      const res = await fetch(`${BASE_URL}/products/${id}`, {
+        method: 'PUT',
+        headers: {
+          'x-user-role': currentActiveRole,
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: data,
+      });
+      if (!res.ok) throw new Error('Failed to update product');
+      return await res.json();
+    }
     return fetchJson<RetailProduct>(`/products/${id}`, {
       method: 'PUT',
-      body: JSON.stringify(productData),
+      body: JSON.stringify(data),
     });
   },
 
@@ -447,17 +276,17 @@ export const api = {
     return fetchJson<RetailerCustomer[]>('/retailer/customers');
   },
 
-  async createRetailerCustomer(customerData: Partial<RetailerCustomer>): Promise<RetailerCustomer> {
+  async createRetailerCustomer(data: Omit<RetailerCustomer, 'id'>): Promise<RetailerCustomer> {
     return fetchJson<RetailerCustomer>('/retailer/customers', {
       method: 'POST',
-      body: JSON.stringify(customerData),
+      body: JSON.stringify(data),
     });
   },
 
-  async updateRetailerCustomer(id: string, customerData: Partial<RetailerCustomer>): Promise<RetailerCustomer> {
+  async updateRetailerCustomer(id: string, data: Partial<RetailerCustomer>): Promise<RetailerCustomer> {
     return fetchJson<RetailerCustomer>(`/retailer/customers/${id}`, {
       method: 'PUT',
-      body: JSON.stringify(customerData),
+      body: JSON.stringify(data),
     });
   },
 
@@ -472,17 +301,17 @@ export const api = {
     return fetchJson<Promotion[]>('/promotions');
   },
 
-  async createPromotion(promoData: Partial<Promotion>): Promise<Promotion> {
+  async createPromotion(promo: Omit<Promotion, 'id' | 'usageCount'>): Promise<Promotion> {
     return fetchJson<Promotion>('/promotions', {
       method: 'POST',
-      body: JSON.stringify(promoData),
+      body: JSON.stringify(promo),
     });
   },
 
-  async updatePromotion(id: string, promoData: Partial<Promotion>): Promise<Promotion> {
+  async updatePromotion(id: string, promo: Partial<Promotion>): Promise<Promotion> {
     return fetchJson<Promotion>(`/promotions/${id}`, {
       method: 'PUT',
-      body: JSON.stringify(promoData),
+      body: JSON.stringify(promo),
     });
   },
 
@@ -636,7 +465,7 @@ export const api = {
     });
   },
 
-  // --- AI ENGINE API ---
+  // --- AI ENGINE, CONVERSATIONAL STYLIST & VIRTUAL TRY-ON ---
   async getAiStyling(profile: UserProfile, occasion: string) {
     return fetchJson<{
       colorHarmonyScore: number;
@@ -652,6 +481,37 @@ export const api = {
     });
   },
 
+  async chatStylist(message: string, options?: { budget?: number; occasion?: string }) {
+    return fetchJson<{
+      role: string;
+      content: string;
+      recommendedProducts?: RetailProduct[];
+    }>('/ai/chat', {
+      method: 'POST',
+      body: JSON.stringify({ message, ...options }),
+    });
+  },
+
+  async semanticSearch(q: string): Promise<RetailProduct[]> {
+    return fetchJson<RetailProduct[]>(`/ai/search?q=${encodeURIComponent(q)}`);
+  },
+
+  async virtualTryOn(data: { userPhotoUrl: string; garmentId?: string; garmentUrl?: string }) {
+    return fetchJson<{
+      message: string;
+      job: {
+        jobId: string;
+        resultUrl: string;
+        status: string;
+        fitConfidence: number;
+        stylingNotes: string;
+      };
+    }>('/ai/try-on', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
   async analyzePhoto(photoUrl: string) {
     return fetchJson<{
       confidence: number;
@@ -664,6 +524,110 @@ export const api = {
     }>('/ai/photo-analysis', {
       method: 'POST',
       body: JSON.stringify({ photoUrl }),
+    });
+  },
+
+  // --- NOTIFICATIONS API ---
+  async getNotifications() {
+    return fetchJson<Array<{ id: string; title: string; message: string; type: string; read: boolean; createdAt: string }>>('/notifications');
+  },
+
+  // --- ADMIN APIs ---
+  async getAdminStats(): Promise<AdminDashboardOverview> {
+    return fetchJson<AdminDashboardOverview>('/admin/dashboard/stats');
+  },
+
+  async getAdminRecentActivities(): Promise<any[]> {
+    return fetchJson<any[]>('/admin/dashboard/activities');
+  },
+
+  async getAdminUsers(params?: {
+    search?: string;
+    role?: string;
+    status?: string;
+    approvalStatus?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{ users: AdminUser[]; stats: AdminUserStats; total: number; page: number; totalPages: number }> {
+    const q = new URLSearchParams();
+    if (params?.search) q.append('search', params.search);
+    if (params?.role) q.append('role', params.role);
+    if (params?.status) q.append('status', params.status);
+    if (params?.approvalStatus) q.append('approvalStatus', params.approvalStatus);
+    if (params?.page) q.append('page', String(params.page));
+    if (params?.limit) q.append('limit', String(params.limit));
+    const qs = q.toString() ? `?${q.toString()}` : '';
+    return fetchJson(`/admin/users${qs}`);
+  },
+
+  async updateAdminUserApproval(id: string, approvalStatus: UserApprovalStatus, rejectionReason?: string) {
+    return fetchJson(`/admin/users/${id}/approval`, {
+      method: 'PATCH',
+      body: JSON.stringify({ approvalStatus, rejectionReason }),
+    });
+  },
+
+  async updateAdminUserStatus(id: string, status: UserAccountStatus) {
+    return fetchJson(`/admin/users/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    });
+  },
+
+  async updateAdminUserRole(id: string, role: UserRole) {
+    return fetchJson(`/admin/users/${id}/role`, {
+      method: 'PATCH',
+      body: JSON.stringify({ role }),
+    });
+  },
+
+  async getAdminRetailers(params?: any): Promise<{ retailers: AdminRetailer[]; stats: AdminRetailerStats }> {
+    const q = new URLSearchParams(params).toString();
+    return fetchJson(`/admin/retailers${q ? `?${q}` : ''}`);
+  },
+
+  async updateAdminRetailerApproval(id: string, approvalStatus: UserApprovalStatus, rejectionReason?: string) {
+    return fetchJson(`/admin/retailers/${id}/approval`, {
+      method: 'PATCH',
+      body: JSON.stringify({ approvalStatus, rejectionReason }),
+    });
+  },
+
+  async updateAdminRetailerStatus(id: string, status: UserAccountStatus) {
+    return fetchJson(`/admin/retailers/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    });
+  },
+
+  async getAdminDesigners(params?: any): Promise<{ designers: AdminDesigner[]; submissions: AdminDesignSubmission[]; stats: AdminDesignerStats }> {
+    const q = new URLSearchParams(params).toString();
+    return fetchJson(`/admin/designers${q ? `?${q}` : ''}`);
+  },
+
+  async updateAdminDesignerApproval(id: string, approvalStatus: UserApprovalStatus, rejectionReason?: string) {
+    return fetchJson(`/admin/designers/${id}/approval`, {
+      method: 'PATCH',
+      body: JSON.stringify({ approvalStatus, rejectionReason }),
+    });
+  },
+
+  async updateAdminDesignSubmission(id: string, approvalStatus: UserApprovalStatus, rejectionReason?: string) {
+    return fetchJson(`/admin/designers/submissions/${id}/approval`, {
+      method: 'PATCH',
+      body: JSON.stringify({ approvalStatus, rejectionReason }),
+    });
+  },
+
+  async getAdminOrders(params?: any): Promise<{ orders: CustomerOrder[]; stats: AdminOrderStats }> {
+    const q = new URLSearchParams(params).toString();
+    return fetchJson(`/admin/orders${q ? `?${q}` : ''}`);
+  },
+
+  async updateAdminOrderStatus(id: string, status: OrderStatus, trackingNumber?: string, deliveryDate?: string) {
+    return fetchJson(`/admin/orders/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status, trackingNumber, deliveryDate }),
     });
   },
 };

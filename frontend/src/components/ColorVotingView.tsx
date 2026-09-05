@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Palette, Star, Plus, Flame, ShieldCheck } from 'lucide-react';
+import { Palette, Star, Plus, Flame, ShieldCheck, Radio } from 'lucide-react';
 import type { ColorCombo, OccasionType } from '../types/fashion';
 import { COLOR_COMBINATIONS } from '../data/fashionData';
 import { api } from '../services/api';
+import { subscribeToColorArena } from '../services/socket';
 import confetti from 'canvas-confetti';
 
 interface ColorVotingViewProps {
@@ -13,6 +14,8 @@ export const ColorVotingView: React.FC<ColorVotingViewProps> = ({ searchQuery = 
   const [combos, setCombos] = useState<ColorCombo[]>(COLOR_COMBINATIONS);
   const [selectedOccasion, setSelectedOccasion] = useState<string>('All');
   const [isSubmitOpen, setIsSubmitOpen] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLiveConnected, setIsLiveConnected] = useState<boolean>(true);
 
   // New combo form state
   const [newTitle, setNewTitle] = useState('');
@@ -24,24 +27,48 @@ export const ColorVotingView: React.FC<ColorVotingViewProps> = ({ searchQuery = 
 
   useEffect(() => {
     async function loadCombos() {
+      setIsLoading(true);
       try {
         const data = await api.getColorCombos(selectedOccasion);
-        setCombos(data);
+        if (data && data.length > 0) {
+          setCombos(data);
+        }
       } catch (err) {
         console.error('Error loading color combos from API:', err);
+      } finally {
+        setIsLoading(false);
       }
     }
     loadCombos();
   }, [selectedOccasion]);
 
+  // Subscribe to live real-time color voting WebSocket broadcast
+  useEffect(() => {
+    const unsubscribe = subscribeToColorArena((updatedCombo: ColorCombo) => {
+      setCombos((prev) => {
+        const exists = prev.some((c) => c.id === updatedCombo.id);
+        if (exists) {
+          return prev.map((c) => (c.id === updatedCombo.id ? { ...c, ...updatedCombo } : c));
+        }
+        return [updatedCombo, ...prev];
+      });
+      setIsLiveConnected(true);
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
   const filtered = combos.filter((c) => {
     const matchOccasion = selectedOccasion === 'All' || c.occasion === selectedOccasion;
     if (!searchQuery.trim()) return matchOccasion;
     const q = searchQuery.toLowerCase();
-    return matchOccasion && (
-      c.title.toLowerCase().includes(q) ||
-      c.subType.toLowerCase().includes(q) ||
-      c.occasion.toLowerCase().includes(q)
+    return (
+      matchOccasion &&
+      (c.title.toLowerCase().includes(q) ||
+        c.subType.toLowerCase().includes(q) ||
+        c.occasion.toLowerCase().includes(q))
     );
   });
 
@@ -51,6 +78,20 @@ export const ColorVotingView: React.FC<ColorVotingViewProps> = ({ searchQuery = 
       spread: 60,
       origin: { y: 0.7 },
     });
+
+    // Optimistic UI update
+    setCombos((prev) =>
+      prev.map((c) =>
+        c.id === id
+          ? {
+              ...c,
+              votesCount: c.votesCount + 1,
+              trendingScore: c.trendingScore + 1,
+              userVote: starRating,
+            }
+          : c
+      )
+    );
 
     try {
       const updated = await api.voteColorCombo(id, 'up');
@@ -88,7 +129,6 @@ export const ColorVotingView: React.FC<ColorVotingViewProps> = ({ searchQuery = 
 
   return (
     <div className="space-y-8 animate-fadeIn">
-      
       {/* Header Banner */}
       <div className="glass-panel rounded-3xl p-6 sm:p-8 relative overflow-hidden">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative z-10">
@@ -96,18 +136,24 @@ export const ColorVotingView: React.FC<ColorVotingViewProps> = ({ searchQuery = 
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs font-semibold">
               <Palette className="w-3.5 h-3.5" />
               <span>Signature Community Intelligence Asset</span>
+              {isLiveConnected && (
+                <span className="flex items-center gap-1 text-[10px] text-emerald-400 font-bold ml-2">
+                  <Radio className="w-3 h-3 animate-pulse text-emerald-400" />
+                  Live Sync
+                </span>
+              )}
             </div>
             <h1 className="text-3xl sm:text-4xl font-serif font-bold text-theme-heading tracking-tight">
               Community <span className="gradient-text-rose">Color Voting Arena</span>
             </h1>
             <p className="text-sm text-theme-secondary">
-              Rate color palettes for each occasion. Every vote updates the real-time Bayesian leaderboard and powers the AI styling engine for 10,000+ users.
+              Rate color palettes for each occasion. Every vote broadcasts instantly via WebSockets to update the Bayesian leaderboard and power the AI styling engine in real-time.
             </p>
           </div>
 
           <button
             onClick={() => setIsSubmitOpen(true)}
-            className="flex items-center gap-2 bg-gradient-to-r from-rose-500 to-amber-500 hover:from-rose-400 hover:to-amber-400 text-slate-950 font-bold px-5 py-3 rounded-2xl shadow-xl shadow-rose-500/20 text-xs transition-all hover:scale-105"
+            className="flex items-center gap-2 bg-gradient-to-r from-rose-500 to-amber-500 hover:from-rose-400 hover:to-amber-400 text-slate-950 font-bold px-5 py-3 rounded-2xl shadow-xl shadow-rose-500/20 text-xs transition-all hover:scale-105 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>Submit New Color Combo</span>
@@ -115,14 +161,14 @@ export const ColorVotingView: React.FC<ColorVotingViewProps> = ({ searchQuery = 
         </div>
       </div>
 
-      {/* Occasion Filter & Redis Deduplication Indicator */}
+      {/* Occasion Filter & Anti-fraud badge */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-1 bg-surface-theme p-1.5 rounded-2xl border border-theme-main overflow-x-auto max-w-full">
           {['All', 'Work', 'Casual', 'Date night', 'Formal', 'Party', 'Travel'].map((occ) => (
             <button
               key={occ}
               onClick={() => setSelectedOccasion(occ)}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
                 selectedOccasion === occ
                   ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 shadow-sm'
                   : 'text-theme-muted hover:text-theme-heading hover:bg-surface-subtle-theme'
@@ -135,88 +181,99 @@ export const ColorVotingView: React.FC<ColorVotingViewProps> = ({ searchQuery = 
 
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-surface-theme border border-theme-main text-[11px] text-theme-secondary">
           <ShieldCheck className="w-4 h-4 text-emerald-400" />
-          <span>Anti-Fraud Active: 1 vote/user/combo/day</span>
+          <span>Real-time Socket & Anti-Fraud Enabled</span>
         </div>
       </div>
 
-      {/* Voting Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filtered.map((combo) => (
-          <div key={combo.id} className="glass-card rounded-3xl p-6 flex flex-col justify-between space-y-6">
-            
-            {/* Header info */}
-            <div>
-              <div className="flex justify-between items-start">
-                <span className="text-[10px] uppercase font-bold tracking-widest text-theme-muted bg-surface-subtle-theme px-2.5 py-1 rounded-full border border-theme-main">
-                  {combo.occasion} • {combo.subType}
-                </span>
-                <span className="flex items-center gap-1 text-xs font-bold text-amber-400">
-                  <Flame className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                  <span>{combo.trendingScore} Trending</span>
-                </span>
-              </div>
-              
-              <h3 className="font-serif font-bold text-xl text-theme-heading mt-3">{combo.title}</h3>
+      {/* Shimmer Skeleton or Voting Cards Grid */}
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3, 4, 5, 6].map((sk) => (
+            <div key={sk} className="glass-card rounded-3xl p-6 space-y-4 animate-pulse">
+              <div className="h-4 bg-slate-700/40 rounded w-1/3" />
+              <div className="h-6 bg-slate-700/40 rounded w-2/3" />
+              <div className="h-16 bg-slate-700/40 rounded-2xl" />
+              <div className="h-12 bg-slate-700/40 rounded-xl" />
             </div>
-
-            {/* Color Palette Display */}
-            <div className="space-y-2">
-              <div className="h-16 rounded-2xl overflow-hidden flex shadow-inner border border-theme-main">
-                {combo.colors.map((c, i) => (
-                  <div
-                    key={i}
-                    className="h-full flex-1 flex flex-col justify-end p-2 transition-all hover:flex-[1.5]"
-                    style={{ backgroundColor: c.hex }}
-                  >
-                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-black/60 backdrop-blur text-white truncate max-w-full inline-block">
-                      {c.name}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Voting Metrics & Star Inputs */}
-            <div className="bg-surface-theme p-4 rounded-2xl border border-theme-main space-y-3">
-              <div className="flex justify-between items-center text-xs">
-                <div className="flex items-center gap-1">
-                  <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-                  <strong className="text-theme-heading text-sm">{combo.rating}</strong>
-                  <span className="text-theme-muted">/ 5.0</span>
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filtered.map((combo) => (
+            <div key={combo.id} className="glass-card rounded-3xl p-6 flex flex-col justify-between space-y-6 transition-all hover:border-rose-500/30">
+              {/* Header info */}
+              <div>
+                <div className="flex justify-between items-start">
+                  <span className="text-[10px] uppercase font-bold tracking-widest text-theme-muted bg-surface-subtle-theme px-2.5 py-1 rounded-full border border-theme-main">
+                    {combo.occasion} • {combo.subType}
+                  </span>
+                  <span className="flex items-center gap-1 text-xs font-bold text-amber-400">
+                    <Flame className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                    <span>{combo.trendingScore} Trending</span>
+                  </span>
                 </div>
-                <span className="text-theme-muted">{combo.votesCount.toLocaleString()} votes</span>
+
+                <h3 className="font-serif font-bold text-xl text-theme-heading mt-3">{combo.title}</h3>
               </div>
 
-              {/* Interactive 5-Star Vote Picker */}
-              <div className="pt-2 border-t border-theme-main flex items-center justify-between">
-                <span className="text-[11px] text-theme-muted">Cast Your Vote:</span>
-                <div className="flex gap-1">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <button
-                      key={star}
-                      onClick={() => handleVote(combo.id, star)}
-                      className="p-1 text-theme-muted hover:text-amber-400 hover:scale-125 transition-all"
-                      title={`Rate ${star} Stars`}
+              {/* Color Palette Display */}
+              <div className="space-y-2">
+                <div className="h-16 rounded-2xl overflow-hidden flex shadow-inner border border-theme-main">
+                  {combo.colors.map((c, i) => (
+                    <div
+                      key={i}
+                      className="h-full flex-1 flex flex-col justify-end p-2 transition-all hover:flex-[1.5]"
+                      style={{ backgroundColor: c.hex }}
                     >
-                      <Star
-                        className={`w-4 h-4 ${
-                          (combo.userVote || 0) >= star ? 'fill-amber-400 text-amber-400' : ''
-                        }`}
-                      />
-                    </button>
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-black/60 backdrop-blur text-white truncate max-w-full inline-block">
+                        {c.name}
+                      </span>
+                    </div>
                   ))}
                 </div>
               </div>
-              {combo.userVote && (
-                <div className="text-[10px] text-emerald-400 font-semibold text-right">
-                  ✓ Rated {combo.userVote} Stars today
-                </div>
-              )}
-            </div>
 
-          </div>
-        ))}
-      </div>
+              {/* Voting Metrics & Star Inputs */}
+              <div className="bg-surface-theme p-4 rounded-2xl border border-theme-main space-y-3">
+                <div className="flex justify-between items-center text-xs">
+                  <div className="flex items-center gap-1">
+                    <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+                    <strong className="text-theme-heading text-sm">{combo.rating}</strong>
+                    <span className="text-theme-muted">/ 5.0</span>
+                  </div>
+                  <span className="text-theme-muted">{combo.votesCount.toLocaleString()} votes</span>
+                </div>
+
+                {/* Interactive 5-Star Vote Picker */}
+                <div className="pt-2 border-t border-theme-main flex items-center justify-between">
+                  <span className="text-[11px] text-theme-muted">Cast Your Vote:</span>
+                  <div className="flex gap-1">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        onClick={() => handleVote(combo.id, star)}
+                        className="p-1 text-theme-muted hover:text-amber-400 hover:scale-125 transition-all cursor-pointer"
+                        title={`Rate ${star} Stars`}
+                      >
+                        <Star
+                          className={`w-4 h-4 ${
+                            (combo.userVote || 0) >= star ? 'fill-amber-400 text-amber-400' : ''
+                          }`}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {combo.userVote && (
+                  <div className="text-[10px] text-emerald-400 font-semibold text-right">
+                    ✓ Rated {combo.userVote} Stars
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Modal: Submit New Color Combo */}
       {isSubmitOpen && (
@@ -293,13 +350,13 @@ export const ColorVotingView: React.FC<ColorVotingViewProps> = ({ searchQuery = 
                 <button
                   type="button"
                   onClick={() => setIsSubmitOpen(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold text-theme-muted hover:text-theme-heading"
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-theme-muted hover:text-theme-heading cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="bg-gradient-to-r from-rose-500 to-amber-500 text-slate-950 font-bold px-5 py-2.5 rounded-xl text-xs shadow-lg shadow-rose-500/20"
+                  className="bg-gradient-to-r from-rose-500 to-amber-500 text-slate-950 font-bold px-5 py-2.5 rounded-xl text-xs shadow-lg shadow-rose-500/20 cursor-pointer"
                 >
                   Submit & Open Voting
                 </button>
@@ -308,7 +365,6 @@ export const ColorVotingView: React.FC<ColorVotingViewProps> = ({ searchQuery = 
           </div>
         </div>
       )}
-
     </div>
   );
 };

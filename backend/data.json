@@ -580,6 +580,62 @@
   ],
   "orders": [
     {
+      "id": "ord_1788605442894",
+      "orderNumber": "ORD-9148",
+      "date": "Sep 05, 2026",
+      "status": "Processing",
+      "customerName": "Test Customer",
+      "customerEmail": "test_customer_1788605442742@example.com",
+      "customerPhone": "+1-555-0199",
+      "paymentMethod": "Google Pay / UPI",
+      "totalAmount": 340,
+      "currency": "$",
+      "shippingAddress": "100 Innovation Way, Suite 500, Seattle, WA",
+      "items": [
+        {
+          "id": "item_1788605442894_0",
+          "orderId": "ORD-9148",
+          "productId": "prod_101",
+          "title": "Double-Breasted Italian Wool Trench Coat",
+          "brand": "Aria Vance Studio",
+          "imageUrl": "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6",
+          "price": 340,
+          "quantity": 1,
+          "size": "M",
+          "color": "Midnight Navy",
+          "sku": "SKU-prod_101"
+        }
+      ]
+    },
+    {
+      "id": "ord_1788605381653",
+      "orderNumber": "ORD-3037",
+      "date": "Sep 05, 2026",
+      "status": "Processing",
+      "customerName": "Test Customer",
+      "customerEmail": "test_customer_1788605381509@example.com",
+      "customerPhone": "+1-555-0199",
+      "paymentMethod": "Google Pay / UPI",
+      "totalAmount": 340,
+      "currency": "$",
+      "shippingAddress": "100 Innovation Way, Suite 500, Seattle, WA",
+      "items": [
+        {
+          "id": "item_1788605381653_0",
+          "orderId": "ORD-3037",
+          "productId": "prod_101",
+          "title": "Double-Breasted Italian Wool Trench Coat",
+          "brand": "Aria Vance Studio",
+          "imageUrl": "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6",
+          "price": 340,
+          "quantity": 1,
+          "size": "M",
+          "color": "Midnight Navy",
+          "sku": "SKU-prod_101"
+        }
+      ]
+    },
+    {
       "id": "ord_1787547822468",
       "orderNumber": "ORD-8030",
       "date": "Aug 24, 2026",

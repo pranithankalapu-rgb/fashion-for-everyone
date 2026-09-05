@@ -8,41 +8,56 @@ datasource db {
 }
 
 model UserProfile {
-  id                  String   @id @default(uuid())
+  id                  String    @id @default(uuid())
   name                String
-  email               String?  @unique
+  email               String?   @unique
+  passwordHash        String?
+  refreshToken        String?
+  refreshTokenExpiry  DateTime?
   avatar              String
   photoUrl            String?
-  skinTone            String   @default("Warm Golden")
-  undertone           String   @default("Warm")
-  hairColor           String   @default("Chestnut Brown")
-  bodyShape           String   @default("Hourglass")
-  measurements        Json     @default("{\"heightCm\": 170, \"chestCm\": 88, \"waistCm\": 68, \"hipsCm\": 94}")
-  selectedOccasions   String[] @default([])
-  styleVibes          String[] @default([])
-  completedOnboarding Boolean  @default(true)
-  role                String   @default("customer")
-  approvalStatus      String   @default("Approved")
-  status              String   @default("Active")
+  skinTone            String    @default("Warm Golden")
+  undertone           String    @default("Warm")
+  hairColor           String    @default("Chestnut Brown")
+  bodyShape           String    @default("Hourglass")
+  measurements        Json      @default("{\"heightCm\": 170, \"chestCm\": 88, \"waistCm\": 68, \"hipsCm\": 94}")
+  selectedOccasions   String[]  @default([])
+  styleVibes          String[]  @default([])
+  completedOnboarding Boolean   @default(true)
+  role                String    @default("customer")
+  approvalStatus      String    @default("Approved")
+  status              String    @default("Active")
   requestedRole       String?
   rejectionReason     String?
   phone               String?
   bio                 String?
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @default(now()) @updatedAt
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @default(now()) @updatedAt
 }
 
 model ColorCombo {
-  id              String  @id @default(uuid())
+  id              String      @id @default(uuid())
   occasion        String
   subType         String
   title           String
   colors          Json
-  rating          Float   @default(5.0)
-  votesCount      Int     @default(0)
+  rating          Float       @default(5.0)
+  votesCount      Int         @default(0)
   userVote        Int?
-  trendingScore   Int     @default(0)
+  trendingScore   Int         @default(0)
   exampleImageUrl String
+  votes           ColorVote[]
+}
+
+model ColorVote {
+  id           String     @id @default(uuid())
+  colorComboId String
+  userId       String
+  voteType     String     @default("up")
+  createdAt    DateTime   @default(now())
+  colorCombo   ColorCombo @relation(fields: [colorComboId], references: [id], onDelete: Cascade)
+
+  @@unique([colorComboId, userId])
 }
 
 model Designer {
@@ -145,7 +160,7 @@ model CustomerOrder {
   id              String      @id @default(uuid())
   orderNumber     String      @unique
   date            String
-  status          String
+  status          String      @default("Pending")
   totalAmount     Float
   currency        String      @default("$")
   shippingAddress String
@@ -154,7 +169,11 @@ model CustomerOrder {
   customerName    String?
   customerEmail   String?
   customerPhone   String?
-  paymentMethod   String?
+  paymentMethod   String?     @default("Credit Card")
+  paymentStatus   String      @default("PAID")
+  paymentIntentId String?
+  paymentGateway  String      @default("MOCK")
+  idempotencyKey  String?
   items           OrderItem[]
 }
 
@@ -259,4 +278,28 @@ model AiAnalysisRequest {
   providerUsed          String   @default("rule-based")
   status                String   @default("completed")
   createdAt             DateTime @default(now())
+}
+
+model Notification {
+  id            String   @id @default(uuid())
+  recipientRole String   @default("retailer")
+  recipientId   String?
+  title         String
+  message       String
+  type          String   @default("info")
+  read          Boolean  @default(false)
+  createdAt     DateTime @default(now())
+}
+
+model TryOnJob {
+  id            String   @id @default(uuid())
+  userId        String
+  garmentId     String?
+  userPhotoUrl  String
+  garmentUrl    String?
+  resultUrl     String?
+  status        String   @default("PENDING")
+  provider      String   @default("virtual-tryon-v1")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @default(now()) @updatedAt
 }

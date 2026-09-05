@@ -6,14 +6,22 @@ if (typeof process.loadEnvFile === 'function') {
   }
 }
 
+import http from 'http';
+import path from 'path';
 import express from 'express';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import apiRouter from './routes/api';
 import { securityHeadersMiddleware, rateLimiter } from './security';
+import { initSocketServer } from './services/socketService';
 
 const app = express();
 const PORT = Number(process.env.PORT) || 5000;
 const ALLOWED_ORIGIN = process.env.CORS_ORIGIN || '*';
+
+// Create HTTP Server for WebSockets
+const server = http.createServer(app);
+initSocketServer(server);
 
 // Security Headers Middleware
 app.use(securityHeadersMiddleware);
@@ -21,10 +29,14 @@ app.use(securityHeadersMiddleware);
 // Rate Limiter for /api
 app.use('/api', rateLimiter);
 
+// Cookie Parser Middleware
+app.use(cookieParser());
+
 // CORS configuration
 app.use(
   cors({
     origin: ALLOWED_ORIGIN,
+    credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'x-user-role', 'x-user-id'],
   })
@@ -39,18 +51,15 @@ app.use((req, res, next) => {
   next();
 });
 
-import path from 'path';
-
 // Serve uploaded static files
 app.use('/uploads', express.static(path.resolve(process.cwd(), 'backend', 'uploads')));
 
 // Register API Router under /api
 app.use('/api', apiRouter);
 
-
 // Start Server
-app.listen(PORT, () => {
-  console.log(`✨ Fashion for Everyone Backend API running at http://localhost:${PORT}`);
+server.listen(PORT, () => {
+  console.log(`✨ Fashion for Everyone Backend API & WebSocket Server running at http://localhost:${PORT}`);
 });
 
 export default app;
