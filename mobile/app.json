@@ -6,9 +6,6 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
-    "splash": {
-      "backgroundColor": "#0F0F1A"
-    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.fashionforeveryone.mobile"
@@ -26,13 +23,9 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "extra": {
-      "eas": {
-        "projectId": "fashion-for-everyone-mobile"
-      }
-    },
     "plugins": [
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-font"
     ]
   }
 }
