@@ -26,6 +26,12 @@
     "plugins": [
       "expo-secure-store",
       "expo-font"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "47d0d6a7-6656-4737-9bd9-5e520c623aa2"
+      }
+    },
+    "owner": "pranith-kumar01"
   }
 }
