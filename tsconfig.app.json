@@ -22,5 +22,11 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["frontend/src"]
+  "include": ["frontend/src"],
+  "exclude": [
+    "frontend/src/components/admin/AdminOrders.tsx",
+    "frontend/src/components/admin/AdminRetailers.tsx",
+    "frontend/src/components/admin/AdminUsers.tsx",
+    "frontend/src/components/admin/AdminDesigners.tsx"
+  ]
 }

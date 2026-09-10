@@ -17,15 +17,13 @@ export const OrderCheckoutModal: React.FC<OrderCheckoutModalProps> = ({
   onOrderSuccess,
 }) => {
   const [size, setSize] = useState<string>(product?.sizes?.[0] || 'M');
-  const [color, setColor] = useState<string>(product?.colors?.[0] || 'Default');
+  const color = product?.colors?.[0] || 'Default';
   const [quantity, setQuantity] = useState<number>(1);
   const [shippingAddress, setShippingAddress] = useState<string>(
     '742 Evergreen Terrace, Suite 4B, Seattle, WA 98103'
   );
-  const [customerEmail, setCustomerEmail] = useState<string>(
-    userProfile?.name ? userProfile.name.toLowerCase().replace(/\s+/g, '.') + '@example.com' : 'customer@example.com'
-  );
-  const [customerPhone, setCustomerPhone] = useState<string>('+1 (206) 555-0192');
+  const customerEmail = userProfile?.name ? userProfile.name.toLowerCase().replace(/\s+/g, '.') + '@example.com' : 'customer@example.com';
+  const customerPhone = '+1 (206) 555-0192';
   const [paymentGateway, setPaymentGateway] = useState<string>('GPAY');
   const [paymentMethod, setPaymentMethod] = useState<string>('Google Pay / UPI');
 

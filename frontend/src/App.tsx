@@ -17,7 +17,7 @@ import type { UserProfile, RetailProduct } from './types/fashion';
 import { INITIAL_USER_PROFILE } from './data/fashionData';
 import { api, setCurrentRole } from './services/api';
 import { subscribeToNotifications } from './services/socket';
-import { X, MapPin, ShoppingBag, Heart, Sparkles, Wand2, Bell } from 'lucide-react';
+import { X, ShoppingBag, Heart, Sparkles, Wand2, Bell } from 'lucide-react';
 
 export function App() {
   const [activeTab, setActiveTab] = useState<string>(() => {
@@ -344,7 +344,6 @@ export function App() {
             <div className="flex items-center gap-3 pt-4 border-t border-theme-main">
               <button
                 onClick={() => {
-                  const prod = selectedProduct;
                   setSelectedProduct(null);
                   setIsTryOnOpen(true);
                 }}

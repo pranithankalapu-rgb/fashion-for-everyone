@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
-import type { ColorCombo, RetailProduct, CustomerOrder, OutfitLook, Designer, Design, StoreSettings } from '../types/fashion';
+import type { ColorCombo } from '../types/fashion';
 
 export function useProducts(params?: { query?: string; category?: string; maxPrice?: number }) {
   return useQuery({

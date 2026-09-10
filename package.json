@@ -8,6 +8,7 @@
     "dev:backend": "tsx watch backend/index.ts",
     "dev:frontend": "vite",
     "server": "npm run dev:backend",
+    "start": "tsx backend/index.ts",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview"

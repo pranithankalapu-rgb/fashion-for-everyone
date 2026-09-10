@@ -25,7 +25,7 @@ import type {
   AdminDashboardOverview,
 } from '../types/fashion';
 
-const BASE_URL = '/api';
+const BASE_URL = (import.meta.env.VITE_API_URL as string) || '/api';
 
 let currentActiveRole: 'customer' | 'designer' | 'retailer' | 'admin' = 'customer';
 
@@ -190,10 +190,10 @@ export const api = {
     });
   },
 
-  async updateOrderStatus(id: string, status: string): Promise<CustomerOrder> {
+  async updateOrderStatus(id: string, status: string, trackingNumber?: string): Promise<CustomerOrder> {
     const res = await fetchJson<{ message: string; order: CustomerOrder }>(`/orders/${id}/status`, {
       method: 'PATCH',
-      body: JSON.stringify({ status }),
+      body: JSON.stringify({ status, trackingNumber }),
     });
     return res.order;
   },
@@ -533,8 +533,12 @@ export const api = {
   },
 
   // --- ADMIN APIs ---
+  async getAdminDashboardOverview(): Promise<AdminDashboardOverview> {
+    return fetchJson<AdminDashboardOverview>('/admin/dashboard/overview');
+  },
+
   async getAdminStats(): Promise<AdminDashboardOverview> {
-    return fetchJson<AdminDashboardOverview>('/admin/dashboard/stats');
+    return fetchJson<AdminDashboardOverview>('/admin/dashboard/overview');
   },
 
   async getAdminRecentActivities(): Promise<any[]> {

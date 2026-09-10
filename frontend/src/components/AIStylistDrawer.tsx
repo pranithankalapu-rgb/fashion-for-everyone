@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sparkles, Send, X, Bot, User, ShoppingBag, DollarSign, ArrowRight } from 'lucide-react';
+import { Sparkles, Send, X, Bot, User, ShoppingBag, DollarSign } from 'lucide-react';
 import { api } from '../services/api';
 import type { RetailProduct } from '../types/fashion';
 

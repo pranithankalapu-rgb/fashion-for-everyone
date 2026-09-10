@@ -11,8 +11,8 @@ function getDefaultApiUrl(): string {
       ? 'http://10.0.2.2:5000/api'
       : 'http://localhost:5000/api';
   }
-  // Production URL — update when deployed
-  return 'https://your-production-api.com/api';
+  // Production URL — deployed backend API
+  return 'https://fashion-for-everyone-backend.onrender.com/api';
 }
 
 // Expo env variable takes precedence if set
