@@ -1,6 +1,6 @@
 async function testApi() {
-  const baseUrl = 'http://localhost:5000/api';
-  console.log('Testing local backend at:', baseUrl);
+  const baseUrl = process.env.API_URL || 'https://fashion-for-everyone-backend.onrender.com/api';
+  console.log('Testing backend at:', baseUrl);
 
   // 1. Health
   const healthRes = await fetch(`${baseUrl}/health`);

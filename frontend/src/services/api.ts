@@ -25,7 +25,13 @@ import type {
   AdminDashboardOverview,
 } from '../types/fashion';
 
-const BASE_URL = (import.meta.env.VITE_API_URL as string) || '/api';
+const BASE_URL =
+  (import.meta.env.VITE_API_URL as string) ||
+  (typeof window !== 'undefined' &&
+  (window.location.hostname.includes('vercel.app') ||
+    (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'))
+    ? 'https://fashion-for-everyone-backend.onrender.com/api'
+    : '/api');
 
 let currentActiveRole: 'customer' | 'designer' | 'retailer' | 'admin' = 'customer';
 

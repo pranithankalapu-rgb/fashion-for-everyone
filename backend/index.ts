@@ -88,4 +88,29 @@ server.listen(PORT, () => {
   console.log(`✨ Fashion for Everyone Backend API & WebSocket Server running at http://localhost:${PORT}`);
 });
 
+// Auto-synchronize PostgreSQL Database tables and seed initial data if needed on production boot
+async function ensureDatabaseReady() {
+  if (process.env.DATABASE_URL && process.env.NODE_ENV === 'production') {
+    try {
+      console.log('🔄 Checking database schema and synchronizing on boot...');
+      const { exec } = await import('child_process');
+      const util = await import('util');
+      const execAsync = util.promisify(exec);
+      await execAsync('npx prisma db push --accept-data-loss');
+      console.log('✅ Prisma schema synchronized successfully.');
+
+      const { prisma } = await import('./db');
+      const count = await prisma.retailProduct.count().catch(() => 0);
+      if (count === 0) {
+        console.log('🌱 Seeding initial database from JSON...');
+        await execAsync('npx tsx scripts/migrate-json-to-db.ts');
+        console.log('✅ Initial database seeded successfully.');
+      }
+    } catch (e: any) {
+      console.warn('⚠️ Database auto-sync warning (in-memory JSON fallback active):', e.message);
+    }
+  }
+}
+ensureDatabaseReady();
+
 export default app;

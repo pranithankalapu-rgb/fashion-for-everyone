@@ -1,16 +1,16 @@
 import type { Response } from 'express';
 import type { AuthenticatedRequest } from '../middleware/auth';
-import { prisma } from '../db';
+import { prisma, getDb, saveDb } from '../db';
 import { sanitizeString } from '../security';
 
 export const productController = {
   // GET /api/products
   async getAll(req: AuthenticatedRequest, res: Response) {
-    try {
-      const queryParam = req.query.query ? sanitizeString(req.query.query as string) : '';
-      const categoryParam = req.query.category ? sanitizeString(req.query.category as string) : '';
-      const maxPrice = req.query.maxPrice ? Number(req.query.maxPrice) : null;
+    const queryParam = req.query.query ? sanitizeString(req.query.query as string) : '';
+    const categoryParam = req.query.category ? sanitizeString(req.query.category as string) : '';
+    const maxPrice = req.query.maxPrice ? Number(req.query.maxPrice) : null;
 
+    try {
       const whereClause: any = {};
 
       if (queryParam) {
@@ -33,15 +33,29 @@ export const productController = {
 
       res.json(products);
     } catch (err) {
-      console.error('Error fetching products via Prisma:', err);
-      res.status(500).json({ error: 'Failed to fetch products' });
+      console.warn('Falling back to in-memory JSON DB for products:', err);
+      const db = getDb();
+      let products = [...(db.products || [])];
+      if (categoryParam && categoryParam.toLowerCase() !== 'all') {
+        products = products.filter((p) => p.category?.toLowerCase() === categoryParam.toLowerCase());
+      }
+      if (queryParam) {
+        const q = queryParam.toLowerCase();
+        products = products.filter(
+          (p) => p.title?.toLowerCase().includes(q) || p.brand?.toLowerCase().includes(q)
+        );
+      }
+      if (maxPrice !== null && !isNaN(maxPrice)) {
+        products = products.filter((p) => p.price <= maxPrice);
+      }
+      res.json(products);
     }
   },
 
   // GET /api/products/:id
   async getById(req: AuthenticatedRequest, res: Response) {
+    const id = sanitizeString(req.params.id);
     try {
-      const id = sanitizeString(req.params.id);
       const product = await prisma.retailProduct.findUnique({
         where: { id },
       });
@@ -52,8 +66,13 @@ export const productController = {
 
       res.json(product);
     } catch (err) {
-      console.error('Error fetching product by ID via Prisma:', err);
-      res.status(500).json({ error: 'Failed to fetch product' });
+      console.warn('Falling back to in-memory JSON DB for product by ID:', err);
+      const db = getDb();
+      const product = db.products?.find((p) => p.id === id);
+      if (!product) {
+        return res.status(404).json({ error: 'Product not found' });
+      }
+      res.json(product);
     }
   },
 

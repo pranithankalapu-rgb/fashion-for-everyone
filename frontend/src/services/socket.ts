@@ -2,9 +2,21 @@ import { io, Socket } from 'socket.io-client';
 
 let socket: Socket | null = null;
 
+const SOCKET_URL =
+  (import.meta.env.VITE_SOCKET_URL as string) ||
+  (import.meta.env.VITE_API_URL
+    ? (import.meta.env.VITE_API_URL as string).replace(/\/api\/?$/, '')
+    : '') ||
+  (typeof window !== 'undefined' &&
+  (window.location.hostname.includes('vercel.app') || window.location.hostname !== 'localhost')
+    ? 'https://fashion-for-everyone-backend.onrender.com'
+    : typeof window !== 'undefined'
+      ? window.location.origin
+      : 'https://fashion-for-everyone-backend.onrender.com');
+
 export function getClientSocket(): Socket {
   if (!socket) {
-    socket = io(window.location.origin, {
+    socket = io(SOCKET_URL, {
       transports: ['websocket', 'polling'],
       autoConnect: true,
       reconnection: true,

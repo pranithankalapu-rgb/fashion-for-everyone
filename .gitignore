@@ -13,6 +13,8 @@ dist-ssr
 # Environment & Uploads
 .env
 .env.*
+!.env.example
+!*.example
 backend/uploads/*
 !backend/uploads/.gitkeep
 
