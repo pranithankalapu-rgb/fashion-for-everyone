@@ -5,14 +5,17 @@ import { Platform } from 'react-native';
 // Physical device should use the computer's LAN IP
 // In production, use the deployed backend URL
 
+// Deployed production Render backend API
+const PRODUCTION_API_URL = 'https://fashion-for-everyone-backend.onrender.com/api';
+
 function getDefaultApiUrl(): string {
-  if (__DEV__) {
+  if (__DEV__ && process.env.EXPO_PUBLIC_USE_LOCAL_API === 'true') {
     return Platform.OS === 'android'
       ? 'http://10.0.2.2:5000/api'
       : 'http://localhost:5000/api';
   }
   // Production URL — deployed backend API
-  return 'https://fashion-for-everyone-backend.onrender.com/api';
+  return PRODUCTION_API_URL;
 }
 
 // Expo env variable takes precedence if set
