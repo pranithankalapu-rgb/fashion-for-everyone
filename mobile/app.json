@@ -2,10 +2,14 @@
   "expo": {
     "name": "Fashion For Everyone",
     "slug": "fashion-for-everyone",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
+    "androidNavigationBar": {
+      "barStyle": "light-content",
+      "backgroundColor": "#1A1A2E"
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.fashionforeveryone.mobile"
@@ -18,7 +22,8 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "package": "com.fashionforeveryone.mobile",
-      "versionCode": 3
+      "versionCode": 4,
+      "softwareKeyboardLayoutMode": "resize"
     },
     "web": {
       "favicon": "./assets/favicon.png"

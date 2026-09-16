@@ -14,9 +14,19 @@ export const productController = {
       const whereClause: any = {};
 
       if (queryParam) {
+        const stopWords = new Set(['for', 'the', 'and', 'in', 'with', 'a', 'an', 'to', 'of']);
+        const tokens = queryParam
+          .toLowerCase()
+          .split(/\s+/)
+          .filter((w) => w.length > 1 && !stopWords.has(w));
+
         whereClause.OR = [
           { title: { contains: queryParam, mode: 'insensitive' } },
           { brand: { contains: queryParam, mode: 'insensitive' } },
+          { category: { contains: queryParam, mode: 'insensitive' } },
+          ...tokens.map((token) => ({ title: { contains: token, mode: 'insensitive' } })),
+          ...tokens.map((token) => ({ category: { contains: token, mode: 'insensitive' } })),
+          ...tokens.map((token) => ({ description: { contains: token, mode: 'insensitive' } })),
         ];
       }
       if (categoryParam && categoryParam.toLowerCase() !== 'all') {
@@ -41,9 +51,20 @@ export const productController = {
       }
       if (queryParam) {
         const q = queryParam.toLowerCase();
-        products = products.filter(
-          (p) => p.title?.toLowerCase().includes(q) || p.brand?.toLowerCase().includes(q)
-        );
+        const stopWords = new Set(['for', 'the', 'and', 'in', 'with', 'a', 'an', 'to', 'of']);
+        const tokens = q
+          .split(/\s+/)
+          .filter((w) => w.length > 1 && !stopWords.has(w));
+
+        products = products.filter((p) => {
+          const title = (p.title || '').toLowerCase();
+          const brand = (p.brand || '').toLowerCase();
+          const cat = (p.category || '').toLowerCase();
+          const desc = (p.description || '').toLowerCase();
+
+          if (title.includes(q) || brand.includes(q) || cat.includes(q)) return true;
+          return tokens.some((token) => title.includes(token) || cat.includes(token) || desc.includes(token));
+        });
       }
       if (maxPrice !== null && !isNaN(maxPrice)) {
         products = products.filter((p) => p.price <= maxPrice);

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -13,12 +13,16 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Shadows } from '../constants/theme';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../hooks/useAuth';
 import api from '../services/api';
 import type { RetailProduct, AiStylingResult, ChatMessage } from '../types/fashion';
 import { OCCASIONS } from '../constants/config';
+import { getAiStylistSuggestions } from '../utils/searchSuggestions';
 
 export default function AiStylistScreen({ navigation }: any) {
+  const insets = useSafeAreaInsets();
+  const scrollViewRef = useRef<ScrollView>(null);
   const { user } = useAuth();
   const [tab, setTab] = useState<'styling' | 'chat'>('chat');
   const [occasion, setOccasion] = useState('Casual');
@@ -29,6 +33,15 @@ export default function AiStylistScreen({ navigation }: any) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
+
+  const aiSuggestions = useMemo(() => {
+    if (chatInput.trim().length < 2) return [];
+    return getAiStylistSuggestions(chatInput);
+  }, [chatInput]);
+
+  const handleSelectAiSuggestion = (suggestion: string) => {
+    setChatInput(suggestion);
+  };
 
   const handleGetStyling = async () => {
     if (!user) {
@@ -70,10 +83,12 @@ export default function AiStylistScreen({ navigation }: any) {
     }
   };
 
+  const headerPaddingTop = insets.top > 0 ? insets.top + Spacing.md : 60;
+
   return (
     <View style={styles.container}>
       {/* Header */}
-      <LinearGradient colors={['#1a103d', Colors.background]} style={styles.header}>
+      <LinearGradient colors={['#1a103d', Colors.background]} style={[styles.header, { paddingTop: headerPaddingTop }]}>
         <Text style={styles.headerTitle}>AI Stylist ✦</Text>
         <Text style={styles.headerSub}>Your personal fashion advisor</Text>
 
@@ -97,11 +112,18 @@ export default function AiStylistScreen({ navigation }: any) {
       {tab === 'chat' ? (
         <KeyboardAvoidingView
           style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          keyboardVerticalOffset={90}
+          behavior="padding"
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
         >
           {/* Chat Messages */}
-          <ScrollView style={styles.chatArea} contentContainerStyle={styles.chatContent}>
+          <ScrollView
+            ref={scrollViewRef}
+            style={styles.chatArea}
+            contentContainerStyle={styles.chatContent}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
+          >
             {messages.length === 0 && (
               <View style={styles.chatEmpty}>
                 <Ionicons name="sparkles" size={48} color={Colors.primary} />
@@ -132,6 +154,30 @@ export default function AiStylistScreen({ navigation }: any) {
               </View>
             )}
           </ScrollView>
+
+          {/* AI Suggestions strip */}
+          {aiSuggestions.length > 0 && (
+            <View style={styles.aiSuggestionsContainer}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+                contentContainerStyle={styles.aiSuggestionsScroll}
+              >
+                {aiSuggestions.map((suggestion, idx) => (
+                  <TouchableOpacity
+                    key={idx}
+                    style={styles.aiSuggestionChip}
+                    onPress={() => handleSelectAiSuggestion(suggestion)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="sparkles" size={13} color={Colors.primary} />
+                    <Text style={styles.aiSuggestionText}>{suggestion}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
 
           {/* Chat Input */}
           <View style={styles.chatInputBar}>
@@ -256,7 +302,7 @@ const styles = StyleSheet.create({
   tabText: { color: Colors.textMuted, fontSize: FontSize.sm, fontWeight: FontWeight.medium },
   tabTextActive: { color: Colors.primary },
   chatArea: { flex: 1 },
-  chatContent: { padding: Spacing.lg, paddingBottom: 100 },
+  chatContent: { padding: Spacing.lg, paddingBottom: 20 },
   chatEmpty: { alignItems: 'center', paddingTop: 60 },
   chatEmptyTitle: { color: Colors.white, fontSize: FontSize.xl, fontWeight: FontWeight.bold, marginTop: Spacing.lg },
   chatEmptyText: { color: Colors.textSecondary, fontSize: FontSize.md, textAlign: 'center', marginTop: Spacing.sm, paddingHorizontal: Spacing.xl },
@@ -274,6 +320,33 @@ const styles = StyleSheet.create({
   },
   recProductTitle: { color: Colors.text, fontSize: FontSize.sm, flex: 1 },
   recProductPrice: { color: Colors.primary, fontSize: FontSize.sm, fontWeight: FontWeight.bold },
+  aiSuggestionsContainer: {
+    backgroundColor: Colors.surface,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    paddingVertical: Spacing.xs,
+  },
+  aiSuggestionsScroll: {
+    paddingHorizontal: Spacing.md,
+    gap: Spacing.sm,
+    alignItems: 'center',
+  },
+  aiSuggestionChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.surfaceLight,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 7,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    gap: 6,
+  },
+  aiSuggestionText: {
+    color: Colors.text,
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.medium,
+  },
   chatInputBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -291,6 +364,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.sm,
     color: Colors.text,
     fontSize: FontSize.md,
+    maxHeight: 120,
   },
   sendBtn: {
     width: 40,

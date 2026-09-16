@@ -12,11 +12,13 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Shadows } from '../constants/theme';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../hooks/useAuth';
 import api from '../services/api';
 import type { RetailProduct, OutfitLook } from '../types/fashion';
 
 export default function HomeScreen({ navigation }: any) {
+  const insets = useSafeAreaInsets();
   const { user, role } = useAuth();
   const [products, setProducts] = useState<RetailProduct[]>([]);
   const [socialFeed, setSocialFeed] = useState<OutfitLook[]>([]);
@@ -50,13 +52,15 @@ export default function HomeScreen({ navigation }: any) {
     { icon: 'people', label: 'Social', screen: 'SocialFeed', color: '#FBBF24' },
   ];
 
+  const headerPaddingTop = insets.top > 0 ? insets.top + Spacing.lg : 60;
+
   return (
     <ScrollView
       style={styles.container}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
     >
       {/* Header */}
-      <LinearGradient colors={['#1a103d', Colors.background]} style={styles.header}>
+      <LinearGradient colors={['#1a103d', Colors.background]} style={[styles.header, { paddingTop: headerPaddingTop }]}>
         <View style={styles.headerTop}>
           <View>
             <Text style={styles.greeting}>Hello{user?.name ? `, ${user.name}` : ''}! 👋</Text>
