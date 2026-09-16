@@ -16,6 +16,9 @@ import { securityHeadersMiddleware, rateLimiter } from './security';
 import { initSocketServer } from './services/socketService';
 
 const app = express();
+// Enable trust proxy for Render reverse proxy (Cloudflare/Render load balancers)
+app.set('trust proxy', 1);
+
 const PORT = Number(process.env.PORT) || 5000;
 const configuredOrigins = process.env.CORS_ORIGIN
   ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim())
@@ -41,7 +44,7 @@ app.use(
       // Allow requests with no origin (e.g. mobile apps, curl, server-to-server)
       if (!origin) return callback(null, true);
 
-      // Allow configured origins
+      // Allow configured origins or wildcard
       if (configuredOrigins.includes(origin) || configuredOrigins.includes('*')) {
         return callback(null, true);
       }
@@ -55,12 +58,23 @@ app.use(
         return callback(null, true);
       }
 
+      // Allow mobile app custom schemes and null origins
+      if (
+        origin === 'null' ||
+        origin.startsWith('android-app://') ||
+        origin.startsWith('exp://') ||
+        origin.startsWith('file://')
+      ) {
+        return callback(null, true);
+      }
+
       // Allow Vercel deployment URLs (production & preview)
       if (/^https:\/\/.*\.vercel\.app$/.test(origin)) {
         return callback(null, true);
       }
 
-      return callback(new Error(`Origin ${origin} not allowed by CORS`));
+      // Disallow unknown web origins safely without crashing request with 500
+      return callback(null, false);
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -83,9 +97,9 @@ app.use('/uploads', express.static(path.resolve(process.cwd(), 'backend', 'uploa
 // Register API Router under /api
 app.use('/api', apiRouter);
 
-// Start Server
-server.listen(PORT, () => {
-  console.log(`✨ Fashion for Everyone Backend API & WebSocket Server running at http://localhost:${PORT}`);
+// Start Server bound explicitly to 0.0.0.0 for public accessibility in Docker/Render
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`✨ Fashion for Everyone Backend API & WebSocket Server running at http://0.0.0.0:${PORT}`);
 });
 
 // Auto-synchronize PostgreSQL Database tables and seed initial data if needed on production boot

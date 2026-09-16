@@ -6,7 +6,9 @@ import { Platform } from 'react-native';
 // In production, use the deployed backend URL
 
 // Deployed production Render backend API
-const PRODUCTION_API_URL = 'https://fashion-for-everyone-backend.onrender.com/api';
+export const PRODUCTION_API_URL = 'https://fashion-for-everyone-backend.onrender.com/api';
+// Reliable edge proxy fallback for networks/ISPs with Render DNS issues
+export const FALLBACK_API_URL = 'https://fashion-for-everyone.vercel.app/api';
 
 function getDefaultApiUrl(): string {
   if (__DEV__ && process.env.EXPO_PUBLIC_USE_LOCAL_API === 'true') {

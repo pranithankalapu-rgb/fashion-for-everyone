@@ -1,6 +1,6 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import * as SecureStore from 'expo-secure-store';
-import { API_BASE_URL } from '../constants/config';
+import { API_BASE_URL, PRODUCTION_API_URL, FALLBACK_API_URL } from '../constants/config';
 import type {
   UserProfile,
   RetailProduct,
@@ -65,9 +65,10 @@ export function getCurrentRole(): UserRole {
   return currentRole;
 }
 
+// 60-second timeout to safely accommodate Render free-tier cold starts (which take 30-50s)
 const client: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 15000,
+  timeout: 60000,
   headers: { 'Content-Type': 'application/json' },
 });
 
@@ -82,16 +83,87 @@ client.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
   return config;
 });
 
-// Response interceptor – basic error handling
+/**
+ * Diagnostic parser to categorize and provide informative error messages for mobile users
+ */
+function parseApiError(error: any): string {
+  const code = error?.code || '';
+  const rawMsg = (error?.message || '').toLowerCase();
+  const status = error?.response?.status;
+  const serverError = error?.response?.data?.error || error?.response?.data?.message;
+
+  // 1. Backend validation or business logic error (HTTP 4xx with message)
+  if (serverError) {
+    return typeof serverError === 'string' ? serverError : JSON.stringify(serverError);
+  }
+
+  // 2. HTTP status specific handling
+  if (status) {
+    if (status === 400) return 'Invalid request. Please check the entered information.';
+    if (status === 401) return 'Invalid credentials. Please verify your email and password.';
+    if (status === 403) return 'Access denied. You do not have permission for this action.';
+    if (status === 404) return 'Requested service or resource not found.';
+    if (status === 429) return 'Too many requests. Please wait a few moments and try again.';
+    if (status >= 500) return `Backend server error (${status}). Service is temporarily unavailable.`;
+  }
+
+  // 3. DNS resolution failure
+  if (code === 'ENOTFOUND' || rawMsg.includes('enotfound') || rawMsg.includes('err_name_not_resolved') || rawMsg.includes('unknownhost')) {
+    return 'DNS resolution failed. Your network cannot resolve the backend server address. Please check your DNS or mobile data connection.';
+  }
+
+  // 4. Request timeout (Render free instance waking up)
+  if (code === 'ECONNABORTED' || rawMsg.includes('timeout') || rawMsg.includes('timed out')) {
+    return 'Connection timed out. The backend server is spinning up from idle state. Please try again in 10 seconds.';
+  }
+
+  // 5. SSL / TLS Handshake failure
+  if (code.startsWith('CERT_') || rawMsg.includes('cert') || rawMsg.includes('ssl') || rawMsg.includes('tls') || rawMsg.includes('handshake')) {
+    return 'Secure connection failed (SSL/TLS error). Please verify your device system time and network security.';
+  }
+
+  // 6. Connection refused
+  if (code === 'ECONNREFUSED' || rawMsg.includes('econnrefused') || rawMsg.includes('connection refused')) {
+    return 'Connection refused by server. The backend may be rebooting.';
+  }
+
+  // 7. General network error
+  if (rawMsg === 'network error' || rawMsg.includes('network request failed')) {
+    return 'Network Error: Unable to reach the backend server. Please verify your internet connection.';
+  }
+
+  return error?.message || 'Network error occurred while connecting to the server.';
+}
+
+// Response interceptor – diagnostic error handling with automatic fallback retry
 client.interceptors.response.use(
   (response) => response,
-  (error) => {
-    const message =
-      error.response?.data?.error ||
-      error.response?.data?.message ||
-      error.message ||
-      'Network error';
-    return Promise.reject(new Error(message));
+  async (error) => {
+    const originalRequest = error.config;
+
+    // If request failed at network level (no response) and hasn't retried fallback yet
+    if (
+      !error.response &&
+      originalRequest &&
+      !originalRequest._hasRetriedFallback &&
+      FALLBACK_API_URL &&
+      originalRequest.baseURL !== FALLBACK_API_URL
+    ) {
+      originalRequest._hasRetriedFallback = true;
+      console.warn(`[API] Primary backend connection failed (${error.message}). Retrying with fallback proxy ${FALLBACK_API_URL}...`);
+      originalRequest.baseURL = FALLBACK_API_URL;
+      try {
+        return await client(originalRequest);
+      } catch (fallbackError: any) {
+        console.error('[API] Fallback also failed:', fallbackError.message);
+        const detailedMessage = parseApiError(fallbackError);
+        return Promise.reject(new Error(detailedMessage));
+      }
+    }
+
+    const detailedMessage = parseApiError(error);
+    console.error(`[API Error] URL: ${originalRequest?.url || 'unknown'} | Reason: ${detailedMessage}`);
+    return Promise.reject(new Error(detailedMessage));
   }
 );
 
