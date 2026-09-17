@@ -43,7 +43,7 @@ export type RootStackParamList = {
 export type TabParamList = {
   Home: undefined;
   Explore: undefined;
-  AiStylist: undefined;
+  Cart: undefined;
   Wishlist: undefined;
   Profile: undefined;
 };
@@ -71,7 +71,7 @@ function MainTabs() {
         tabBarActiveTintColor: Colors.primary,
         tabBarInactiveTintColor: Colors.textMuted,
         tabBarLabelStyle: {
-          fontSize: FontSize.xs,
+          fontSize: 10,
           fontWeight: '600',
         },
         tabBarIcon: ({ focused, color, size }) => {
@@ -79,7 +79,7 @@ function MainTabs() {
           switch (route.name) {
             case 'Home': iconName = focused ? 'home' : 'home-outline'; break;
             case 'Explore': iconName = focused ? 'compass' : 'compass-outline'; break;
-            case 'AiStylist': iconName = focused ? 'sparkles' : 'sparkles-outline'; break;
+            case 'Cart': iconName = focused ? 'bag-handle' : 'bag-handle-outline'; break;
             case 'Wishlist': iconName = focused ? 'heart' : 'heart-outline'; break;
             case 'Profile': iconName = focused ? 'person' : 'person-outline'; break;
           }
@@ -90,9 +90,18 @@ function MainTabs() {
       <Tab.Screen name="Home" component={HomeScreen} />
       <Tab.Screen name="Explore" component={ExploreScreen} />
       <Tab.Screen
-        name="AiStylist"
-        component={AiStylistScreen}
-        options={{ tabBarLabel: 'AI Stylist' }}
+        name="Cart"
+        component={CartScreen}
+        options={{
+          tabBarLabel: 'Add to Bag',
+          tabBarBadge: totalItems > 0 ? totalItems : undefined,
+          tabBarBadgeStyle: {
+            backgroundColor: Colors.accent,
+            color: Colors.white,
+            fontSize: 10,
+            fontWeight: 'bold',
+          },
+        }}
       />
       <Tab.Screen name="Wishlist" component={WishlistScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
