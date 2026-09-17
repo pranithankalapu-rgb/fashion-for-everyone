@@ -54,7 +54,7 @@ export default function HomeScreen({ navigation }: any) {
     { icon: 'sparkles', label: 'AI Stylist', screen: 'AiStylist', color: Colors.primary },
     { icon: 'color-palette', label: 'Colors', screen: 'ColorVoting', color: Colors.accent },
     { icon: 'brush', label: 'Designers', screen: 'DesignerShowcase', color: '#4ADE80' },
-    { icon: 'people', label: 'Social', screen: 'SocialFeed', color: '#FBBF24' },
+    { icon: 'videocam', label: 'Style Feed', screen: 'SocialFeed', color: '#FBBF24' },
   ];
 
   const headerPaddingTop = insets.top > 0 ? insets.top + Spacing.lg : 60;
@@ -298,7 +298,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: Spacing.xs,
   },
-  quickActionLabel: { color: Colors.textSecondary, fontSize: FontSize.xs, fontWeight: FontWeight.medium },
+  quickActionLabel: { color: Colors.textSecondary, fontSize: FontSize.xs, fontWeight: FontWeight.medium, textAlign: 'center' },
   categorySection: { marginTop: Spacing.md, marginBottom: Spacing.xs },
   catPill: {
     paddingHorizontal: Spacing.lg,

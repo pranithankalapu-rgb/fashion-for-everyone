@@ -43,7 +43,7 @@ export default function ProfileScreen({ navigation }: any) {
     { icon: 'cart-outline', label: 'Cart', screen: 'Cart' },
     { icon: 'color-palette-outline', label: 'Color Voting', screen: 'ColorVoting' },
     { icon: 'brush-outline', label: 'Designer Showcase', screen: 'DesignerShowcase' },
-    { icon: 'people-outline', label: 'Social Feed', screen: 'SocialFeed' },
+    { icon: 'videocam-outline', label: 'Style Feed', screen: 'SocialFeed' },
   ];
 
   if (role === 'designer') {
