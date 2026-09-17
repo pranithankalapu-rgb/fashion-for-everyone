@@ -37,13 +37,25 @@ export default function AiStylistScreen({ route, navigation }: any) {
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
     const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
 
-    const showSub = Keyboard.addListener(showEvent, () => setIsKeyboardVisible(true));
-    const hideSub = Keyboard.addListener(hideEvent, () => setIsKeyboardVisible(false));
+    const showSub = Keyboard.addListener(showEvent, (e) => {
+      const height = e?.endCoordinates?.height || 0;
+      setKeyboardHeight(height);
+      setIsKeyboardVisible(true);
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 50);
+    });
+
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+      setIsKeyboardVisible(false);
+    });
 
     return () => {
       showSub.remove();
@@ -65,9 +77,16 @@ export default function AiStylistScreen({ route, navigation }: any) {
   // Add comfortable safe-area clearance above Android system navigation
   // (both Android 3-button navigation ~48dp and gesture navigation ~16-24dp).
   // KEYBOARD OPEN / TYPING:
-  // Sits immediately and snug above the Android keyboard (Spacing.xs).
-  const chatBottomPadding = isKeyboardVisible
-    ? Spacing.xs
+  // On Android, anchor the chat container directly above the keyboard:
+  // keyboardHeight + system navigation inset. The input bar itself keeps snug Spacing.sm padding.
+  // On iOS, KeyboardAvoidingView manages container displacement while input bar keeps snug Spacing.sm padding.
+  const chatContainerBottomPadding =
+    Platform.OS === 'android' && keyboardHeight > 0
+      ? keyboardHeight + (insets.bottom > 0 ? insets.bottom : 0)
+      : 0;
+
+  const chatInputBottomPadding = isKeyboardVisible
+    ? Spacing.sm
     : (insets.bottom > 0 ? insets.bottom + Spacing.xs : Spacing.md);
 
   const handleGetStyling = async () => {
@@ -169,7 +188,6 @@ export default function AiStylistScreen({ route, navigation }: any) {
       <KeyboardAvoidingView
         style={styles.mainContainer}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        enabled={Platform.OS === 'ios'}
       >
         {/* Header */}
         <LinearGradient colors={['#1a103d', Colors.background]} style={styles.header}>
@@ -203,7 +221,7 @@ export default function AiStylistScreen({ route, navigation }: any) {
         </LinearGradient>
 
         {tab === 'chat' ? (
-          <View style={styles.chatContainer}>
+          <View style={[styles.chatContainer, { paddingBottom: chatContainerBottomPadding }]}>
             {/* Chat Messages */}
             <ScrollView
               ref={scrollViewRef}
@@ -274,7 +292,7 @@ export default function AiStylistScreen({ route, navigation }: any) {
               )}
 
               {/* Chat Input placed right above the system navigation or keyboard */}
-              <View style={[styles.chatInputBar, { paddingBottom: chatBottomPadding }]}>
+              <View style={[styles.chatInputBar, { paddingBottom: chatInputBottomPadding }]}>
                 <TextInput
                   style={styles.chatTextInput}
                   placeholder="Ask your AI stylist..."
@@ -283,9 +301,9 @@ export default function AiStylistScreen({ route, navigation }: any) {
                   onChangeText={setChatInput}
                   onSubmitEditing={handleSendChat}
                   returnKeyType="send"
-                  multiline={false}
+                  multiline={true}
+                  autoCapitalize="sentences"
                   autoCorrect={false}
-                  onFocus={() => setIsKeyboardVisible(true)}
                 />
                 <TouchableOpacity
                   style={styles.sendBtn}
@@ -523,7 +541,7 @@ const styles = StyleSheet.create({
   },
   chatInputBar: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     paddingHorizontal: Spacing.md,
     paddingTop: Spacing.sm,
     backgroundColor: Colors.surface,
@@ -537,10 +555,12 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surfaceLight,
     borderRadius: BorderRadius.lg,
     paddingHorizontal: Spacing.md,
-    paddingVertical: Platform.OS === 'ios' ? Spacing.sm : 8,
+    paddingTop: Platform.OS === 'ios' ? 10 : 8,
+    paddingBottom: Platform.OS === 'ios' ? 10 : 8,
     color: Colors.text,
     fontSize: FontSize.md,
     maxHeight: 120,
+    textAlignVertical: 'center',
   },
   sendBtn: {
     width: 44,
