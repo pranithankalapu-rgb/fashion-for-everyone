@@ -220,7 +220,7 @@ export const AIStylistDrawer: React.FC<AIStylistDrawerProps> = ({
         </div>
 
         {/* Input Footer */}
-        <form onSubmit={handleSend} className="p-4 border-t border-slate-800 bg-slate-950/80 flex gap-2">
+        <form onSubmit={handleSend} className="p-4 pb-[max(1rem,env(safe-area-inset-bottom,1rem))] border-t border-slate-800 bg-slate-950/80 flex items-center gap-2">
           <input
             type="text"
             placeholder="Ask for an outfit, budget, or advice..."
