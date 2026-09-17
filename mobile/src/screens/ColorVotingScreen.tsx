@@ -15,16 +15,26 @@ import api from '../services/api';
 import type { ColorCombo } from '../types/fashion';
 import { OCCASIONS } from '../constants/config';
 
+function decodeHtml(str?: string) {
+  if (!str) return '';
+  return str
+    .replace(/&amp;/g, '&')
+    .replace(/&#39;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>');
+}
+
 export default function ColorVotingScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const [combos, setCombos] = useState<ColorCombo[]>([]);
-  const [loading, setLoading] = useState(true);
   const [occasion, setOccasion] = useState('All');
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const fetchCombos = async () => {
+  const loadData = async (occ?: string) => {
     try {
-      const data = await api.getColorCombos(occasion === 'All' ? undefined : occasion);
+      const data = await api.getColorCombos(occ === 'All' ? undefined : occ);
       setCombos(data);
     } catch {
       setCombos([]);
@@ -33,18 +43,13 @@ export default function ColorVotingScreen({ navigation }: any) {
     }
   };
 
-  useEffect(() => { fetchCombos(); }, [occasion]);
-
-  const handleVote = async (id: string, direction: 'up' | 'down') => {
-    try {
-      const updated = await api.voteColorCombo(id, direction);
-      setCombos((prev) => prev.map((c) => (c.id === id ? updated : c)));
-    } catch {}
-  };
+  useEffect(() => {
+    loadData(occasion);
+  }, [occasion]);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchCombos();
+    await loadData(occasion);
     setRefreshing(false);
   };
 
@@ -53,6 +58,26 @@ export default function ColorVotingScreen({ navigation }: any) {
       colorCombo: combo,
       occasion: combo.occasion,
     });
+  };
+
+  const handleVote = async (comboId: string, direction: 'up' | 'down') => {
+    try {
+      const updated = await api.voteColorCombo(comboId, direction);
+      setCombos((prev) => prev.map((c) => (c.id === comboId ? updated : c)));
+    } catch {
+      // Optimistic update
+      setCombos((prev) =>
+        prev.map((c) =>
+          c.id === comboId
+            ? {
+                ...c,
+                votesCount: c.votesCount + (direction === 'up' ? 1 : -1),
+                rating: Math.min(5, Math.max(1, c.rating + (direction === 'up' ? 0.1 : -0.1))),
+              }
+            : c
+        )
+      );
+    }
   };
 
   if (loading) return <Loading message="Loading color combos..." />;
@@ -85,6 +110,7 @@ export default function ColorVotingScreen({ navigation }: any) {
           <TouchableOpacity
             style={[styles.pill, occasion === item && styles.pillActive]}
             onPress={() => setOccasion(item)}
+            activeOpacity={0.8}
           >
             <Text style={[styles.pillText, occasion === item && styles.pillTextActive]}>{item}</Text>
           </TouchableOpacity>
@@ -109,7 +135,7 @@ export default function ColorVotingScreen({ navigation }: any) {
             onPress={() => handleSelectCombo(item)}
           >
             <View style={styles.cardHeader}>
-              <Text style={styles.cardTitle}>{item.title}</Text>
+              <Text style={styles.cardTitle}>{decodeHtml(item.title)}</Text>
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>{item.occasion}</Text>
               </View>
@@ -166,19 +192,29 @@ const styles = StyleSheet.create({
   backBtn: { marginRight: Spacing.md, padding: 4 },
   title: { color: Colors.white, fontSize: FontSize.xxl, fontWeight: FontWeight.bold },
   subtitle: { color: Colors.textSecondary, fontSize: FontSize.md, marginTop: 2 },
-  filterList: { maxHeight: 44, marginTop: Spacing.sm },
+  filterList: { maxHeight: 46, marginTop: Spacing.sm },
   pill: {
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.sm,
     borderRadius: BorderRadius.full,
-    backgroundColor: Colors.surface,
+    backgroundColor: Colors.surfaceLight,
     marginRight: Spacing.sm,
-    borderWidth: 1,
-    borderColor: Colors.border,
+    borderWidth: 1.5,
+    borderColor: Colors.borderLight,
   },
-  pillActive: { borderColor: Colors.primary, backgroundColor: Colors.primaryFaded },
-  pillText: { color: Colors.textMuted, fontSize: FontSize.sm },
-  pillTextActive: { color: Colors.primary },
+  pillActive: {
+    borderColor: Colors.primaryLight,
+    backgroundColor: Colors.primary,
+  },
+  pillText: {
+    color: '#E0E0F0',
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.semibold,
+  },
+  pillTextActive: {
+    color: Colors.white,
+    fontWeight: FontWeight.bold,
+  },
   card: {
     backgroundColor: Colors.surface,
     borderRadius: BorderRadius.lg,
