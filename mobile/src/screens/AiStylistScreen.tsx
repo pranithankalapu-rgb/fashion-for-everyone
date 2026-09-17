@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -17,16 +17,17 @@ import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Shadows } from '..
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../hooks/useAuth';
 import api from '../services/api';
-import type { RetailProduct, AiStylingResult, ChatMessage } from '../types/fashion';
+import type { RetailProduct, AiStylingResult, ChatMessage, ColorCombo } from '../types/fashion';
 import { OCCASIONS } from '../constants/config';
 import { getAiStylistSuggestions } from '../utils/searchSuggestions';
 
-export default function AiStylistScreen({ navigation }: any) {
+export default function AiStylistScreen({ route, navigation }: any) {
   const insets = useSafeAreaInsets();
   const scrollViewRef = useRef<ScrollView>(null);
   const { user } = useAuth();
-  const [tab, setTab] = useState<'styling' | 'chat'>('chat');
-  const [occasion, setOccasion] = useState('Casual');
+  const [tab, setTab] = useState<'styling' | 'chat'>(route?.params?.colorCombo ? 'styling' : 'chat');
+  const [occasion, setOccasion] = useState(route?.params?.colorCombo?.occasion || route?.params?.occasion || 'Casual');
+  const [selectedCombo, setSelectedCombo] = useState<ColorCombo | null>(route?.params?.colorCombo || null);
   const [stylingResult, setStylingResult] = useState<AiStylingResult | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -69,6 +70,45 @@ export default function AiStylistScreen({ navigation }: any) {
     }
   };
 
+  useEffect(() => {
+    if (route?.params?.colorCombo) {
+      setSelectedCombo(route.params.colorCombo);
+      setTab('styling');
+      const occ = route.params.colorCombo.occasion;
+      if (occ) {
+        setOccasion(occ);
+        // Automatically fetch AI styling advice for this combination & occasion
+        (async () => {
+          setLoading(true);
+          try {
+            const activeProfile = user || {
+              id: 'guest_01',
+              name: 'Guest Fashion Enthusiast',
+              skinTone: 'Warm Golden',
+              undertone: 'Warm',
+              bodyShape: 'Hourglass',
+              measurements: { heightCm: 168, chestCm: 88, waistCm: 68, hipsCm: 94 },
+              avatar: '',
+              hairColor: 'Brown',
+              selectedOccasions: ['Casual', 'Work'],
+              styleVibes: ['Classic', 'Smart casual'],
+              completedOnboarding: true,
+            };
+            const result = await api.getAiStyling(activeProfile as any, occ);
+            setStylingResult(result);
+          } catch {
+            // Ignore error
+          } finally {
+            setLoading(false);
+          }
+        })();
+      }
+    } else if (route?.params?.occasion) {
+      setTab('styling');
+      setOccasion(route.params.occasion);
+    }
+  }, [route?.params?.colorCombo, route?.params?.occasion]);
+
   const handleSendChat = async () => {
     if (!chatInput.trim()) return;
     const userMsg: ChatMessage = { role: 'user', content: chatInput.trim() };
@@ -99,8 +139,17 @@ export default function AiStylistScreen({ navigation }: any) {
     <View style={styles.container}>
       {/* Header */}
       <LinearGradient colors={['#1a103d', Colors.background]} style={[styles.header, { paddingTop: headerPaddingTop }]}>
-        <Text style={styles.headerTitle}>AI Stylist ✦</Text>
-        <Text style={styles.headerSub}>Your personal fashion advisor</Text>
+        <View style={styles.headerTop}>
+          {navigation?.canGoBack?.() && (
+            <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+              <Ionicons name="arrow-back" size={24} color={Colors.white} />
+            </TouchableOpacity>
+          )}
+          <View style={{ flex: 1 }}>
+            <Text style={styles.headerTitle}>AI Stylist ✦</Text>
+            <Text style={styles.headerSub}>Your personal fashion advisor</Text>
+          </View>
+        </View>
 
         {/* Tab switcher */}
         <View style={styles.tabs}>
@@ -207,6 +256,43 @@ export default function AiStylistScreen({ navigation }: any) {
         </KeyboardAvoidingView>
       ) : (
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: Spacing.lg }}>
+          {/* Selected Color Combination Banner (when navigated from Color Voting) */}
+          {selectedCombo && (
+            <View style={styles.selectedComboCard}>
+              <View style={styles.selectedComboHeader}>
+                <View style={styles.selectedComboTag}>
+                  <Ionicons name="color-palette" size={15} color={Colors.accent} />
+                  <Text style={styles.selectedComboTagText}>Selected Color Palette</Text>
+                </View>
+                <View style={styles.selectedComboBadge}>
+                  <Text style={styles.selectedComboBadgeText}>{selectedCombo.occasion}</Text>
+                </View>
+              </View>
+
+              <Text style={styles.selectedComboTitle}>{selectedCombo.title}</Text>
+              <Text style={styles.selectedComboSub}>{selectedCombo.subType}</Text>
+
+              <View style={styles.selectedComboColorRow}>
+                {selectedCombo.colors.map((c, i) => (
+                  <View key={i} style={styles.selectedComboColorItem}>
+                    <View style={[styles.selectedComboSwatch, { backgroundColor: c.hex }]} />
+                    <Text style={styles.selectedComboColorName} numberOfLines={1}>{c.name}</Text>
+                    <Text style={styles.selectedComboHex}>{c.hex}</Text>
+                  </View>
+                ))}
+              </View>
+
+              <View style={styles.selectedComboFooter}>
+                <View style={styles.selectedComboRating}>
+                  <Ionicons name="star" size={14} color={Colors.warning} />
+                  <Text style={styles.selectedComboRatingText}>{selectedCombo.rating.toFixed(1)}</Text>
+                  <Text style={styles.selectedComboVotesText}>({selectedCombo.votesCount.toLocaleString()} votes)</Text>
+                </View>
+                <Text style={styles.selectedComboHint}>Curating matching outfits below</Text>
+              </View>
+            </View>
+          )}
+
           {/* Occasion selector */}
           <Text style={styles.label}>Select Occasion</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: Spacing.xl }}>
@@ -457,4 +543,110 @@ const styles = StyleSheet.create({
   curatedBrand: { color: Colors.textMuted, fontSize: FontSize.xs, textTransform: 'uppercase' },
   curatedTitle: { color: Colors.text, fontSize: FontSize.xs, fontWeight: FontWeight.semibold, marginTop: 2 },
   curatedPrice: { color: Colors.primary, fontSize: FontSize.sm, fontWeight: FontWeight.bold, marginTop: 2 },
+  headerTop: { flexDirection: 'row', alignItems: 'center' },
+  backBtn: { marginRight: Spacing.md, padding: 4 },
+  selectedComboCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.lg,
+    marginBottom: Spacing.xl,
+    borderWidth: 1,
+    borderColor: Colors.accent + '40',
+    ...Shadows.md,
+  },
+  selectedComboHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.xs,
+  },
+  selectedComboTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  selectedComboTagText: {
+    color: Colors.accent,
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.semibold,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  selectedComboBadge: {
+    backgroundColor: Colors.primaryFaded,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 2,
+    borderRadius: BorderRadius.sm,
+  },
+  selectedComboBadgeText: {
+    color: Colors.primary,
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.medium,
+  },
+  selectedComboTitle: {
+    color: Colors.white,
+    fontSize: FontSize.xl,
+    fontWeight: FontWeight.bold,
+    marginTop: 4,
+  },
+  selectedComboSub: {
+    color: Colors.textMuted,
+    fontSize: FontSize.xs,
+    marginTop: 2,
+  },
+  selectedComboColorRow: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+    marginVertical: Spacing.md,
+  },
+  selectedComboColorItem: {
+    alignItems: 'center',
+  },
+  selectedComboSwatch: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 2,
+    borderColor: Colors.border,
+    marginBottom: 4,
+  },
+  selectedComboColorName: {
+    color: Colors.text,
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.medium,
+    maxWidth: 70,
+    textAlign: 'center',
+  },
+  selectedComboHex: {
+    color: Colors.textMuted,
+    fontSize: 10,
+  },
+  selectedComboFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    paddingTop: Spacing.sm,
+    marginTop: Spacing.xs,
+  },
+  selectedComboRating: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  selectedComboRatingText: {
+    color: Colors.warning,
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.bold,
+  },
+  selectedComboVotesText: {
+    color: Colors.textMuted,
+    fontSize: FontSize.xs,
+  },
+  selectedComboHint: {
+    color: Colors.primary,
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.semibold,
+  },
 });

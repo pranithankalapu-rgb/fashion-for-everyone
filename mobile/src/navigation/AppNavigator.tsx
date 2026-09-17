@@ -23,6 +23,7 @@ import SocialFeedScreen from '../screens/SocialFeedScreen';
 import RetailerDashboardScreen from '../screens/RetailerDashboardScreen';
 
 import { useCart } from '../hooks/useCart';
+import type { ColorCombo } from '../types/fashion';
 
 export type RootStackParamList = {
   Splash: undefined;
@@ -33,6 +34,7 @@ export type RootStackParamList = {
   Checkout: undefined;
   Orders: undefined;
   ColorVoting: undefined;
+  AiStylist: { colorCombo?: ColorCombo; occasion?: string } | undefined;
   DesignerShowcase: undefined;
   SocialFeed: undefined;
   RetailerDashboard: undefined;
@@ -115,6 +117,7 @@ export default function AppNavigator() {
       <Stack.Screen name="Checkout" component={CheckoutScreen} />
       <Stack.Screen name="Orders" component={OrdersScreen} />
       <Stack.Screen name="ColorVoting" component={ColorVotingScreen} />
+      <Stack.Screen name="AiStylist" component={AiStylistScreen} />
       <Stack.Screen name="DesignerShowcase" component={DesignerShowcaseScreen} />
       <Stack.Screen name="SocialFeed" component={SocialFeedScreen} />
       <Stack.Screen name="RetailerDashboard" component={RetailerDashboardScreen} />

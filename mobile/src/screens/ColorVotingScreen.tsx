@@ -48,6 +48,13 @@ export default function ColorVotingScreen({ navigation }: any) {
     setRefreshing(false);
   };
 
+  const handleSelectCombo = (combo: ColorCombo) => {
+    navigation.navigate('AiStylist', {
+      colorCombo: combo,
+      occasion: combo.occasion,
+    });
+  };
+
   if (loading) return <Loading message="Loading color combos..." />;
 
   return (
@@ -96,7 +103,11 @@ export default function ColorVotingScreen({ navigation }: any) {
           </View>
         }
         renderItem={({ item }) => (
-          <View style={styles.card}>
+          <TouchableOpacity
+            style={styles.card}
+            activeOpacity={0.88}
+            onPress={() => handleSelectCombo(item)}
+          >
             <View style={styles.cardHeader}>
               <Text style={styles.cardTitle}>{item.title}</Text>
               <View style={styles.badge}>
@@ -111,19 +122,37 @@ export default function ColorVotingScreen({ navigation }: any) {
                 </View>
               ))}
             </View>
-            <View style={styles.voteRow}>
-              <TouchableOpacity style={styles.voteBtn} onPress={() => handleVote(item.id, 'up')}>
-                <Ionicons name="arrow-up-circle" size={28} color={Colors.success} />
-              </TouchableOpacity>
-              <Text style={styles.voteCount}>{item.votesCount}</Text>
-              <TouchableOpacity style={styles.voteBtn} onPress={() => handleVote(item.id, 'down')}>
-                <Ionicons name="arrow-down-circle" size={28} color={Colors.error} />
-              </TouchableOpacity>
-              <View style={{ flex: 1 }} />
-              <Ionicons name="star" size={16} color={Colors.warning} />
-              <Text style={styles.rating}>{item.rating.toFixed(1)}</Text>
+            <View style={styles.cardFooter}>
+              <View style={styles.voteRow}>
+                <TouchableOpacity
+                  style={styles.voteBtn}
+                  onPress={() => handleVote(item.id, 'up')}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Ionicons name="arrow-up-circle" size={28} color={Colors.success} />
+                </TouchableOpacity>
+                <Text style={styles.voteCount}>{item.votesCount}</Text>
+                <TouchableOpacity
+                  style={styles.voteBtn}
+                  onPress={() => handleVote(item.id, 'down')}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Ionicons name="arrow-down-circle" size={28} color={Colors.error} />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.metaRow}>
+                <View style={styles.ratingBadge}>
+                  <Ionicons name="star" size={14} color={Colors.warning} />
+                  <Text style={styles.rating}>{item.rating.toFixed(1)}</Text>
+                </View>
+                <View style={styles.styleHint}>
+                  <Text style={styles.styleHintText}>AI Stylist</Text>
+                  <Ionicons name="chevron-forward" size={14} color={Colors.primary} />
+                </View>
+              </View>
             </View>
-          </View>
+          </TouchableOpacity>
         )}
       />
     </View>
@@ -165,10 +194,28 @@ const styles = StyleSheet.create({
   colorItem: { alignItems: 'center' },
   colorSwatch: { width: 48, height: 48, borderRadius: 24, borderWidth: 2, borderColor: Colors.border, marginBottom: 4 },
   colorName: { color: Colors.textMuted, fontSize: FontSize.xs },
+  cardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: Spacing.xs,
+  },
   voteRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   voteBtn: { padding: 4 },
-  voteCount: { color: Colors.text, fontSize: FontSize.lg, fontWeight: FontWeight.bold, minWidth: 30, textAlign: 'center' },
+  voteCount: { color: Colors.text, fontSize: FontSize.lg, fontWeight: FontWeight.bold, minWidth: 26, textAlign: 'center' },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
+  ratingBadge: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   rating: { color: Colors.warning, fontSize: FontSize.sm, fontWeight: FontWeight.semibold },
+  styleHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    backgroundColor: Colors.primaryFaded,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.full,
+  },
+  styleHintText: { color: Colors.primary, fontSize: FontSize.xs, fontWeight: FontWeight.semibold },
   empty: { alignItems: 'center', paddingTop: 80 },
   emptyText: { color: Colors.textMuted, fontSize: FontSize.md, marginTop: Spacing.md },
 });
