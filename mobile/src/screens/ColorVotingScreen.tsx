@@ -104,7 +104,7 @@ export default function ColorVotingScreen({ navigation }: any) {
         horizontal
         showsHorizontalScrollIndicator={false}
         style={styles.filterList}
-        contentContainerStyle={{ paddingHorizontal: Spacing.lg }}
+        contentContainerStyle={styles.filterContent}
         keyExtractor={(item) => item}
         renderItem={({ item }) => (
           <TouchableOpacity
@@ -112,7 +112,12 @@ export default function ColorVotingScreen({ navigation }: any) {
             onPress={() => setOccasion(item)}
             activeOpacity={0.8}
           >
-            <Text style={[styles.pillText, occasion === item && styles.pillTextActive]}>{item}</Text>
+            <Text
+              style={[styles.pillText, occasion === item && styles.pillTextActive]}
+              numberOfLines={1}
+            >
+              {item}
+            </Text>
           </TouchableOpacity>
         )}
       />
@@ -187,20 +192,23 @@ export default function ColorVotingScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  header: { paddingHorizontal: Spacing.lg, paddingBottom: Spacing.md },
+  header: { paddingHorizontal: Spacing.lg, paddingBottom: Spacing.sm },
   headerRow: { flexDirection: 'row', alignItems: 'center' },
   backBtn: { marginRight: Spacing.md, padding: 4 },
   title: { color: Colors.white, fontSize: FontSize.xxl, fontWeight: FontWeight.bold },
   subtitle: { color: Colors.textSecondary, fontSize: FontSize.md, marginTop: 2 },
-  filterList: { maxHeight: 46, marginTop: Spacing.sm },
+  filterList: { height: 48, flexGrow: 0, marginTop: Spacing.xs, marginBottom: Spacing.xs },
+  filterContent: { paddingHorizontal: Spacing.lg, alignItems: 'center', paddingRight: Spacing.xl },
   pill: {
+    height: 36,
     paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.sm,
     borderRadius: BorderRadius.full,
     backgroundColor: Colors.surfaceLight,
     marginRight: Spacing.sm,
     borderWidth: 1.5,
     borderColor: Colors.borderLight,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   pillActive: {
     borderColor: Colors.primaryLight,
@@ -210,6 +218,10 @@ const styles = StyleSheet.create({
     color: '#E0E0F0',
     fontSize: FontSize.sm,
     fontWeight: FontWeight.semibold,
+    lineHeight: 18,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    textAlign: 'center',
   },
   pillTextActive: {
     color: Colors.white,

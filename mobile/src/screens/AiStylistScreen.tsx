@@ -15,10 +15,10 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Shadows } from '../constants/theme';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../hooks/useAuth';
 import api from '../services/api';
-import type { RetailProduct, AiStylingResult, ChatMessage, ColorCombo } from '../types/fashion';
+import type { AiStylingResult, ChatMessage, ColorCombo } from '../types/fashion';
 import { OCCASIONS } from '../constants/config';
 import { getAiStylistSuggestions } from '../utils/searchSuggestions';
 
@@ -45,18 +45,9 @@ export default function AiStylistScreen({ route, navigation }: any) {
     const showSub = Keyboard.addListener(showEvent, () => setIsKeyboardVisible(true));
     const hideSub = Keyboard.addListener(hideEvent, () => setIsKeyboardVisible(false));
 
-    const extraShowSub = Platform.OS === 'android'
-      ? Keyboard.addListener('keyboardDidShow', () => setIsKeyboardVisible(true))
-      : null;
-    const extraHideSub = Platform.OS === 'android'
-      ? Keyboard.addListener('keyboardDidHide', () => setIsKeyboardVisible(false))
-      : null;
-
     return () => {
       showSub.remove();
       hideSub.remove();
-      extraShowSub?.remove();
-      extraHideSub?.remove();
     };
   }, []);
 
@@ -69,11 +60,14 @@ export default function AiStylistScreen({ route, navigation }: any) {
     setChatInput(suggestion);
   };
 
-  // Dynamic bottom spacing: when keyboard is open, stay snug to the keyboard.
-  // When keyboard is closed, add clearance respecting device safe area insets
-  // (both Android 3-button navigation and gesture navigation).
+  // Dynamic bottom spacing:
+  // KEYBOARD CLOSED:
+  // Add comfortable safe-area clearance above Android system navigation
+  // (both Android 3-button navigation ~48dp and gesture navigation ~16-24dp).
+  // KEYBOARD OPEN / TYPING:
+  // Sits immediately and snug above the Android keyboard (Spacing.xs).
   const chatBottomPadding = isKeyboardVisible
-    ? Spacing.sm
+    ? Spacing.xs
     : (insets.bottom > 0 ? insets.bottom + Spacing.xs : Spacing.md);
 
   const handleGetStyling = async () => {
@@ -170,264 +164,265 @@ export default function AiStylistScreen({ route, navigation }: any) {
     }
   };
 
-  const headerPaddingTop = insets.top > 0 ? insets.top + Spacing.md : 60;
-
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <LinearGradient colors={['#1a103d', Colors.background]} style={[styles.header, { paddingTop: headerPaddingTop }]}>
-        <View style={styles.headerTop}>
-          {navigation?.canGoBack?.() && (
-            <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-              <Ionicons name="arrow-back" size={24} color={Colors.white} />
-            </TouchableOpacity>
-          )}
-          <View style={{ flex: 1 }}>
-            <Text style={styles.headerTitle}>AI Stylist ✦</Text>
-            <Text style={styles.headerSub}>Your personal fashion advisor</Text>
-          </View>
-        </View>
-
-        {/* Tab switcher */}
-        <View style={styles.tabs}>
-          <TouchableOpacity
-            style={[styles.tab, tab === 'styling' && styles.tabActive]}
-            onPress={() => setTab('styling')}
-          >
-            <Text style={[styles.tabText, tab === 'styling' && styles.tabTextActive]}>AI Analysis</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, tab === 'chat' && styles.tabActive]}
-            onPress={() => setTab('chat')}
-          >
-            <Text style={[styles.tabText, tab === 'chat' && styles.tabTextActive]}>Stylist Chat</Text>
-          </TouchableOpacity>
-        </View>
-      </LinearGradient>
-
-      {tab === 'chat' ? (
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-        >
-          {/* Chat Messages */}
-          <ScrollView
-            ref={scrollViewRef}
-            style={styles.chatArea}
-            contentContainerStyle={[styles.chatContent, { paddingBottom: Spacing.xl }]}
-            keyboardShouldPersistTaps="handled"
-            keyboardDismissMode="on-drag"
-            onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
-          >
-            {messages.length === 0 && (
-              <View style={[styles.chatEmpty, isKeyboardVisible && styles.chatEmptyCompact]}>
-                <Ionicons name="sparkles" size={isKeyboardVisible ? 32 : 48} color={Colors.primary} />
-                <Text style={[styles.chatEmptyTitle, isKeyboardVisible && styles.chatEmptyTitleCompact]}>
-                  Ask me anything!
-                </Text>
-                {!isKeyboardVisible && (
-                  <Text style={styles.chatEmptyText}>
-                    "What should I wear to a summer wedding?" or "Find me casual outfits under $50"
-                  </Text>
-                )}
-              </View>
-            )}
-            {messages.map((msg, i) => (
-              <View key={i} style={[styles.bubble, msg.role === 'user' ? styles.bubbleUser : styles.bubbleAi]}>
-                <Text style={styles.bubbleText}>{msg.content}</Text>
-                {msg.recommendedProducts?.map((p) => (
-                  <TouchableOpacity
-                    key={p.id}
-                    style={styles.recProduct}
-                    onPress={() => navigation.navigate('ProductDetail', { productId: p.id })}
-                  >
-                    <Text style={styles.recProductTitle}>{p.title}</Text>
-                    <Text style={styles.recProductPrice}>${p.price.toFixed(2)}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            ))}
-            {chatLoading && (
-              <View style={[styles.bubble, styles.bubbleAi]}>
-                <Text style={styles.bubbleText}>Thinking...</Text>
-              </View>
-            )}
-          </ScrollView>
-
-          {/* Bottom input area: suggestions + chat bar */}
-          <View style={styles.inputWrapper}>
-            {aiSuggestions.length > 0 && (
-              <View style={styles.aiSuggestionsContainer}>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  keyboardShouldPersistTaps="handled"
-                  contentContainerStyle={styles.aiSuggestionsScroll}
-                >
-                  {aiSuggestions.map((suggestion, idx) => (
-                    <TouchableOpacity
-                      key={idx}
-                      style={styles.aiSuggestionChip}
-                      onPress={() => handleSelectAiSuggestion(suggestion)}
-                      activeOpacity={0.7}
-                    >
-                      <Ionicons name="sparkles" size={13} color={Colors.primary} />
-                      <Text style={styles.aiSuggestionText}>{suggestion}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
-            )}
-
-            {/* Chat Input placed right above the system navigation or keyboard */}
-            <View style={[styles.chatInputBar, { paddingBottom: chatBottomPadding }]}>
-              <TextInput
-                style={styles.chatTextInput}
-                placeholder="Ask your AI stylist..."
-                placeholderTextColor={Colors.textMuted}
-                value={chatInput}
-                onChangeText={setChatInput}
-                onSubmitEditing={handleSendChat}
-                returnKeyType="send"
-                multiline={false}
-                autoCorrect={false}
-              />
-              <TouchableOpacity
-                style={styles.sendBtn}
-                onPress={handleSendChat}
-                disabled={chatLoading}
-                activeOpacity={0.8}
-              >
-                <Ionicons name="send" size={20} color={Colors.white} />
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+      <KeyboardAvoidingView
+        style={styles.mainContainer}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        enabled={Platform.OS === 'ios'}
+      >
+        {/* Header */}
+        <LinearGradient colors={['#1a103d', Colors.background]} style={styles.header}>
+          <View style={styles.headerTop}>
+            {navigation?.canGoBack?.() && (
+              <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+                <Ionicons name="arrow-back" size={24} color={Colors.white} />
               </TouchableOpacity>
+            )}
+            <View style={{ flex: 1 }}>
+              <Text style={styles.headerTitle}>AI Stylist ✦</Text>
+              <Text style={styles.headerSub}>Your personal fashion advisor</Text>
             </View>
           </View>
-        </KeyboardAvoidingView>
-      ) : (
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: Spacing.lg }}>
-          {/* Selected Color Combination Banner (when navigated from Color Voting) */}
-          {selectedCombo && (
-            <View style={styles.selectedComboCard}>
-              <View style={styles.selectedComboHeader}>
-                <View style={styles.selectedComboTag}>
-                  <Ionicons name="color-palette" size={15} color={Colors.accent} />
-                  <Text style={styles.selectedComboTagText}>Selected Color Palette</Text>
-                </View>
-                <View style={styles.selectedComboBadge}>
-                  <Text style={styles.selectedComboBadgeText}>{selectedCombo.occasion}</Text>
-                </View>
-              </View>
 
-              <Text style={styles.selectedComboTitle}>{selectedCombo.title}</Text>
-              <Text style={styles.selectedComboSub}>{selectedCombo.subType}</Text>
-
-              <View style={styles.selectedComboColorRow}>
-                {selectedCombo.colors.map((c, i) => (
-                  <View key={i} style={styles.selectedComboColorItem}>
-                    <View style={[styles.selectedComboSwatch, { backgroundColor: c.hex }]} />
-                    <Text style={styles.selectedComboColorName} numberOfLines={1}>{c.name}</Text>
-                    <Text style={styles.selectedComboHex}>{c.hex}</Text>
-                  </View>
-                ))}
-              </View>
-
-              <View style={styles.selectedComboFooter}>
-                <View style={styles.selectedComboRating}>
-                  <Ionicons name="star" size={14} color={Colors.warning} />
-                  <Text style={styles.selectedComboRatingText}>{selectedCombo.rating.toFixed(1)}</Text>
-                  <Text style={styles.selectedComboVotesText}>({selectedCombo.votesCount.toLocaleString()} votes)</Text>
-                </View>
-                <Text style={styles.selectedComboHint}>Curating matching outfits below</Text>
-              </View>
-            </View>
-          )}
-
-          {/* Occasion selector */}
-          <Text style={styles.label}>Select Occasion</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: Spacing.xl }}>
-            {OCCASIONS.map((occ) => (
-              <TouchableOpacity
-                key={occ}
-                style={[styles.occPill, occasion === occ && styles.occPillActive]}
-                onPress={() => setOccasion(occ)}
-              >
-                <Text style={[styles.occText, occasion === occ && styles.occTextActive]}>{occ}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-
-          <TouchableOpacity onPress={handleGetStyling} disabled={loading} activeOpacity={0.8}>
-            <LinearGradient
-              colors={[Colors.primary, Colors.accent]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.analyzeBtn}
+          {/* Tab switcher */}
+          <View style={styles.tabs}>
+            <TouchableOpacity
+              style={[styles.tab, tab === 'styling' && styles.tabActive]}
+              onPress={() => setTab('styling')}
             >
-              <Ionicons name="sparkles" size={20} color={Colors.white} />
-              <Text style={styles.analyzeBtnText}>
-                {loading ? 'Analyzing...' : 'Get AI Styling Advice'}
-              </Text>
-            </LinearGradient>
-          </TouchableOpacity>
+              <Text style={[styles.tabText, tab === 'styling' && styles.tabTextActive]}>AI Analysis</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.tab, tab === 'chat' && styles.tabActive]}
+              onPress={() => setTab('chat')}
+            >
+              <Text style={[styles.tabText, tab === 'chat' && styles.tabTextActive]}>Stylist Chat</Text>
+            </TouchableOpacity>
+          </View>
+        </LinearGradient>
 
-          {/* Results */}
-          {stylingResult && (
-            <View style={styles.results}>
-              <View style={styles.scoreRow}>
-                <ScoreCard label="Color Harmony" score={stylingResult.colorHarmonyScore} />
-                <ScoreCard label="Fit Score" score={stylingResult.fitScore} />
-                <ScoreCard label="Overall" score={stylingResult.overallMatch} />
-              </View>
-
-              <View style={styles.adviceCard}>
-                <Text style={styles.adviceLabel}>Palette Rationale</Text>
-                <Text style={styles.adviceText}>{stylingResult.paletteRationale}</Text>
-              </View>
-
-              <View style={styles.adviceCard}>
-                <Text style={styles.adviceLabel}>Body Shape Advice</Text>
-                <Text style={styles.adviceText}>{stylingResult.bodyShapeAdvice}</Text>
-              </View>
-
-              {stylingResult.recommendedPalette?.length > 0 && (
-                <View style={styles.paletteSection}>
-                  <Text style={styles.adviceLabel}>Recommended Palette</Text>
-                  <View style={styles.paletteRow}>
-                    {stylingResult.recommendedPalette.map((color, i) => (
-                      <View key={i} style={[styles.paletteSwatch, { backgroundColor: color }]} />
-                    ))}
-                  </View>
+        {tab === 'chat' ? (
+          <View style={styles.chatContainer}>
+            {/* Chat Messages */}
+            <ScrollView
+              ref={scrollViewRef}
+              style={styles.chatArea}
+              contentContainerStyle={[styles.chatContent, { paddingBottom: Spacing.md }]}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
+              onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
+            >
+              {messages.length === 0 && (
+                <View style={[styles.chatEmpty, isKeyboardVisible && styles.chatEmptyCompact]}>
+                  <Ionicons name="sparkles" size={isKeyboardVisible ? 32 : 48} color={Colors.primary} />
+                  <Text style={[styles.chatEmptyTitle, isKeyboardVisible && styles.chatEmptyTitleCompact]}>
+                    Ask me anything!
+                  </Text>
+                  {!isKeyboardVisible && (
+                    <Text style={styles.chatEmptyText}>
+                      "What should I wear to a summer wedding?" or "Find me casual outfits under $50"
+                    </Text>
+                  )}
                 </View>
               )}
+              {messages.map((msg, i) => (
+                <View key={i} style={[styles.bubble, msg.role === 'user' ? styles.bubbleUser : styles.bubbleAi]}>
+                  <Text style={styles.bubbleText}>{msg.content}</Text>
+                  {msg.recommendedProducts?.map((p) => (
+                    <TouchableOpacity
+                      key={p.id}
+                      style={styles.recProduct}
+                      onPress={() => navigation.navigate('ProductDetail', { productId: p.id })}
+                    >
+                      <Text style={styles.recProductTitle}>{p.title}</Text>
+                      <Text style={styles.recProductPrice}>${p.price.toFixed(2)}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              ))}
+              {chatLoading && (
+                <View style={[styles.bubble, styles.bubbleAi]}>
+                  <Text style={styles.bubbleText}>Thinking...</Text>
+                </View>
+              )}
+            </ScrollView>
 
-              {stylingResult.curatedProducts?.length > 0 && (
-                <View style={styles.curatedSection}>
-                  <Text style={styles.adviceLabel}>Curated Matching Pieces ✨</Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: Spacing.sm }}>
-                    {stylingResult.curatedProducts.map((p: any) => (
+            {/* Bottom input area: suggestions + chat bar */}
+            <View style={styles.inputWrapper}>
+              {aiSuggestions.length > 0 && (
+                <View style={styles.aiSuggestionsContainer}>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
+                    contentContainerStyle={styles.aiSuggestionsScroll}
+                  >
+                    {aiSuggestions.map((suggestion, idx) => (
                       <TouchableOpacity
-                        key={p.id}
-                        style={styles.curatedCard}
-                        onPress={() => navigation.navigate('ProductDetail', { productId: p.id })}
+                        key={idx}
+                        style={styles.aiSuggestionChip}
+                        onPress={() => handleSelectAiSuggestion(suggestion)}
+                        activeOpacity={0.7}
                       >
-                        <Image source={{ uri: p.imageUrl || 'https://via.placeholder.com/120' }} style={styles.curatedImage} />
-                        <View style={styles.curatedInfo}>
-                          <Text style={styles.curatedBrand}>{p.brand}</Text>
-                          <Text style={styles.curatedTitle} numberOfLines={1}>{p.title}</Text>
-                          <Text style={styles.curatedPrice}>${Number(p.price).toFixed(2)}</Text>
-                        </View>
+                        <Ionicons name="sparkles" size={13} color={Colors.primary} />
+                        <Text style={styles.aiSuggestionText}>{suggestion}</Text>
                       </TouchableOpacity>
                     ))}
                   </ScrollView>
                 </View>
               )}
+
+              {/* Chat Input placed right above the system navigation or keyboard */}
+              <View style={[styles.chatInputBar, { paddingBottom: chatBottomPadding }]}>
+                <TextInput
+                  style={styles.chatTextInput}
+                  placeholder="Ask your AI stylist..."
+                  placeholderTextColor={Colors.textMuted}
+                  value={chatInput}
+                  onChangeText={setChatInput}
+                  onSubmitEditing={handleSendChat}
+                  returnKeyType="send"
+                  multiline={false}
+                  autoCorrect={false}
+                  onFocus={() => setIsKeyboardVisible(true)}
+                />
+                <TouchableOpacity
+                  style={styles.sendBtn}
+                  onPress={handleSendChat}
+                  disabled={chatLoading}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="send" size={20} color={Colors.white} />
+                </TouchableOpacity>
+              </View>
             </View>
-          )}
-          <View style={{ height: 100 }} />
-        </ScrollView>
-      )}
-    </View>
+          </View>
+        ) : (
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: Spacing.lg }}>
+            {/* Selected Color Combination Banner (when navigated from Color Voting) */}
+            {selectedCombo && (
+              <View style={styles.selectedComboCard}>
+                <View style={styles.selectedComboHeader}>
+                  <View style={styles.selectedComboTag}>
+                    <Ionicons name="color-palette" size={15} color={Colors.accent} />
+                    <Text style={styles.selectedComboTagText}>Selected Color Palette</Text>
+                  </View>
+                  <View style={styles.selectedComboBadge}>
+                    <Text style={styles.selectedComboBadgeText}>{selectedCombo.occasion}</Text>
+                  </View>
+                </View>
+
+                <Text style={styles.selectedComboTitle}>{selectedCombo.title}</Text>
+                <Text style={styles.selectedComboSub}>{selectedCombo.subType}</Text>
+
+                <View style={styles.selectedComboColorRow}>
+                  {selectedCombo.colors.map((c, i) => (
+                    <View key={i} style={styles.selectedComboColorItem}>
+                      <View style={[styles.selectedComboSwatch, { backgroundColor: c.hex }]} />
+                      <Text style={styles.selectedComboColorName} numberOfLines={1}>{c.name}</Text>
+                      <Text style={styles.selectedComboHex}>{c.hex}</Text>
+                    </View>
+                  ))}
+                </View>
+
+                <View style={styles.selectedComboFooter}>
+                  <View style={styles.selectedComboRating}>
+                    <Ionicons name="star" size={14} color={Colors.warning} />
+                    <Text style={styles.selectedComboRatingText}>{selectedCombo.rating.toFixed(1)}</Text>
+                    <Text style={styles.selectedComboVotesText}>({selectedCombo.votesCount.toLocaleString()} votes)</Text>
+                  </View>
+                  <Text style={styles.selectedComboHint}>Curating matching outfits below</Text>
+                </View>
+              </View>
+            )}
+
+            {/* Occasion selector */}
+            <Text style={styles.label}>Select Occasion</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: Spacing.xl }}>
+              {OCCASIONS.map((occ) => (
+                <TouchableOpacity
+                  key={occ}
+                  style={[styles.occPill, occasion === occ && styles.occPillActive]}
+                  onPress={() => setOccasion(occ)}
+                >
+                  <Text style={[styles.occText, occasion === occ && styles.occTextActive]}>{occ}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            <TouchableOpacity onPress={handleGetStyling} disabled={loading} activeOpacity={0.8}>
+              <LinearGradient
+                colors={[Colors.primary, Colors.accent]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.analyzeBtn}
+              >
+                <Ionicons name="sparkles" size={20} color={Colors.white} />
+                <Text style={styles.analyzeBtnText}>
+                  {loading ? 'Analyzing...' : 'Get AI Styling Advice'}
+                </Text>
+              </LinearGradient>
+            </TouchableOpacity>
+
+            {/* Results */}
+            {stylingResult && (
+              <View style={styles.results}>
+                <View style={styles.scoreRow}>
+                  <ScoreCard label="Color Harmony" score={stylingResult.colorHarmonyScore} />
+                  <ScoreCard label="Fit Score" score={stylingResult.fitScore} />
+                  <ScoreCard label="Overall" score={stylingResult.overallMatch} />
+                </View>
+
+                <View style={styles.adviceCard}>
+                  <Text style={styles.adviceLabel}>Palette Rationale</Text>
+                  <Text style={styles.adviceText}>{stylingResult.paletteRationale}</Text>
+                </View>
+
+                <View style={styles.adviceCard}>
+                  <Text style={styles.adviceLabel}>Body Shape Advice</Text>
+                  <Text style={styles.adviceText}>{stylingResult.bodyShapeAdvice}</Text>
+                </View>
+
+                {stylingResult.recommendedPalette?.length > 0 && (
+                  <View style={styles.paletteSection}>
+                    <Text style={styles.adviceLabel}>Recommended Palette</Text>
+                    <View style={styles.paletteRow}>
+                      {stylingResult.recommendedPalette.map((color, i) => (
+                        <View key={i} style={[styles.paletteSwatch, { backgroundColor: color }]} />
+                      ))}
+                    </View>
+                  </View>
+                )}
+
+                {stylingResult.curatedProducts?.length > 0 && (
+                  <View style={styles.curatedSection}>
+                    <Text style={styles.adviceLabel}>Curated Matching Pieces ✨</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: Spacing.sm }}>
+                      {stylingResult.curatedProducts.map((p: any) => (
+                        <TouchableOpacity
+                          key={p.id}
+                          style={styles.curatedCard}
+                          onPress={() => navigation.navigate('ProductDetail', { productId: p.id })}
+                        >
+                          <Image source={{ uri: p.imageUrl || 'https://via.placeholder.com/120' }} style={styles.curatedImage} />
+                          <View style={styles.curatedInfo}>
+                            <Text style={styles.curatedBrand}>{p.brand}</Text>
+                            <Text style={styles.curatedTitle} numberOfLines={1}>{p.title}</Text>
+                            <Text style={styles.curatedPrice}>${Number(p.price).toFixed(2)}</Text>
+                          </View>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  </View>
+                )}
+              </View>
+            )}
+            <View style={{ height: 100 }} />
+          </ScrollView>
+        )}
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
@@ -455,13 +450,14 @@ const scoreStyles = StyleSheet.create({
 });
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-  header: { paddingTop: 60, paddingHorizontal: Spacing.lg, paddingBottom: Spacing.lg },
+  safeArea: { flex: 1, backgroundColor: '#1a103d' },
+  mainContainer: { flex: 1, backgroundColor: Colors.background },
+  header: { paddingTop: Spacing.sm, paddingHorizontal: Spacing.lg, paddingBottom: Spacing.md },
   headerTitle: { color: Colors.white, fontSize: FontSize.xxl, fontWeight: FontWeight.bold },
   headerSub: { color: Colors.textSecondary, fontSize: FontSize.md, marginTop: 2 },
   tabs: {
     flexDirection: 'row',
-    marginTop: Spacing.lg,
+    marginTop: Spacing.md,
     backgroundColor: Colors.surface,
     borderRadius: BorderRadius.md,
     padding: 3,
@@ -470,8 +466,9 @@ const styles = StyleSheet.create({
   tabActive: { backgroundColor: Colors.primaryFaded },
   tabText: { color: Colors.textMuted, fontSize: FontSize.sm, fontWeight: FontWeight.medium },
   tabTextActive: { color: Colors.primary },
+  chatContainer: { flex: 1, backgroundColor: Colors.background },
   chatArea: { flex: 1, flexShrink: 1 },
-  chatContent: { padding: Spacing.lg, paddingBottom: 20 },
+  chatContent: { padding: Spacing.lg, paddingBottom: Spacing.md },
   chatEmpty: { alignItems: 'center', paddingTop: 28, paddingBottom: 16 },
   chatEmptyCompact: { paddingTop: Spacing.sm, paddingBottom: Spacing.xs },
   chatEmptyTitle: { color: Colors.white, fontSize: FontSize.lg, fontWeight: FontWeight.bold, marginTop: Spacing.sm },
