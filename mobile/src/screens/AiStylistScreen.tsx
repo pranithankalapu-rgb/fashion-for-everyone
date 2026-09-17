@@ -237,49 +237,51 @@ export default function AiStylistScreen({ route, navigation }: any) {
             )}
           </ScrollView>
 
-          {/* AI Suggestions strip */}
-          {aiSuggestions.length > 0 && (
-            <View style={styles.aiSuggestionsContainer}>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
-                contentContainerStyle={styles.aiSuggestionsScroll}
-              >
-                {aiSuggestions.map((suggestion, idx) => (
-                  <TouchableOpacity
-                    key={idx}
-                    style={styles.aiSuggestionChip}
-                    onPress={() => handleSelectAiSuggestion(suggestion)}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons name="sparkles" size={13} color={Colors.primary} />
-                    <Text style={styles.aiSuggestionText}>{suggestion}</Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-          )}
+          {/* Bottom input area: suggestions + chat bar */}
+          <View style={styles.inputWrapper}>
+            {aiSuggestions.length > 0 && (
+              <View style={styles.aiSuggestionsContainer}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  keyboardShouldPersistTaps="handled"
+                  contentContainerStyle={styles.aiSuggestionsScroll}
+                >
+                  {aiSuggestions.map((suggestion, idx) => (
+                    <TouchableOpacity
+                      key={idx}
+                      style={styles.aiSuggestionChip}
+                      onPress={() => handleSelectAiSuggestion(suggestion)}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name="sparkles" size={13} color={Colors.primary} />
+                      <Text style={styles.aiSuggestionText}>{suggestion}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
 
-          {/* Chat Input placed right above the app navigation */}
-          <View style={styles.chatInputBar}>
-            <TextInput
-              style={styles.chatTextInput}
-              placeholder="Ask your AI stylist..."
-              placeholderTextColor={Colors.textMuted}
-              value={chatInput}
-              onChangeText={setChatInput}
-              onSubmitEditing={handleSendChat}
-              returnKeyType="send"
-            />
-            <TouchableOpacity
-              style={styles.sendBtn}
-              onPress={handleSendChat}
-              disabled={chatLoading}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="send" size={20} color={Colors.white} />
-            </TouchableOpacity>
+            {/* Chat Input placed right above the app navigation */}
+            <View style={styles.chatInputBar}>
+              <TextInput
+                style={styles.chatTextInput}
+                placeholder="Ask your AI stylist..."
+                placeholderTextColor={Colors.textMuted}
+                value={chatInput}
+                onChangeText={setChatInput}
+                onSubmitEditing={handleSendChat}
+                returnKeyType="send"
+              />
+              <TouchableOpacity
+                style={styles.sendBtn}
+                onPress={handleSendChat}
+                disabled={chatLoading}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="send" size={20} color={Colors.white} />
+              </TouchableOpacity>
+            </View>
           </View>
         </KeyboardAvoidingView>
       ) : (
@@ -448,11 +450,11 @@ const styles = StyleSheet.create({
   tabActive: { backgroundColor: Colors.primaryFaded },
   tabText: { color: Colors.textMuted, fontSize: FontSize.sm, fontWeight: FontWeight.medium },
   tabTextActive: { color: Colors.primary },
-  chatArea: { flex: 1 },
+  chatArea: { flex: 1, flexShrink: 1 },
   chatContent: { padding: Spacing.lg, paddingBottom: 20 },
-  chatEmpty: { alignItems: 'center', paddingTop: 60 },
-  chatEmptyTitle: { color: Colors.white, fontSize: FontSize.xl, fontWeight: FontWeight.bold, marginTop: Spacing.lg },
-  chatEmptyText: { color: Colors.textSecondary, fontSize: FontSize.md, textAlign: 'center', marginTop: Spacing.sm, paddingHorizontal: Spacing.xl },
+  chatEmpty: { alignItems: 'center', paddingTop: 28, paddingBottom: 16 },
+  chatEmptyTitle: { color: Colors.white, fontSize: FontSize.lg, fontWeight: FontWeight.bold, marginTop: Spacing.sm },
+  chatEmptyText: { color: Colors.textSecondary, fontSize: FontSize.sm, textAlign: 'center', marginTop: Spacing.xs, paddingHorizontal: Spacing.lg },
   bubble: { maxWidth: '85%', padding: Spacing.md, borderRadius: BorderRadius.lg, marginBottom: Spacing.md },
   bubbleUser: { alignSelf: 'flex-end', backgroundColor: Colors.primary },
   bubbleAi: { alignSelf: 'flex-start', backgroundColor: Colors.surface },
@@ -467,11 +469,17 @@ const styles = StyleSheet.create({
   },
   recProductTitle: { color: Colors.text, fontSize: FontSize.sm, flex: 1 },
   recProductPrice: { color: Colors.primary, fontSize: FontSize.sm, fontWeight: FontWeight.bold },
+  inputWrapper: {
+    flexShrink: 0,
+    width: '100%',
+    backgroundColor: Colors.surface,
+  },
   aiSuggestionsContainer: {
     backgroundColor: Colors.surface,
     borderTopWidth: 1,
     borderTopColor: Colors.border,
     paddingVertical: Spacing.xs,
+    maxHeight: 46,
   },
   aiSuggestionsScroll: {
     paddingHorizontal: Spacing.md,
