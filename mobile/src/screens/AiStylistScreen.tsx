@@ -39,17 +39,24 @@ export default function AiStylistScreen({ route, navigation }: any) {
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
 
   useEffect(() => {
-    const showSub = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-      () => setIsKeyboardVisible(true)
-    );
-    const hideSub = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
-      () => setIsKeyboardVisible(false)
-    );
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSub = Keyboard.addListener(showEvent, () => setIsKeyboardVisible(true));
+    const hideSub = Keyboard.addListener(hideEvent, () => setIsKeyboardVisible(false));
+
+    const extraShowSub = Platform.OS === 'android'
+      ? Keyboard.addListener('keyboardDidShow', () => setIsKeyboardVisible(true))
+      : null;
+    const extraHideSub = Platform.OS === 'android'
+      ? Keyboard.addListener('keyboardDidHide', () => setIsKeyboardVisible(false))
+      : null;
+
     return () => {
       showSub.remove();
       hideSub.remove();
+      extraShowSub?.remove();
+      extraHideSub?.remove();
     };
   }, []);
 
@@ -61,6 +68,13 @@ export default function AiStylistScreen({ route, navigation }: any) {
   const handleSelectAiSuggestion = (suggestion: string) => {
     setChatInput(suggestion);
   };
+
+  // Dynamic bottom spacing: when keyboard is open, stay snug to the keyboard.
+  // When keyboard is closed, add clearance respecting device safe area insets
+  // (both Android 3-button navigation and gesture navigation).
+  const chatBottomPadding = isKeyboardVisible
+    ? Spacing.sm
+    : (insets.bottom > 0 ? insets.bottom + Spacing.xs : Spacing.md);
 
   const handleGetStyling = async () => {
     setLoading(true);
@@ -207,12 +221,16 @@ export default function AiStylistScreen({ route, navigation }: any) {
             onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
           >
             {messages.length === 0 && (
-              <View style={styles.chatEmpty}>
-                <Ionicons name="sparkles" size={48} color={Colors.primary} />
-                <Text style={styles.chatEmptyTitle}>Ask me anything!</Text>
-                <Text style={styles.chatEmptyText}>
-                  "What should I wear to a summer wedding?" or "Find me casual outfits under $50"
+              <View style={[styles.chatEmpty, isKeyboardVisible && styles.chatEmptyCompact]}>
+                <Ionicons name="sparkles" size={isKeyboardVisible ? 32 : 48} color={Colors.primary} />
+                <Text style={[styles.chatEmptyTitle, isKeyboardVisible && styles.chatEmptyTitleCompact]}>
+                  Ask me anything!
                 </Text>
+                {!isKeyboardVisible && (
+                  <Text style={styles.chatEmptyText}>
+                    "What should I wear to a summer wedding?" or "Find me casual outfits under $50"
+                  </Text>
+                )}
               </View>
             )}
             {messages.map((msg, i) => (
@@ -262,8 +280,8 @@ export default function AiStylistScreen({ route, navigation }: any) {
               </View>
             )}
 
-            {/* Chat Input placed right above the app navigation */}
-            <View style={styles.chatInputBar}>
+            {/* Chat Input placed right above the system navigation or keyboard */}
+            <View style={[styles.chatInputBar, { paddingBottom: chatBottomPadding }]}>
               <TextInput
                 style={styles.chatTextInput}
                 placeholder="Ask your AI stylist..."
@@ -272,6 +290,8 @@ export default function AiStylistScreen({ route, navigation }: any) {
                 onChangeText={setChatInput}
                 onSubmitEditing={handleSendChat}
                 returnKeyType="send"
+                multiline={false}
+                autoCorrect={false}
               />
               <TouchableOpacity
                 style={styles.sendBtn}
@@ -453,7 +473,9 @@ const styles = StyleSheet.create({
   chatArea: { flex: 1, flexShrink: 1 },
   chatContent: { padding: Spacing.lg, paddingBottom: 20 },
   chatEmpty: { alignItems: 'center', paddingTop: 28, paddingBottom: 16 },
+  chatEmptyCompact: { paddingTop: Spacing.sm, paddingBottom: Spacing.xs },
   chatEmptyTitle: { color: Colors.white, fontSize: FontSize.lg, fontWeight: FontWeight.bold, marginTop: Spacing.sm },
+  chatEmptyTitleCompact: { fontSize: FontSize.md, marginTop: 4 },
   chatEmptyText: { color: Colors.textSecondary, fontSize: FontSize.sm, textAlign: 'center', marginTop: Spacing.xs, paddingHorizontal: Spacing.lg },
   bubble: { maxWidth: '85%', padding: Spacing.md, borderRadius: BorderRadius.lg, marginBottom: Spacing.md },
   bubbleUser: { alignSelf: 'flex-end', backgroundColor: Colors.primary },
@@ -506,7 +528,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
+    paddingTop: Spacing.sm,
     backgroundColor: Colors.surface,
     borderTopWidth: 1,
     borderTopColor: Colors.border,
