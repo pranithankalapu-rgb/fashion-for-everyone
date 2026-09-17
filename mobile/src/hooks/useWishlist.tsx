@@ -1,5 +1,8 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import * as SecureStore from 'expo-secure-store';
 import type { RetailProduct } from '../types/fashion';
+
+const WISHLIST_STORAGE_KEY = 'fashion_wishlist_items';
 
 interface WishlistContextType {
   items: RetailProduct[];
@@ -13,11 +16,31 @@ const WishlistContext = createContext<WishlistContextType | undefined>(undefined
 export function WishlistProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<RetailProduct[]>([]);
 
+  // Load wishlist from storage on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const stored = await SecureStore.getItemAsync(WISHLIST_STORAGE_KEY);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) {
+            setItems(parsed);
+          }
+        }
+      } catch {}
+    })();
+  }, []);
+
+  const saveItems = (newItems: RetailProduct[]) => {
+    SecureStore.setItemAsync(WISHLIST_STORAGE_KEY, JSON.stringify(newItems)).catch(() => {});
+  };
+
   const toggleWishlist = useCallback((product: RetailProduct) => {
     setItems((prev) => {
       const exists = prev.find((p) => p.id === product.id);
-      if (exists) return prev.filter((p) => p.id !== product.id);
-      return [...prev, product];
+      const updated = exists ? prev.filter((p) => p.id !== product.id) : [...prev, product];
+      saveItems(updated);
+      return updated;
     });
   }, []);
 
@@ -26,7 +49,10 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
     [items]
   );
 
-  const clearWishlist = useCallback(() => setItems([]), []);
+  const clearWishlist = useCallback(() => {
+    setItems([]);
+    SecureStore.deleteItemAsync(WISHLIST_STORAGE_KEY).catch(() => {});
+  }, []);
 
   return (
     <WishlistContext.Provider value={{ items, toggleWishlist, isWishlisted, clearWishlist }}>

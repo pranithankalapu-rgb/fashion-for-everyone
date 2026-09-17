@@ -55,6 +55,7 @@ function MainTabs() {
 
   return (
     <Tab.Navigator
+      backBehavior="firstRoute"
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarHideOnKeyboard: true,

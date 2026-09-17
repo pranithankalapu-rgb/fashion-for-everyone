@@ -12,11 +12,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Shadows } from '../constants/theme';
 import Button from '../components/Button';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../hooks/useAuth';
 import api from '../services/api';
 import type { UserProfile } from '../types/fashion';
 
 export default function ProfileScreen({ navigation }: any) {
+  const insets = useSafeAreaInsets();
   const { user, role, logout, switchRole, isAuthenticated } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
 
@@ -44,6 +46,10 @@ export default function ProfileScreen({ navigation }: any) {
     { icon: 'people-outline', label: 'Social Feed', screen: 'SocialFeed' },
   ];
 
+  if (role === 'designer') {
+    menuItems.push({ icon: 'brush-outline', label: 'Designer Studio & Upload', screen: 'DesignerShowcase' });
+  }
+
   if (role === 'retailer') {
     menuItems.push({ icon: 'storefront-outline', label: 'Retailer Dashboard', screen: 'RetailerDashboard' });
   }
@@ -54,10 +60,12 @@ export default function ProfileScreen({ navigation }: any) {
     { key: 'retailer', label: 'Retailer', icon: '🏪' },
   ];
 
+  const headerPaddingTop = insets.top > 0 ? insets.top + Spacing.lg : 60;
+
   return (
     <ScrollView style={styles.container}>
       {/* Profile Header */}
-      <LinearGradient colors={['#1a103d', Colors.background]} style={styles.header}>
+      <LinearGradient colors={['#1a103d', Colors.background]} style={[styles.header, { paddingTop: headerPaddingTop }]}>
         <View style={styles.avatarContainer}>
           {displayProfile?.avatar ? (
             <Image source={{ uri: displayProfile.avatar }} style={styles.avatar} />
@@ -121,12 +129,14 @@ export default function ProfileScreen({ navigation }: any) {
         ))}
       </View>
 
-      {/* Logout */}
-      {isAuthenticated && (
-        <View style={styles.section}>
+      {/* Auth action */}
+      <View style={styles.section}>
+        {isAuthenticated ? (
           <Button title="Sign Out" variant="outline" onPress={handleLogout} fullWidth />
-        </View>
-      )}
+        ) : (
+          <Button title="Sign In or Register" onPress={() => navigation.navigate('Login')} fullWidth />
+        )}
+      </View>
       <View style={{ height: 100 }} />
     </ScrollView>
   );

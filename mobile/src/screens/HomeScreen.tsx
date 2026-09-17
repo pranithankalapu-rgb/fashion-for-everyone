@@ -14,14 +14,19 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Shadows } from '../constants/theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../hooks/useAuth';
+import { useWishlist } from '../hooks/useWishlist';
 import api from '../services/api';
 import type { RetailProduct, OutfitLook } from '../types/fashion';
+
+const CATEGORIES = ['All', 'Tops', 'Bottoms', 'Dresses', 'Outerwear', 'Accessories', 'Footwear'];
 
 export default function HomeScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const { user, role } = useAuth();
+  const { toggleWishlist, isWishlisted } = useWishlist();
   const [products, setProducts] = useState<RetailProduct[]>([]);
   const [socialFeed, setSocialFeed] = useState<OutfitLook[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState('All');
   const [refreshing, setRefreshing] = useState(false);
 
   const loadData = async () => {
@@ -30,7 +35,7 @@ export default function HomeScreen({ navigation }: any) {
         api.getProducts().catch(() => []),
         api.getSocialFeed().catch(() => []),
       ]);
-      setProducts(prods.slice(0, 6));
+      setProducts(prods.slice(0, 12));
       setSocialFeed(feed.slice(0, 4));
     } catch {}
   };
@@ -53,6 +58,10 @@ export default function HomeScreen({ navigation }: any) {
   ];
 
   const headerPaddingTop = insets.top > 0 ? insets.top + Spacing.lg : 60;
+
+  const filteredProducts = selectedCategory === 'All'
+    ? products
+    : products.filter((p) => p.category?.toLowerCase() === selectedCategory.toLowerCase());
 
   return (
     <ScrollView
@@ -100,16 +109,40 @@ export default function HomeScreen({ navigation }: any) {
         ))}
       </View>
 
+      {/* Category Pills */}
+      <View style={styles.categorySection}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: Spacing.lg }}
+        >
+          {CATEGORIES.map((cat) => (
+            <TouchableOpacity
+              key={cat}
+              style={[styles.catPill, selectedCategory === cat && styles.catPillActive]}
+              onPress={() => {
+                setSelectedCategory(cat);
+                if (cat !== 'All') {
+                  navigation.navigate('Explore', { category: cat });
+                }
+              }}
+            >
+              <Text style={[styles.catText, selectedCategory === cat && styles.catTextActive]}>{cat}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+
       {/* Trending Products */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Trending Now 🔥</Text>
-          <TouchableOpacity onPress={() => navigation.navigate('Explore')}>
+          <TouchableOpacity onPress={() => navigation.navigate('Explore', { category: selectedCategory })}>
             <Text style={styles.seeAll}>See All</Text>
           </TouchableOpacity>
         </View>
         <FlatList
-          data={products}
+          data={filteredProducts}
           horizontal
           showsHorizontalScrollIndicator={false}
           keyExtractor={(item) => item.id}
@@ -119,13 +152,27 @@ export default function HomeScreen({ navigation }: any) {
               style={styles.trendingCard}
               onPress={() => navigation.navigate('ProductDetail', { productId: item.id })}
             >
-              <Image
-                source={{ uri: item.imageUrl || 'https://via.placeholder.com/150' }}
-                style={styles.trendingImage}
-              />
-              <Text style={styles.trendingBrand}>{item.brand}</Text>
-              <Text style={styles.trendingTitle} numberOfLines={1}>{item.title}</Text>
-              <Text style={styles.trendingPrice}>${item.price.toFixed(2)}</Text>
+              <View style={styles.trendingImageContainer}>
+                <Image
+                  source={{ uri: item.imageUrl || 'https://via.placeholder.com/150' }}
+                  style={styles.trendingImage}
+                />
+                <TouchableOpacity
+                  style={styles.trendingWishlistBtn}
+                  onPress={() => toggleWishlist(item)}
+                >
+                  <Ionicons
+                    name={isWishlisted(item.id) ? 'heart' : 'heart-outline'}
+                    size={16}
+                    color={isWishlisted(item.id) ? Colors.accent : Colors.white}
+                  />
+                </TouchableOpacity>
+              </View>
+              <View style={{ padding: Spacing.sm }}>
+                <Text style={styles.trendingBrand}>{item.brand}</Text>
+                <Text style={styles.trendingTitle} numberOfLines={1}>{item.title}</Text>
+                <Text style={styles.trendingPrice}>${item.price.toFixed(2)}</Text>
+              </View>
             </TouchableOpacity>
           )}
         />
@@ -166,6 +213,28 @@ export default function HomeScreen({ navigation }: any) {
           </View>
         ))}
       </View>
+
+      {/* Designer Banner */}
+      {role === 'designer' && (
+        <TouchableOpacity
+          style={styles.retailerBanner}
+          onPress={() => navigation.navigate('DesignerShowcase')}
+        >
+          <LinearGradient
+            colors={['#8B5CF6', '#EC4899']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.retailerBannerGradient}
+          >
+            <Ionicons name="brush" size={28} color={Colors.white} />
+            <View style={{ flex: 1, marginLeft: Spacing.md }}>
+              <Text style={styles.retailerBannerTitle}>Designer Studio</Text>
+              <Text style={styles.retailerBannerSub}>Upload designs & track ratings</Text>
+            </View>
+            <Ionicons name="arrow-forward" size={24} color={Colors.white} />
+          </LinearGradient>
+        </TouchableOpacity>
+      )}
 
       {/* Retailer Banner */}
       {role === 'retailer' && (
@@ -230,6 +299,19 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xs,
   },
   quickActionLabel: { color: Colors.textSecondary, fontSize: FontSize.xs, fontWeight: FontWeight.medium },
+  categorySection: { marginTop: Spacing.md, marginBottom: Spacing.xs },
+  catPill: {
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: 7,
+    borderRadius: BorderRadius.full,
+    backgroundColor: Colors.surface,
+    marginRight: Spacing.sm,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  catPillActive: { backgroundColor: Colors.primaryFaded, borderColor: Colors.primary },
+  catText: { color: Colors.textMuted, fontSize: FontSize.xs, fontWeight: FontWeight.medium },
+  catTextActive: { color: Colors.primary, fontWeight: FontWeight.semibold },
   section: { marginTop: Spacing.xxxl },
   sectionHeader: {
     flexDirection: 'row',
@@ -248,27 +330,34 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     ...Shadows.sm,
   },
-  trendingImage: { width: '100%', height: 180 },
+  trendingImageContainer: { position: 'relative', width: '100%', height: 150 },
+  trendingImage: { width: '100%', height: '100%' },
+  trendingWishlistBtn: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   trendingBrand: {
     color: Colors.textMuted,
     fontSize: FontSize.xs,
-    paddingHorizontal: Spacing.sm,
-    paddingTop: Spacing.sm,
     textTransform: 'uppercase',
   },
   trendingTitle: {
     color: Colors.text,
     fontSize: FontSize.sm,
     fontWeight: FontWeight.semibold,
-    paddingHorizontal: Spacing.sm,
     marginTop: 2,
   },
   trendingPrice: {
     color: Colors.primary,
     fontSize: FontSize.md,
     fontWeight: FontWeight.bold,
-    paddingHorizontal: Spacing.sm,
-    paddingBottom: Spacing.sm,
     marginTop: 4,
   },
   feedCard: {
@@ -298,7 +387,7 @@ const styles = StyleSheet.create({
   feedActions: { flexDirection: 'row', paddingHorizontal: Spacing.md, paddingBottom: Spacing.md, gap: Spacing.xl },
   feedStat: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   feedStatText: { color: Colors.textSecondary, fontSize: FontSize.sm },
-  retailerBanner: { marginHorizontal: Spacing.lg, marginTop: Spacing.xxxl },
+  retailerBanner: { marginHorizontal: Spacing.lg, marginTop: Spacing.xl },
   retailerBannerGradient: {
     flexDirection: 'row',
     alignItems: 'center',

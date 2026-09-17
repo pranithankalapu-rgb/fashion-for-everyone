@@ -9,6 +9,7 @@ import {
   Alert,
   Dimensions,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Shadows } from '../constants/theme';
 import Button from '../components/Button';
@@ -21,6 +22,7 @@ import type { RetailProduct } from '../types/fashion';
 const { width } = Dimensions.get('window');
 
 export default function ProductDetailScreen({ route, navigation }: any) {
+  const insets = useSafeAreaInsets();
   const { productId } = route.params;
   const [product, setProduct] = useState<RetailProduct | null>(null);
   const [loading, setLoading] = useState(true);
@@ -54,9 +56,14 @@ export default function ProductDetailScreen({ route, navigation }: any) {
     Alert.alert('Added to Cart', `${product.title} (${selectedSize}) added to your cart!`);
   };
 
+  const topInset = Math.max(insets.top + 8, 44);
+
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 110 + insets.bottom }}
+      >
         {/* Image */}
         <View style={styles.imageContainer}>
           <Image
@@ -64,11 +71,11 @@ export default function ProductDetailScreen({ route, navigation }: any) {
             style={styles.image}
             resizeMode="cover"
           />
-          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+          <TouchableOpacity style={[styles.backBtn, { top: topInset }]} onPress={() => navigation.goBack()}>
             <Ionicons name="arrow-back" size={24} color={Colors.white} />
           </TouchableOpacity>
           <TouchableOpacity
-            style={styles.heartBtn}
+            style={[styles.heartBtn, { top: topInset }]}
             onPress={() => toggleWishlist(product)}
           >
             <Ionicons
@@ -159,8 +166,8 @@ export default function ProductDetailScreen({ route, navigation }: any) {
         <View style={{ height: 120 }} />
       </ScrollView>
 
-      {/* Bottom CTA */}
-      <View style={styles.bottomBar}>
+      {/* Bottom action bar */}
+      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) + Spacing.md }]}>
         <TouchableOpacity
           style={styles.cartIconBtn}
           onPress={() => navigation.navigate('Cart')}

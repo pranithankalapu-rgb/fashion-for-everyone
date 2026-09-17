@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import { api, getToken, setToken, setCurrentRole } from '../services/api';
+import { api, getToken, setToken, setCurrentRole, setCurrentUserId, getSavedRole } from '../services/api';
 import type { UserProfile, UserRole } from '../types/fashion';
 
 interface AuthState {
@@ -27,18 +27,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isLoading: true,
   });
 
-  // Check for existing token on mount
+  // Check for existing token and role on mount
   useEffect(() => {
     (async () => {
       try {
         const token = await getToken();
+        const savedRole = await getSavedRole();
         if (token) {
           const { user } = await api.getMe();
-          const role = (user?.role as UserRole) || 'customer';
+          const role = savedRole || (user?.role as UserRole) || 'customer';
           setCurrentRole(role);
+          if (user?.id) setCurrentUserId(user.id);
           setState({ user, role, isAuthenticated: true, isLoading: false });
         } else {
-          setState((s) => ({ ...s, isLoading: false }));
+          setState((s) => ({ ...s, role: savedRole || 'customer', isLoading: false }));
         }
       } catch {
         await setToken(null);
@@ -51,8 +53,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setState((s) => ({ ...s, isLoading: true }));
     try {
       const res = await api.login({ emailOrUsername, password, role });
-      const userRole = (res.user?.role as UserRole) || (role as UserRole) || 'customer';
+      const userRole = (role as UserRole) || (res.user?.role as UserRole) || 'customer';
       setCurrentRole(userRole);
+      if (res.user?.id) setCurrentUserId(res.user.id);
       setState({ user: res.user, role: userRole, isAuthenticated: true, isLoading: false });
     } catch (err) {
       setState((s) => ({ ...s, isLoading: false }));
@@ -64,8 +67,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setState((s) => ({ ...s, isLoading: true }));
     try {
       const res = await api.register({ name, email, password, role });
-      const userRole = (res.user?.role as UserRole) || (role as UserRole) || 'customer';
+      const userRole = (role as UserRole) || (res.user?.role as UserRole) || 'customer';
       setCurrentRole(userRole);
+      if (res.user?.id) setCurrentUserId(res.user.id);
       setState({ user: res.user, role: userRole, isAuthenticated: true, isLoading: false });
     } catch (err) {
       setState((s) => ({ ...s, isLoading: false }));

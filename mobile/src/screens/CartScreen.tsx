@@ -1,16 +1,23 @@
 import React from 'react';
 import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity, Alert } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Shadows } from '../constants/theme';
 import Button from '../components/Button';
 import { useCart } from '../hooks/useCart';
 
 export default function CartScreen({ navigation }: any) {
+  const insets = useSafeAreaInsets();
   const { items, removeFromCart, updateQuantity, totalPrice, clearCart } = useCart();
 
   if (items.length === 0) {
     return (
-      <View style={styles.emptyContainer}>
+      <View style={[styles.emptyContainer, { paddingTop: Math.max(insets.top + 10, 50) }]}>
+        {navigation.canGoBack() && (
+          <TouchableOpacity style={styles.emptyBackBtn} onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={24} color={Colors.white} />
+          </TouchableOpacity>
+        )}
         <Ionicons name="cart-outline" size={80} color={Colors.textMuted} />
         <Text style={styles.emptyTitle}>Your Cart is Empty</Text>
         <Text style={styles.emptyText}>Add items to get started</Text>
@@ -23,8 +30,15 @@ export default function CartScreen({ navigation }: any) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Cart 🛒</Text>
+      <View style={[styles.header, { paddingTop: Math.max(insets.top + 10, 50) }]}>
+        <View style={styles.headerLeft}>
+          {navigation.canGoBack() && (
+            <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+              <Ionicons name="arrow-back" size={24} color={Colors.white} />
+            </TouchableOpacity>
+          )}
+          <Text style={styles.title}>Cart 🛒</Text>
+        </View>
         <TouchableOpacity onPress={() => Alert.alert('Clear Cart', 'Remove all items?', [
           { text: 'Cancel' },
           { text: 'Clear', style: 'destructive', onPress: clearCart },
@@ -65,7 +79,7 @@ export default function CartScreen({ navigation }: any) {
       />
 
       {/* Checkout bar */}
-      <View style={styles.checkoutBar}>
+      <View style={[styles.checkoutBar, { paddingBottom: Math.max(insets.bottom, 16) + Spacing.md }]}>
         <View>
           <Text style={styles.totalLabel}>Total</Text>
           <Text style={styles.totalPrice}>${totalPrice.toFixed(2)}</Text>
@@ -84,10 +98,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 60,
     paddingHorizontal: Spacing.lg,
     paddingBottom: Spacing.md,
   },
+  headerLeft: { flexDirection: 'row', alignItems: 'center' },
+  backBtn: { marginRight: Spacing.md, padding: 4 },
   title: { color: Colors.white, fontSize: FontSize.xxl, fontWeight: FontWeight.bold },
   clearText: { color: Colors.error, fontSize: FontSize.sm },
   card: {
@@ -113,14 +128,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: Spacing.lg,
-    paddingBottom: Spacing.xxxl,
     backgroundColor: Colors.surface,
     borderTopWidth: 1,
     borderTopColor: Colors.border,
   },
   totalLabel: { color: Colors.textMuted, fontSize: FontSize.sm },
   totalPrice: { color: Colors.white, fontSize: FontSize.xxl, fontWeight: FontWeight.bold },
-  emptyContainer: { flex: 1, backgroundColor: Colors.background, alignItems: 'center', justifyContent: 'center', padding: Spacing.xxl },
+  emptyContainer: { flex: 1, backgroundColor: Colors.background, alignItems: 'center', justifyContent: 'center', padding: Spacing.xxl, position: 'relative' },
+  emptyBackBtn: { position: 'absolute', top: 50, left: Spacing.lg, padding: 8 },
   emptyTitle: { color: Colors.white, fontSize: FontSize.xl, fontWeight: FontWeight.bold, marginTop: Spacing.xl },
   emptyText: { color: Colors.textSecondary, fontSize: FontSize.md, marginTop: Spacing.sm },
   browseBtn: {

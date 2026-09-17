@@ -7,15 +7,22 @@ import {
   FlatList,
   TouchableOpacity,
   RefreshControl,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Shadows } from '../constants/theme';
 import Loading from '../components/Loading';
+import { useAuth } from '../hooks/useAuth';
 import api from '../services/api';
 import type { RetailProduct, CustomerOrder, RetailerCustomer } from '../types/fashion';
 
 export default function RetailerDashboardScreen({ navigation }: any) {
+  const insets = useSafeAreaInsets();
+  const { role, switchRole } = useAuth();
+  const isRetailer = role === 'retailer' || role === 'admin';
+
   const [products, setProducts] = useState<RetailProduct[]>([]);
   const [orders, setOrders] = useState<CustomerOrder[]>([]);
   const [customers, setCustomers] = useState<RetailerCustomer[]>([]);
@@ -46,8 +53,34 @@ export default function RetailerDashboardScreen({ navigation }: any) {
     setRefreshing(false);
   };
 
+  const handleUpdateStock = async (product: RetailProduct, delta: number) => {
+    const current = product.stockQuantity || 0;
+    const nextVal = Math.max(0, current + delta);
+    try {
+      const updated = await api.updateProductStock(product.id, nextVal);
+      setProducts((prev) =>
+        prev.map((p) => (p.id === product.id ? { ...p, stockQuantity: updated.stockQuantity } : p))
+      );
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to update product stock');
+    }
+  };
+
+  const handleUpdateOrderStatus = async (order: CustomerOrder) => {
+    const statuses = ['Pending', 'Processing', 'Shipped', 'Delivered'];
+    const currentIdx = statuses.indexOf(order.status);
+    const nextStatus = statuses[(currentIdx + 1) % statuses.length];
+    try {
+      const updated = await api.updateOrderStatus(order.id, nextStatus);
+      setOrders((prev) => prev.map((o) => (o.id === order.id ? updated : o)));
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to update order status');
+    }
+  };
+
   if (loading) return <Loading message="Loading dashboard..." />;
 
+  const paddingTop = insets.top > 0 ? insets.top + Spacing.md : 60;
   const totalRevenue = orders.reduce((sum, o) => sum + o.totalAmount, 0);
   const pendingOrders = orders.filter((o) => o.status === 'Pending').length;
   const lowStockProducts = products.filter((p) => (p.stockQuantity || 0) < 10).length;
@@ -61,106 +94,154 @@ export default function RetailerDashboardScreen({ navigation }: any) {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={['#1a103d', Colors.background]} style={styles.header}>
-        <Text style={styles.title}>Retailer Dashboard 🏪</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabBar}>
-          {tabs.map((t) => (
-            <TouchableOpacity
-              key={t.key}
-              style={[styles.tabBtn, tab === t.key && styles.tabBtnActive]}
-              onPress={() => setTab(t.key)}
-            >
-              <Ionicons name={t.icon as any} size={16} color={tab === t.key ? Colors.primary : Colors.textMuted} />
-              <Text style={[styles.tabLabel, tab === t.key && styles.tabLabelActive]}>{t.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+      <LinearGradient colors={['#1a103d', Colors.background]} style={[styles.header, { paddingTop }]}>
+        <View style={styles.headerTop}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={24} color={Colors.white} />
+          </TouchableOpacity>
+          <Text style={styles.title}>Retailer Dashboard 🏪</Text>
+        </View>
+
+        {isRetailer && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabBar}>
+            {tabs.map((t) => (
+              <TouchableOpacity
+                key={t.key}
+                style={[styles.tabBtn, tab === t.key && styles.tabBtnActive]}
+                onPress={() => setTab(t.key)}
+              >
+                <Ionicons name={t.icon as any} size={16} color={tab === t.key ? Colors.primary : Colors.textMuted} />
+                <Text style={[styles.tabLabel, tab === t.key && styles.tabLabelActive]}>{t.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        )}
       </LinearGradient>
 
-      <ScrollView
-        style={{ flex: 1 }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
-      >
-        {tab === 'overview' && (
-          <View style={styles.content}>
-            <View style={styles.statsRow}>
-              <StatCard label="Revenue" value={`$${totalRevenue.toFixed(0)}`} icon="cash-outline" color={Colors.success} />
-              <StatCard label="Orders" value={String(orders.length)} icon="receipt-outline" color={Colors.primary} />
+      {!isRetailer ? (
+        <View style={styles.guardContainer}>
+          <Ionicons name="shield-outline" size={64} color={Colors.warning} />
+          <Text style={styles.guardTitle}>Retailer Access Required</Text>
+          <Text style={styles.guardSubtitle}>
+            This dashboard is reserved for retailers to manage store inventory, stock quantities, and customer orders.
+          </Text>
+          <TouchableOpacity
+            style={styles.switchRoleBtn}
+            onPress={() => switchRole('retailer')}
+          >
+            <Text style={styles.switchRoleBtnText}>Switch to Retailer Mode</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.goBackBtn} onPress={() => navigation.goBack()}>
+            <Text style={styles.goBackBtnText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ paddingBottom: 110 + insets.bottom }}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
+        >
+          {tab === 'overview' && (
+            <View style={styles.content}>
+              <View style={styles.statsRow}>
+                <StatCard label="Revenue" value={`$${totalRevenue.toFixed(0)}`} icon="cash-outline" color={Colors.success} />
+                <StatCard label="Orders" value={String(orders.length)} icon="receipt-outline" color={Colors.primary} />
+              </View>
+              <View style={styles.statsRow}>
+                <StatCard label="Products" value={String(products.length)} icon="cube-outline" color={Colors.info} />
+                <StatCard label="Pending" value={String(pendingOrders)} icon="time-outline" color={Colors.warning} />
+              </View>
+              {lowStockProducts > 0 && (
+                <View style={styles.alertCard}>
+                  <Ionicons name="warning" size={20} color={Colors.warning} />
+                  <Text style={styles.alertText}>{lowStockProducts} product(s) with low stock (&lt;10 items)</Text>
+                </View>
+              )}
             </View>
-            <View style={styles.statsRow}>
-              <StatCard label="Products" value={String(products.length)} icon="cube-outline" color={Colors.info} />
-              <StatCard label="Pending" value={String(pendingOrders)} icon="time-outline" color={Colors.warning} />
-            </View>
-            {lowStockProducts > 0 && (
-              <View style={styles.alertCard}>
-                <Ionicons name="warning" size={20} color={Colors.warning} />
-                <Text style={styles.alertText}>{lowStockProducts} product(s) with low stock</Text>
-              </View>
-            )}
-          </View>
-        )}
+          )}
 
-        {tab === 'products' && (
-          <FlatList
-            data={products}
-            scrollEnabled={false}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.content}
-            renderItem={({ item }) => (
-              <View style={styles.listCard}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.listTitle}>{item.title}</Text>
-                  <Text style={styles.listSub}>{item.brand} · ${item.price.toFixed(2)}</Text>
+          {tab === 'products' && (
+            <FlatList
+              data={products}
+              scrollEnabled={false}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={styles.content}
+              renderItem={({ item }) => (
+                <View style={styles.listCard}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.listTitle}>{item.title}</Text>
+                    <Text style={styles.listSub}>{item.brand} · ${item.price.toFixed(2)}</Text>
+                  </View>
+                  <View style={styles.stockControl}>
+                    <TouchableOpacity
+                      style={styles.stockBtn}
+                      onPress={() => handleUpdateStock(item, -1)}
+                    >
+                      <Ionicons name="remove" size={16} color={Colors.white} />
+                    </TouchableOpacity>
+                    <View style={[styles.stockBadge, (item.stockQuantity || 0) < 10 && { backgroundColor: Colors.warning + '20' }]}>
+                      <Text style={[styles.stockText, (item.stockQuantity || 0) < 10 && { color: Colors.warning }]}>
+                        {item.stockQuantity ?? '0'}
+                      </Text>
+                    </View>
+                    <TouchableOpacity
+                      style={styles.stockBtn}
+                      onPress={() => handleUpdateStock(item, 1)}
+                    >
+                      <Ionicons name="add" size={16} color={Colors.white} />
+                    </TouchableOpacity>
+                  </View>
                 </View>
-                <View style={[styles.stockBadge, (item.stockQuantity || 0) < 10 && { backgroundColor: Colors.warning + '20' }]}>
-                  <Text style={[styles.stockText, (item.stockQuantity || 0) < 10 && { color: Colors.warning }]}>
-                    {item.stockQuantity ?? '—'} in stock
-                  </Text>
-                </View>
-              </View>
-            )}
-          />
-        )}
+              )}
+            />
+          )}
 
-        {tab === 'orders' && (
-          <FlatList
-            data={orders}
-            scrollEnabled={false}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.content}
-            renderItem={({ item }) => (
-              <View style={styles.listCard}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.listTitle}>#{item.orderNumber}</Text>
-                  <Text style={styles.listSub}>{item.customerName} · {item.items.length} items</Text>
-                </View>
-                <Text style={[styles.statusText, { color: item.status === 'Delivered' ? Colors.success : Colors.warning }]}>
-                  {item.status}
-                </Text>
-              </View>
-            )}
-          />
-        )}
+          {tab === 'orders' && (
+            <FlatList
+              data={orders}
+              scrollEnabled={false}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={styles.content}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.listCard}
+                  activeOpacity={0.8}
+                  onPress={() => handleUpdateOrderStatus(item)}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.listTitle}>#{item.orderNumber}</Text>
+                    <Text style={styles.listSub}>{item.customerName} · {item.items.length} items</Text>
+                  </View>
+                  <View style={{ alignItems: 'flex-end', gap: 4 }}>
+                    <Text style={[styles.statusText, { color: item.status === 'Delivered' ? Colors.success : Colors.warning }]}>
+                      {item.status}
+                    </Text>
+                    <Text style={styles.tapToChange}>Tap to advance</Text>
+                  </View>
+                </TouchableOpacity>
+              )}
+            />
+          )}
 
-        {tab === 'customers' && (
-          <FlatList
-            data={customers}
-            scrollEnabled={false}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.content}
-            renderItem={({ item }) => (
-              <View style={styles.listCard}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.listTitle}>{item.name}</Text>
-                  <Text style={styles.listSub}>{item.email} · {item.ordersCount} orders</Text>
+          {tab === 'customers' && (
+            <FlatList
+              data={customers}
+              scrollEnabled={false}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={styles.content}
+              renderItem={({ item }) => (
+                <View style={styles.listCard}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.listTitle}>{item.name}</Text>
+                    <Text style={styles.listSub}>{item.email} · {item.ordersCount} orders</Text>
+                  </View>
+                  <Text style={styles.custSpent}>${item.totalSpent.toFixed(0)}</Text>
                 </View>
-                <Text style={styles.custSpent}>${item.totalSpent.toFixed(0)}</Text>
-              </View>
-            )}
-          />
-        )}
-        <View style={{ height: 100 }} />
-      </ScrollView>
+              )}
+            />
+          )}
+        </ScrollView>
+      )}
     </View>
   );
 }
@@ -190,7 +271,9 @@ const statStyles = StyleSheet.create({
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  header: { paddingTop: 60, paddingHorizontal: Spacing.lg, paddingBottom: Spacing.md },
+  header: { paddingHorizontal: Spacing.lg, paddingBottom: Spacing.md },
+  headerTop: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
+  backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center' },
   title: { color: Colors.white, fontSize: FontSize.xxl, fontWeight: FontWeight.bold },
   tabBar: { marginTop: Spacing.md },
   tabBtn: {
@@ -205,7 +288,7 @@ const styles = StyleSheet.create({
   },
   tabBtnActive: { backgroundColor: Colors.primaryFaded },
   tabLabel: { color: Colors.textMuted, fontSize: FontSize.sm },
-  tabLabelActive: { color: Colors.primary },
+  tabLabelActive: { color: Colors.primary, fontWeight: FontWeight.semibold },
   content: { padding: Spacing.lg },
   statsRow: { flexDirection: 'row', gap: Spacing.md, marginBottom: Spacing.md },
   alertCard: {
@@ -228,8 +311,31 @@ const styles = StyleSheet.create({
   },
   listTitle: { color: Colors.text, fontSize: FontSize.md, fontWeight: FontWeight.semibold },
   listSub: { color: Colors.textMuted, fontSize: FontSize.sm, marginTop: 2 },
-  stockBadge: { backgroundColor: Colors.surfaceLight, paddingHorizontal: Spacing.sm, paddingVertical: 3, borderRadius: BorderRadius.sm },
-  stockText: { color: Colors.textSecondary, fontSize: FontSize.xs },
+  stockControl: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  stockBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stockBadge: { backgroundColor: Colors.surfaceLight, paddingHorizontal: Spacing.md, paddingVertical: 4, borderRadius: BorderRadius.sm },
+  stockText: { color: Colors.text, fontSize: FontSize.sm, fontWeight: FontWeight.bold },
   statusText: { fontSize: FontSize.sm, fontWeight: FontWeight.semibold },
+  tapToChange: { color: Colors.textMuted, fontSize: 10 },
   custSpent: { color: Colors.primary, fontSize: FontSize.md, fontWeight: FontWeight.bold },
+  guardContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: Spacing.xxl },
+  guardTitle: { color: Colors.white, fontSize: FontSize.xl, fontWeight: FontWeight.bold, marginTop: Spacing.lg },
+  guardSubtitle: { color: Colors.textSecondary, fontSize: FontSize.sm, textAlign: 'center', marginTop: Spacing.sm, lineHeight: 20 },
+  switchRoleBtn: {
+    marginTop: Spacing.xl,
+    backgroundColor: Colors.primary,
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.lg,
+  },
+  switchRoleBtnText: { color: Colors.white, fontSize: FontSize.md, fontWeight: FontWeight.semibold },
+  goBackBtn: { marginTop: Spacing.md, padding: Spacing.sm },
+  goBackBtnText: { color: Colors.textMuted, fontSize: FontSize.sm },
 });

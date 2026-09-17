@@ -55,14 +55,50 @@ export async function setRefreshToken(token: string | null): Promise<void> {
 
 // ---- Axios client ----
 
+const ROLE_KEY = 'user_role';
+const USER_ID_KEY = 'user_id';
+
 let currentRole: UserRole = 'customer';
+let currentUserId: string = 'user_01';
 
 export function setCurrentRole(role: UserRole) {
   currentRole = role;
+  SecureStore.setItemAsync(ROLE_KEY, role).catch(() => {});
 }
 
 export function getCurrentRole(): UserRole {
   return currentRole;
+}
+
+export function setCurrentUserId(userId: string) {
+  currentUserId = userId;
+  SecureStore.setItemAsync(USER_ID_KEY, userId).catch(() => {});
+}
+
+export async function getSavedRole(): Promise<UserRole | null> {
+  try {
+    const saved = await SecureStore.getItemAsync(ROLE_KEY);
+    if (saved) {
+      currentRole = saved as UserRole;
+      return saved as UserRole;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export async function getSavedUserId(): Promise<string | null> {
+  try {
+    const saved = await SecureStore.getItemAsync(USER_ID_KEY);
+    if (saved) {
+      currentUserId = saved;
+      return saved;
+    }
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 // 60-second timeout to safely accommodate Render free-tier cold starts (which take 30-50s)
@@ -79,7 +115,7 @@ client.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
     config.headers.Authorization = `Bearer ${token}`;
   }
   config.headers['x-user-role'] = currentRole;
-  config.headers['x-user-id'] = 'user_01'; // match web default for dev
+  config.headers['x-user-id'] = currentUserId || 'user_01';
   return config;
 });
 
@@ -205,6 +241,10 @@ export const api = {
     } finally {
       await setToken(null);
       await setRefreshToken(null);
+      await SecureStore.deleteItemAsync(ROLE_KEY).catch(() => {});
+      await SecureStore.deleteItemAsync(USER_ID_KEY).catch(() => {});
+      currentRole = 'customer';
+      currentUserId = 'user_01';
     }
   },
 
@@ -323,6 +363,19 @@ export const api = {
 
   async voteDesign(id: string, rating: number): Promise<Design> {
     const res = await client.post<Design>(`/designs/${id}/vote`, { rating });
+    return res.data;
+  },
+
+  async createDesign(data: {
+    title: string;
+    imageUrl: string;
+    collection?: string;
+    occasion?: string;
+    palette?: string[];
+    price?: number;
+    designerId?: string;
+  }): Promise<Design> {
+    const res = await client.post<Design>('/designs', data);
     return res.data;
   },
 

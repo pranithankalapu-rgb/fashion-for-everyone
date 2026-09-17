@@ -1,17 +1,26 @@
 import React from 'react';
 import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Shadows } from '../constants/theme';
 import { useWishlist } from '../hooks/useWishlist';
 import { useCart } from '../hooks/useCart';
 
 export default function WishlistScreen({ navigation }: any) {
+  const insets = useSafeAreaInsets();
   const { items, toggleWishlist } = useWishlist();
   const { addToCart } = useCart();
+  const canGoBack = navigation.canGoBack();
+  const paddingTop = insets.top > 0 ? insets.top + Spacing.md : 60;
 
   if (items.length === 0) {
     return (
-      <View style={styles.emptyContainer}>
+      <View style={[styles.emptyContainer, { paddingTop }]}>
+        {canGoBack && (
+          <TouchableOpacity style={styles.backBtnAbsolute} onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={24} color={Colors.white} />
+          </TouchableOpacity>
+        )}
         <Ionicons name="heart-outline" size={80} color={Colors.textMuted} />
         <Text style={styles.emptyTitle}>Your Wishlist is Empty</Text>
         <Text style={styles.emptyText}>Save items you love to find them later</Text>
@@ -24,17 +33,28 @@ export default function WishlistScreen({ navigation }: any) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Wishlist ❤️</Text>
-        <Text style={styles.subtitle}>{items.length} items saved</Text>
+      <View style={[styles.header, { paddingTop }]}>
+        {canGoBack && (
+          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={24} color={Colors.white} />
+          </TouchableOpacity>
+        )}
+        <View style={{ flex: 1 }}>
+          <Text style={styles.title}>Wishlist ❤️</Text>
+          <Text style={styles.subtitle}>{items.length} items saved</Text>
+        </View>
       </View>
 
       <FlatList
         data={items}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={{ padding: Spacing.lg, paddingBottom: 100 }}
+        contentContainerStyle={{ padding: Spacing.lg, paddingBottom: 110 + insets.bottom }}
         renderItem={({ item }) => (
-          <View style={styles.card}>
+          <TouchableOpacity
+            style={styles.card}
+            activeOpacity={0.85}
+            onPress={() => navigation.navigate('ProductDetail', { productId: item.id })}
+          >
             <Image source={{ uri: item.imageUrl || 'https://via.placeholder.com/100' }} style={styles.image} />
             <View style={styles.info}>
               <Text style={styles.brand}>{item.brand}</Text>
@@ -56,7 +76,7 @@ export default function WishlistScreen({ navigation }: any) {
                 </TouchableOpacity>
               </View>
             </View>
-          </View>
+          </TouchableOpacity>
         )}
       />
     </View>
@@ -65,7 +85,9 @@ export default function WishlistScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  header: { paddingTop: 60, paddingHorizontal: Spacing.lg, paddingBottom: Spacing.md },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.lg, paddingBottom: Spacing.md, gap: Spacing.md },
+  backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center' },
+  backBtnAbsolute: { position: 'absolute', top: 50, left: Spacing.lg, width: 40, height: 40, borderRadius: 20, backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center' },
   title: { color: Colors.white, fontSize: FontSize.xxl, fontWeight: FontWeight.bold },
   subtitle: { color: Colors.textSecondary, fontSize: FontSize.md, marginTop: 2 },
   card: {

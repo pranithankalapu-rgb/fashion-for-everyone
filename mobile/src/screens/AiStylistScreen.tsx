@@ -9,6 +9,7 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -44,16 +45,25 @@ export default function AiStylistScreen({ navigation }: any) {
   };
 
   const handleGetStyling = async () => {
-    if (!user) {
-      Alert.alert('Login Required', 'Please login to use AI Styling');
-      return;
-    }
     setLoading(true);
     try {
-      const result = await api.getAiStyling(user as any, occasion);
+      const activeProfile = user || {
+        id: 'guest_01',
+        name: 'Guest Fashion Enthusiast',
+        skinTone: 'Warm Golden',
+        undertone: 'Warm',
+        bodyShape: 'Hourglass',
+        measurements: { heightCm: 168, chestCm: 88, waistCm: 68, hipsCm: 94 },
+        avatar: '',
+        hairColor: 'Brown',
+        selectedOccasions: ['Casual', 'Work'],
+        styleVibes: ['Classic', 'Smart casual'],
+        completedOnboarding: true,
+      };
+      const result = await api.getAiStyling(activeProfile as any, occasion);
       setStylingResult(result);
     } catch (err: any) {
-      Alert.alert('Error', err.message);
+      Alert.alert('AI Styling Error', err.message || 'Unable to generate styling analysis. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -254,6 +264,28 @@ export default function AiStylistScreen({ navigation }: any) {
                   </View>
                 </View>
               )}
+
+              {stylingResult.curatedProducts?.length > 0 && (
+                <View style={styles.curatedSection}>
+                  <Text style={styles.adviceLabel}>Curated Matching Pieces ✨</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: Spacing.sm }}>
+                    {stylingResult.curatedProducts.map((p: any) => (
+                      <TouchableOpacity
+                        key={p.id}
+                        style={styles.curatedCard}
+                        onPress={() => navigation.navigate('ProductDetail', { productId: p.id })}
+                      >
+                        <Image source={{ uri: p.imageUrl || 'https://via.placeholder.com/120' }} style={styles.curatedImage} />
+                        <View style={styles.curatedInfo}>
+                          <Text style={styles.curatedBrand}>{p.brand}</Text>
+                          <Text style={styles.curatedTitle} numberOfLines={1}>{p.title}</Text>
+                          <Text style={styles.curatedPrice}>${Number(p.price).toFixed(2)}</Text>
+                        </View>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
             </View>
           )}
           <View style={{ height: 100 }} />
@@ -264,9 +296,10 @@ export default function AiStylistScreen({ navigation }: any) {
 }
 
 function ScoreCard({ label, score }: { label: string; score: number }) {
+  const percentage = Math.round(score > 1 ? score : score * 100);
   return (
     <View style={scoreStyles.card}>
-      <Text style={scoreStyles.score}>{Math.round(score * 100)}%</Text>
+      <Text style={scoreStyles.score}>{percentage}%</Text>
       <Text style={scoreStyles.label}>{label}</Text>
     </View>
   );
@@ -409,4 +442,19 @@ const styles = StyleSheet.create({
   paletteSection: { marginTop: Spacing.lg },
   paletteRow: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.sm },
   paletteSwatch: { width: 40, height: 40, borderRadius: 20, borderWidth: 2, borderColor: Colors.border },
+  curatedSection: { marginTop: Spacing.xl },
+  curatedCard: {
+    width: 140,
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.md,
+    overflow: 'hidden',
+    marginRight: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  curatedImage: { width: '100%', height: 130 },
+  curatedInfo: { padding: Spacing.sm },
+  curatedBrand: { color: Colors.textMuted, fontSize: FontSize.xs, textTransform: 'uppercase' },
+  curatedTitle: { color: Colors.text, fontSize: FontSize.xs, fontWeight: FontWeight.semibold, marginTop: 2 },
+  curatedPrice: { color: Colors.primary, fontSize: FontSize.sm, fontWeight: FontWeight.bold, marginTop: 2 },
 });

@@ -21,15 +21,25 @@ import { getProductSearchSuggestions } from '../utils/searchSuggestions';
 
 const CATEGORIES = ['All', 'Tops', 'Bottoms', 'Dresses', 'Outerwear', 'Accessories', 'Footwear'];
 
-export default function ExploreScreen({ navigation }: any) {
+export default function ExploreScreen({ route, navigation }: any) {
   const insets = useSafeAreaInsets();
   const [products, setProducts] = useState<RetailProduct[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(route?.params?.search || '');
   const [isFocused, setIsFocused] = useState(false);
-  const [category, setCategory] = useState('All');
+  const [category, setCategory] = useState(route?.params?.category || 'All');
   const [refreshing, setRefreshing] = useState(false);
   const { toggleWishlist, isWishlisted } = useWishlist();
+
+  // Sync with incoming navigation params
+  useEffect(() => {
+    if (route?.params?.category && route.params.category !== category) {
+      setCategory(route.params.category);
+    }
+    if (route?.params?.search !== undefined && route.params.search !== search) {
+      setSearch(route.params.search);
+    }
+  }, [route?.params?.category, route?.params?.search]);
 
   const suggestions = useMemo(() => {
     if (!isFocused || search.trim().length < 2) return [];
@@ -162,7 +172,7 @@ export default function ExploreScreen({ navigation }: any) {
         numColumns={2}
         keyExtractor={(item) => item.id}
         style={{ flex: 1 }}
-        contentContainerStyle={styles.grid}
+        contentContainerStyle={[styles.grid, { paddingBottom: 110 + insets.bottom }]}
         columnWrapperStyle={{ gap: Spacing.lg }}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"

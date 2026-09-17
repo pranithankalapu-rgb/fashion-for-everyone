@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   RefreshControl,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Shadows } from '../constants/theme';
 import Loading from '../components/Loading';
@@ -15,6 +16,7 @@ import api from '../services/api';
 import type { OutfitLook } from '../types/fashion';
 
 export default function SocialFeedScreen({ navigation }: any) {
+  const insets = useSafeAreaInsets();
   const [looks, setLooks] = useState<OutfitLook[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -49,15 +51,24 @@ export default function SocialFeedScreen({ navigation }: any) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Style Feed ✨</Text>
-        <Text style={styles.subtitle}>Community outfit inspiration</Text>
+      <View style={[styles.header, { paddingTop: Math.max(insets.top + 10, 50) }]}>
+        <View style={styles.headerRow}>
+          {navigation?.canGoBack?.() && (
+            <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+              <Ionicons name="arrow-back" size={24} color={Colors.white} />
+            </TouchableOpacity>
+          )}
+          <View style={{ flex: 1 }}>
+            <Text style={styles.title}>Style Feed ✨</Text>
+            <Text style={styles.subtitle}>Community outfit inspiration</Text>
+          </View>
+        </View>
       </View>
 
       <FlatList
         data={looks}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={{ paddingBottom: 100 }}
+        contentContainerStyle={{ paddingBottom: 50 + insets.bottom }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
         ListEmptyComponent={
           <View style={styles.empty}>
@@ -136,7 +147,9 @@ export default function SocialFeedScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  header: { paddingTop: 60, paddingHorizontal: Spacing.lg, paddingBottom: Spacing.md },
+  header: { paddingHorizontal: Spacing.lg, paddingBottom: Spacing.md },
+  headerRow: { flexDirection: 'row', alignItems: 'center' },
+  backBtn: { marginRight: Spacing.md, padding: 4 },
   title: { color: Colors.white, fontSize: FontSize.xxl, fontWeight: FontWeight.bold },
   subtitle: { color: Colors.textSecondary, fontSize: FontSize.md, marginTop: 2 },
   card: {

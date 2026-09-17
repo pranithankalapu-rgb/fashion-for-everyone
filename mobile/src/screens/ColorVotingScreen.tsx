@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   RefreshControl,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Shadows } from '../constants/theme';
 import Loading from '../components/Loading';
@@ -14,7 +15,8 @@ import api from '../services/api';
 import type { ColorCombo } from '../types/fashion';
 import { OCCASIONS } from '../constants/config';
 
-export default function ColorVotingScreen() {
+export default function ColorVotingScreen({ navigation }: any) {
+  const insets = useSafeAreaInsets();
   const [combos, setCombos] = useState<ColorCombo[]>([]);
   const [loading, setLoading] = useState(true);
   const [occasion, setOccasion] = useState('All');
@@ -50,9 +52,18 @@ export default function ColorVotingScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Color Voting 🎨</Text>
-        <Text style={styles.subtitle}>Vote on the best color combinations</Text>
+      <View style={[styles.header, { paddingTop: Math.max(insets.top + 10, 50) }]}>
+        <View style={styles.headerRow}>
+          {navigation?.canGoBack?.() && (
+            <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+              <Ionicons name="arrow-back" size={24} color={Colors.white} />
+            </TouchableOpacity>
+          )}
+          <View style={{ flex: 1 }}>
+            <Text style={styles.title}>Color Voting 🎨</Text>
+            <Text style={styles.subtitle}>Vote on the best color combinations</Text>
+          </View>
+        </View>
       </View>
 
       {/* Filter */}
@@ -76,7 +87,7 @@ export default function ColorVotingScreen() {
       <FlatList
         data={combos}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={{ padding: Spacing.lg }}
+        contentContainerStyle={{ padding: Spacing.lg, paddingBottom: 50 + insets.bottom }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
         ListEmptyComponent={
           <View style={styles.empty}>
@@ -121,7 +132,9 @@ export default function ColorVotingScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  header: { paddingTop: 60, paddingHorizontal: Spacing.lg, paddingBottom: Spacing.md },
+  header: { paddingHorizontal: Spacing.lg, paddingBottom: Spacing.md },
+  headerRow: { flexDirection: 'row', alignItems: 'center' },
+  backBtn: { marginRight: Spacing.md, padding: 4 },
   title: { color: Colors.white, fontSize: FontSize.xxl, fontWeight: FontWeight.bold },
   subtitle: { color: Colors.textSecondary, fontSize: FontSize.md, marginTop: 2 },
   filterList: { maxHeight: 44, marginTop: Spacing.sm },

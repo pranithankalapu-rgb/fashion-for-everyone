@@ -7,7 +7,10 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  TouchableOpacity,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../constants/theme';
 import Input from '../components/Input';
 import Button from '../components/Button';
@@ -16,6 +19,7 @@ import { useAuth } from '../hooks/useAuth';
 import api from '../services/api';
 
 export default function CheckoutScreen({ navigation }: any) {
+  const insets = useSafeAreaInsets();
   const { items, totalPrice, clearCart } = useCart();
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -71,8 +75,21 @@ export default function CheckoutScreen({ navigation }: any) {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>Checkout</Text>
+      <ScrollView
+        contentContainerStyle={[
+          styles.content,
+          { paddingTop: Math.max(insets.top + 10, 44), paddingBottom: 60 + insets.bottom }
+        ]}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.titleRow}>
+          {navigation.canGoBack() && (
+            <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+              <Ionicons name="arrow-back" size={24} color={Colors.white} />
+            </TouchableOpacity>
+          )}
+          <Text style={styles.title}>Checkout</Text>
+        </View>
 
         {/* Order Summary */}
         <View style={styles.section}>
@@ -128,8 +145,10 @@ export default function CheckoutScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: Spacing.lg, paddingTop: 20 },
-  title: { color: Colors.white, fontSize: FontSize.xxl, fontWeight: FontWeight.bold, marginBottom: Spacing.xxl },
+  content: { padding: Spacing.lg },
+  titleRow: { flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.xl },
+  backBtn: { marginRight: Spacing.md, padding: 4 },
+  title: { color: Colors.white, fontSize: FontSize.xxl, fontWeight: FontWeight.bold },
   section: {
     backgroundColor: Colors.surface,
     borderRadius: BorderRadius.lg,

@@ -7,19 +7,50 @@ import {
   Image,
   TouchableOpacity,
   RefreshControl,
+  Modal,
+  TextInput,
+  Alert,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Shadows } from '../constants/theme';
 import Loading from '../components/Loading';
+import Button from '../components/Button';
+import { useAuth } from '../hooks/useAuth';
 import api from '../services/api';
 import type { Designer, Design } from '../types/fashion';
+import { OCCASIONS } from '../constants/config';
 
-export default function DesignerShowcaseScreen() {
+const SAMPLE_IMAGE_OPTIONS = [
+  'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=600&q=80',
+  'https://images.unsplash.com/photo-1539109136881-3be0616acf4b?auto=format&fit=crop&w=600&q=80',
+  'https://images.unsplash.com/photo-1509631179647-0177331693ae?auto=format&fit=crop&w=600&q=80',
+  'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=600&q=80',
+];
+
+export default function DesignerShowcaseScreen({ navigation }: any) {
+  const insets = useSafeAreaInsets();
+  const { user, role } = useAuth();
+  const isDesigner = role === 'designer' || role === 'admin';
+
   const [designers, setDesigners] = useState<Designer[]>([]);
   const [designs, setDesigns] = useState<Design[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<'designers' | 'designs'>('designers');
+  const [tab, setTab] = useState<'designers' | 'designs' | 'studio'>(isDesigner ? 'studio' : 'designers');
   const [refreshing, setRefreshing] = useState(false);
+
+  // Upload modal state
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [newTitle, setNewTitle] = useState('');
+  const [newCollection, setNewCollection] = useState('Resort Elegance 2026');
+  const [newImageUrl, setNewImageUrl] = useState(SAMPLE_IMAGE_OPTIONS[0]);
+  const [newOccasion, setNewOccasion] = useState('Casual');
+  const [newPrice, setNewPrice] = useState('290');
+  const [uploading, setUploading] = useState(false);
 
   const loadData = async () => {
     try {
@@ -49,27 +80,149 @@ export default function DesignerShowcaseScreen() {
     } catch {}
   };
 
+  const handlePublishDesign = async () => {
+    if (!newTitle.trim()) {
+      Alert.alert('Missing Title', 'Please enter a title for your design.');
+      return;
+    }
+    if (!newImageUrl.trim()) {
+      Alert.alert('Missing Image', 'Please select or enter an image URL.');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const created = await api.createDesign({
+        title: newTitle.trim(),
+        collection: newCollection.trim() || 'Autumn Collection 2026',
+        imageUrl: newImageUrl.trim(),
+        occasion: newOccasion,
+        price: Number(newPrice) || 290,
+        palette: ['#1E293B', '#D97706', '#064E3B'],
+        designerId: user?.id || 'des_1',
+      });
+      setDesigns((prev) => [created, ...prev]);
+      setIsUploadModalOpen(false);
+      setNewTitle('');
+      Alert.alert('Design Published! 🎉', 'Your design is now live in the community showcase.');
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to publish design');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   if (loading) return <Loading message="Loading designers..." />;
+
+  const paddingTop = insets.top > 0 ? insets.top + Spacing.md : 60;
+  const totalVotes = designs.reduce((acc, d) => acc + (d.votesCount || 0), 3210);
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Designer Showcase 🎨</Text>
+      <View style={[styles.header, { paddingTop }]}>
+        <View style={styles.headerTop}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={24} color={Colors.white} />
+          </TouchableOpacity>
+          <Text style={styles.title}>Designer Showcase 🎨</Text>
+        </View>
+
         <View style={styles.tabs}>
-          <TouchableOpacity style={[styles.tab, tab === 'designers' && styles.tabActive]} onPress={() => setTab('designers')}>
+          {isDesigner && (
+            <TouchableOpacity
+              style={[styles.tab, tab === 'studio' && styles.tabActive]}
+              onPress={() => setTab('studio')}
+            >
+              <Text style={[styles.tabText, tab === 'studio' && styles.tabTextActive]}>My Studio</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity
+            style={[styles.tab, tab === 'designers' && styles.tabActive]}
+            onPress={() => setTab('designers')}
+          >
             <Text style={[styles.tabText, tab === 'designers' && styles.tabTextActive]}>Designers</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.tab, tab === 'designs' && styles.tabActive]} onPress={() => setTab('designs')}>
+          <TouchableOpacity
+            style={[styles.tab, tab === 'designs' && styles.tabActive]}
+            onPress={() => setTab('designs')}
+          >
             <Text style={[styles.tabText, tab === 'designs' && styles.tabTextActive]}>Designs</Text>
           </TouchableOpacity>
         </View>
       </View>
 
-      {tab === 'designers' ? (
+      {tab === 'studio' ? (
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ padding: Spacing.lg, paddingBottom: 110 + insets.bottom }}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
+        >
+          {/* Studio Profile Banner */}
+          <LinearGradient colors={['#1a103d', Colors.surface]} style={styles.studioBanner}>
+            <View style={styles.studioHeader}>
+              <View style={styles.studioAvatarBadge}>
+                <Ionicons name="brush" size={28} color={Colors.primary} />
+              </View>
+              <View style={{ flex: 1, marginLeft: Spacing.md }}>
+                <Text style={styles.studioName}>{user?.name || 'Pro Designer Studio'}</Text>
+                <Text style={styles.studioHandle}>Verified Fashion Creator ✦</Text>
+              </View>
+            </View>
+
+            <View style={styles.statsGrid}>
+              <View style={styles.statBox}>
+                <Text style={styles.statBoxVal}>142.8k</Text>
+                <Text style={styles.statBoxLabel}>Views</Text>
+              </View>
+              <View style={styles.statBox}>
+                <Text style={styles.statBoxVal}>{totalVotes}</Text>
+                <Text style={styles.statBoxLabel}>Likes & Votes</Text>
+              </View>
+              <View style={styles.statBox}>
+                <Text style={styles.statBoxVal}>4.9 ★</Text>
+                <Text style={styles.statBoxLabel}>Merit Score</Text>
+              </View>
+              <View style={styles.statBox}>
+                <Text style={styles.statBoxVal}>#1</Text>
+                <Text style={styles.statBoxLabel}>Rank</Text>
+              </View>
+            </View>
+          </LinearGradient>
+
+          {/* Action Button */}
+          <View style={{ marginVertical: Spacing.lg }}>
+            <Button
+              title="+ Upload New Design"
+              onPress={() => setIsUploadModalOpen(true)}
+              size="lg"
+              fullWidth
+            />
+          </View>
+
+          {/* Published Catalog */}
+          <Text style={styles.sectionHeading}>My Portfolio & Designs ({designs.length})</Text>
+          {designs.map((item) => (
+            <View key={item.id} style={styles.studioDesignRow}>
+              <Image source={{ uri: item.imageUrl || SAMPLE_IMAGE_OPTIONS[0] }} style={styles.studioDesignThumb} />
+              <View style={{ flex: 1, marginLeft: Spacing.md }}>
+                <Text style={styles.designTitle} numberOfLines={1}>{item.title}</Text>
+                <Text style={styles.designDesigner}>{item.collection}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.md, marginTop: Spacing.xs }}>
+                  <Text style={styles.designPrice}>${item.price.toFixed(0)}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                    <Ionicons name="star" size={13} color={Colors.warning} />
+                    <Text style={styles.miniVoteText}>{item.rating.toFixed(1)} ({item.votesCount} votes)</Text>
+                  </View>
+                </View>
+              </View>
+            </View>
+          ))}
+        </ScrollView>
+      ) : tab === 'designers' ? (
         <FlatList
           data={designers}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={{ padding: Spacing.lg }}
+          contentContainerStyle={{ padding: Spacing.lg, paddingBottom: 110 + insets.bottom }}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
           renderItem={({ item }) => (
             <View style={styles.designerCard}>
@@ -105,12 +258,12 @@ export default function DesignerShowcaseScreen() {
           data={designs}
           numColumns={2}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={{ padding: Spacing.lg }}
+          contentContainerStyle={{ padding: Spacing.lg, paddingBottom: 110 + insets.bottom }}
           columnWrapperStyle={{ gap: Spacing.md }}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
           renderItem={({ item }) => (
             <View style={styles.designCard}>
-              <Image source={{ uri: item.imageUrl || 'https://via.placeholder.com/200' }} style={styles.designImage} />
+              <Image source={{ uri: item.imageUrl || SAMPLE_IMAGE_OPTIONS[0] }} style={styles.designImage} />
               <View style={styles.designInfo}>
                 <Text style={styles.designTitle} numberOfLines={1}>{item.title}</Text>
                 <Text style={styles.designDesigner}>{item.designerName}</Text>
@@ -126,14 +279,99 @@ export default function DesignerShowcaseScreen() {
           )}
         />
       )}
+
+      {/* Upload Modal for Designers */}
+      <Modal visible={isUploadModalOpen} animationType="slide" transparent>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.modalOverlay}
+        >
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Upload New Design ✦</Text>
+              <TouchableOpacity onPress={() => setIsUploadModalOpen(false)}>
+                <Ionicons name="close" size={24} color={Colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <Text style={styles.inputLabel}>Design Title</Text>
+              <TextInput
+                style={styles.modalInput}
+                placeholder="e.g. Asymmetric Cashmere Blazer"
+                placeholderTextColor={Colors.textMuted}
+                value={newTitle}
+                onChangeText={setNewTitle}
+              />
+
+              <Text style={styles.inputLabel}>Collection Name</Text>
+              <TextInput
+                style={styles.modalInput}
+                placeholder="e.g. Resort Elegance 2026"
+                placeholderTextColor={Colors.textMuted}
+                value={newCollection}
+                onChangeText={setNewCollection}
+              />
+
+              <Text style={styles.inputLabel}>Select Photo Look</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: Spacing.md }}>
+                {SAMPLE_IMAGE_OPTIONS.map((img, i) => (
+                  <TouchableOpacity
+                    key={i}
+                    onPress={() => setNewImageUrl(img)}
+                    style={[styles.imgOption, newImageUrl === img && styles.imgOptionActive]}
+                  >
+                    <Image source={{ uri: img }} style={styles.imgOptionPhoto} />
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+
+              <Text style={styles.inputLabel}>Occasion</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: Spacing.md }}>
+                {OCCASIONS.map((occ) => (
+                  <TouchableOpacity
+                    key={occ}
+                    style={[styles.occPill, newOccasion === occ && styles.occPillActive]}
+                    onPress={() => setNewOccasion(occ)}
+                  >
+                    <Text style={[styles.occText, newOccasion === occ && styles.occTextActive]}>{occ}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+
+              <Text style={styles.inputLabel}>Target Price ($)</Text>
+              <TextInput
+                style={styles.modalInput}
+                placeholder="290"
+                placeholderTextColor={Colors.textMuted}
+                keyboardType="numeric"
+                value={newPrice}
+                onChangeText={setNewPrice}
+              />
+
+              <View style={{ marginTop: Spacing.lg, marginBottom: Spacing.xl }}>
+                <Button
+                  title={uploading ? 'Publishing...' : 'Publish to Showcase'}
+                  onPress={handlePublishDesign}
+                  loading={uploading}
+                  size="lg"
+                  fullWidth
+                />
+              </View>
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  header: { paddingTop: 60, paddingHorizontal: Spacing.lg },
-  title: { color: Colors.white, fontSize: FontSize.xxl, fontWeight: FontWeight.bold, marginBottom: Spacing.md },
+  header: { paddingHorizontal: Spacing.lg, paddingBottom: Spacing.sm },
+  headerTop: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, marginBottom: Spacing.md },
+  backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center' },
+  title: { color: Colors.white, fontSize: FontSize.xxl, fontWeight: FontWeight.bold },
   tabs: {
     flexDirection: 'row',
     backgroundColor: Colors.surface,
@@ -144,7 +382,41 @@ const styles = StyleSheet.create({
   tab: { flex: 1, paddingVertical: Spacing.sm, alignItems: 'center', borderRadius: BorderRadius.sm },
   tabActive: { backgroundColor: Colors.primaryFaded },
   tabText: { color: Colors.textMuted, fontSize: FontSize.sm, fontWeight: FontWeight.medium },
-  tabTextActive: { color: Colors.primary },
+  tabTextActive: { color: Colors.primary, fontWeight: FontWeight.semibold },
+  studioBanner: {
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.lg,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    ...Shadows.md,
+  },
+  studioHeader: { flexDirection: 'row', alignItems: 'center' },
+  studioAvatarBadge: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: Colors.primaryFaded,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  studioName: { color: Colors.white, fontSize: FontSize.lg, fontWeight: FontWeight.bold },
+  studioHandle: { color: Colors.primaryLight, fontSize: FontSize.xs, marginTop: 2 },
+  statsGrid: { flexDirection: 'row', justifyContent: 'space-between', marginTop: Spacing.lg, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.08)', paddingTop: Spacing.md },
+  statBox: { alignItems: 'center' },
+  statBoxVal: { color: Colors.white, fontSize: FontSize.md, fontWeight: FontWeight.bold },
+  statBoxLabel: { color: Colors.textMuted, fontSize: FontSize.xs, marginTop: 2 },
+  sectionHeading: { color: Colors.textSecondary, fontSize: FontSize.sm, fontWeight: FontWeight.semibold, marginBottom: Spacing.md },
+  studioDesignRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.md,
+    marginBottom: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  studioDesignThumb: { width: 70, height: 85, borderRadius: BorderRadius.md },
   designerCard: {
     flexDirection: 'row',
     backgroundColor: Colors.surface,
@@ -181,4 +453,49 @@ const styles = StyleSheet.create({
   designPrice: { color: Colors.primary, fontSize: FontSize.md, fontWeight: FontWeight.bold },
   miniVoteBtn: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   miniVoteText: { color: Colors.warning, fontSize: FontSize.xs, fontWeight: FontWeight.semibold },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
+  modalContent: {
+    backgroundColor: Colors.surface,
+    borderTopLeftRadius: BorderRadius.xxl,
+    borderTopRightRadius: BorderRadius.xxl,
+    padding: Spacing.xl,
+    maxHeight: '85%',
+  },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.lg },
+  modalTitle: { color: Colors.white, fontSize: FontSize.xl, fontWeight: FontWeight.bold },
+  inputLabel: { color: Colors.textSecondary, fontSize: FontSize.xs, fontWeight: FontWeight.semibold, marginBottom: 6 },
+  modalInput: {
+    backgroundColor: Colors.surfaceLight,
+    color: Colors.white,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginBottom: Spacing.md,
+    fontSize: FontSize.sm,
+  },
+  imgOption: {
+    width: 64,
+    height: 80,
+    borderRadius: BorderRadius.md,
+    overflow: 'hidden',
+    marginRight: Spacing.sm,
+    borderWidth: 2,
+    borderColor: Colors.border,
+  },
+  imgOptionActive: { borderColor: Colors.primary },
+  imgOptionPhoto: { width: '100%', height: '100%' },
+  occPill: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 6,
+    borderRadius: BorderRadius.full,
+    backgroundColor: Colors.surfaceLight,
+    marginRight: Spacing.xs,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  occPillActive: { borderColor: Colors.primary, backgroundColor: Colors.primaryFaded },
+  occText: { color: Colors.textMuted, fontSize: FontSize.xs },
+  occTextActive: { color: Colors.primary },
 });
