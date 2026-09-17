@@ -158,13 +158,6 @@ export default function AiStylistScreen({ route, navigation }: any) {
 
   const headerPaddingTop = insets.top > 0 ? insets.top + Spacing.md : 60;
 
-  // Dynamic bottom spacing: when keyboard is open, stay snug to the keyboard.
-  // When keyboard is closed, add generous clearance respecting safe area insets
-  // and ensuring the input bar stays completely above the mobile navigation bar / gesture bar.
-  const chatBottomPadding = isKeyboardVisible
-    ? Spacing.sm
-    : Math.max(insets.bottom, Spacing.md) + Spacing.md;
-
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -268,8 +261,8 @@ export default function AiStylistScreen({ route, navigation }: any) {
             </View>
           )}
 
-          {/* Chat Input with dynamic bottom safe-area & nav clearance */}
-          <View style={[styles.chatInputBar, { paddingBottom: chatBottomPadding }]}>
+          {/* Chat Input placed right above the app navigation */}
+          <View style={styles.chatInputBar}>
             <TextInput
               style={styles.chatTextInput}
               placeholder="Ask your AI stylist..."
@@ -505,7 +498,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: Spacing.md,
-    paddingTop: Spacing.md,
+    paddingVertical: Spacing.sm,
     backgroundColor: Colors.surface,
     borderTopWidth: 1,
     borderTopColor: Colors.border,
