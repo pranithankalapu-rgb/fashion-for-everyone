@@ -21,7 +21,10 @@ export default function CartScreen({ navigation }: any) {
         <Ionicons name="cart-outline" size={80} color={Colors.textMuted} />
         <Text style={styles.emptyTitle}>Your Cart is Empty</Text>
         <Text style={styles.emptyText}>Add items to get started</Text>
-        <TouchableOpacity style={styles.browseBtn} onPress={() => navigation.navigate('Explore')}>
+        <TouchableOpacity
+          style={styles.browseBtn}
+          onPress={() => navigation.navigate('Main', { screen: 'Explore' })}
+        >
           <Text style={styles.browseBtnText}>Browse Products</Text>
         </TouchableOpacity>
       </View>

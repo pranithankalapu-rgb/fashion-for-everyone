@@ -134,25 +134,27 @@ export default function ColorVotingScreen({ navigation }: any) {
           </View>
         }
         renderItem={({ item }) => (
-          <TouchableOpacity
-            style={styles.card}
-            activeOpacity={0.88}
-            onPress={() => handleSelectCombo(item)}
-          >
-            <View style={styles.cardHeader}>
-              <Text style={styles.cardTitle}>{decodeHtml(item.title)}</Text>
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>{item.occasion}</Text>
-              </View>
-            </View>
-            <View style={styles.colorRow}>
-              {item.colors.map((c, i) => (
-                <View key={i} style={styles.colorItem}>
-                  <View style={[styles.colorSwatch, { backgroundColor: c.hex }]} />
-                  <Text style={styles.colorName}>{c.name}</Text>
+          <View style={styles.card}>
+            <TouchableOpacity
+              activeOpacity={0.88}
+              onPress={() => handleSelectCombo(item)}
+            >
+              <View style={styles.cardHeader}>
+                <Text style={styles.cardTitle}>{decodeHtml(item.title)}</Text>
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{item.occasion}</Text>
                 </View>
-              ))}
-            </View>
+              </View>
+              <View style={styles.colorRow}>
+                {item.colors.map((c, i) => (
+                  <View key={i} style={styles.colorItem}>
+                    <View style={[styles.colorSwatch, { backgroundColor: c.hex }]} />
+                    <Text style={styles.colorName}>{c.name}</Text>
+                  </View>
+                ))}
+              </View>
+            </TouchableOpacity>
+
             <View style={styles.cardFooter}>
               <View style={styles.voteRow}>
                 <TouchableOpacity
@@ -177,13 +179,17 @@ export default function ColorVotingScreen({ navigation }: any) {
                   <Ionicons name="star" size={14} color={Colors.warning} />
                   <Text style={styles.rating}>{item.rating.toFixed(1)}</Text>
                 </View>
-                <View style={styles.styleHint}>
+                <TouchableOpacity
+                  style={styles.styleHint}
+                  onPress={() => handleSelectCombo(item)}
+                  activeOpacity={0.7}
+                >
                   <Text style={styles.styleHintText}>AI Stylist</Text>
                   <Ionicons name="chevron-forward" size={14} color={Colors.primary} />
-                </View>
+                </TouchableOpacity>
               </View>
             </View>
-          </TouchableOpacity>
+          </View>
         )}
       />
     </View>

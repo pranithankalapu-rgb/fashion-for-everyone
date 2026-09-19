@@ -13,12 +13,30 @@ export default function Input({ label, icon, error, style, ...props }: InputProp
   return (
     <View style={styles.wrapper}>
       {label && <Text style={styles.label}>{label}</Text>}
-      <View style={[styles.container, error ? styles.containerError : null]}>
-        {icon && <Ionicons name={icon} size={20} color={Colors.textMuted} style={styles.icon} />}
+      <View
+        style={[
+          styles.container,
+          props.multiline && styles.containerMultiline,
+          error ? styles.containerError : null,
+        ]}
+      >
+        {icon && (
+          <Ionicons
+            name={icon}
+            size={20}
+            color={Colors.textMuted}
+            style={[styles.icon, props.multiline && styles.iconMultiline]}
+          />
+        )}
         <TextInput
-          style={[styles.input, style]}
+          style={[
+            styles.input,
+            props.multiline && styles.inputMultiline,
+            style,
+          ]}
           placeholderTextColor={Colors.textMuted}
           selectionColor={Colors.primary}
+          textAlignVertical={props.multiline ? 'top' : 'center'}
           {...props}
         />
       </View>
@@ -47,12 +65,22 @@ const styles = StyleSheet.create({
   containerError: {
     borderColor: Colors.error,
   },
+  containerMultiline: {
+    alignItems: 'flex-start',
+    minHeight: 80,
+  },
   icon: { marginRight: Spacing.sm },
+  iconMultiline: {
+    marginTop: Spacing.md,
+  },
   input: {
     flex: 1,
     color: Colors.text,
     fontSize: FontSize.md,
     paddingVertical: Spacing.md,
+  },
+  inputMultiline: {
+    minHeight: 60,
   },
   error: {
     color: Colors.error,

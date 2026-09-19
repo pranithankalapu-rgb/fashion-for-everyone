@@ -31,7 +31,14 @@ export default function ProfileScreen({ navigation }: any) {
   const handleLogout = () => {
     Alert.alert('Logout', 'Are you sure?', [
       { text: 'Cancel' },
-      { text: 'Logout', style: 'destructive', onPress: () => { logout(); navigation.replace('Login'); } },
+      {
+        text: 'Logout',
+        style: 'destructive',
+        onPress: () => {
+          logout();
+          (navigation as any).reset({ index: 0, routes: [{ name: 'Login' }] });
+        },
+      },
     ]);
   };
 

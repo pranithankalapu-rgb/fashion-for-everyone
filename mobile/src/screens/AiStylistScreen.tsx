@@ -80,10 +80,9 @@ export default function AiStylistScreen({ route, navigation }: any) {
   // On Android, anchor the chat container directly above the keyboard:
   // keyboardHeight + system navigation inset. The input bar itself keeps snug Spacing.sm padding.
   // On iOS, KeyboardAvoidingView manages container displacement while input bar keeps snug Spacing.sm padding.
-  const chatContainerBottomPadding =
-    Platform.OS === 'android' && keyboardHeight > 0
-      ? keyboardHeight + (insets.bottom > 0 ? insets.bottom : 0)
-      : 0;
+  // In Android with softwareKeyboardLayoutMode="resize", Android OS automatically resizes
+  // the window to sit directly on top of the keyboard. No extra container bottom padding is needed.
+  const chatContainerBottomPadding = 0;
 
   const chatInputBottomPadding = isKeyboardVisible
     ? Spacing.sm
