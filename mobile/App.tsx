@@ -1,5 +1,7 @@
 import React from 'react';
+import { Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { NavigationBar } from 'expo-navigation-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -17,6 +19,7 @@ export default function App() {
             <WishlistProvider>
               <NavigationContainer>
                 <StatusBar style="light" />
+                {Platform.OS === 'android' && <NavigationBar style="light" />}
                 <AppNavigator />
               </NavigationContainer>
             </WishlistProvider>

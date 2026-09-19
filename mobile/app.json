@@ -6,10 +6,6 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
-    "androidNavigationBar": {
-      "barStyle": "light-content",
-      "backgroundColor": "#1A1A2E"
-    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.fashionforeveryone.mobile"
@@ -30,7 +26,16 @@
     },
     "plugins": [
       "expo-secure-store",
-      "expo-font"
+      "expo-font",
+      "expo-image",
+      [
+        "expo-navigation-bar",
+        {
+          "backgroundColor": "#1A1A2E",
+          "style": "light",
+          "hidden": false
+        }
+      ]
     ],
     "extra": {
       "eas": {
