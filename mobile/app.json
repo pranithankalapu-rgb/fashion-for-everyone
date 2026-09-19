@@ -2,7 +2,7 @@
   "expo": {
     "name": "Fashion For Everyone",
     "slug": "fashion-for-everyone",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -22,7 +22,7 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "package": "com.fashionforeveryone.mobile",
-      "versionCode": 5,
+      "versionCode": 6,
       "softwareKeyboardLayoutMode": "resize"
     },
     "web": {
