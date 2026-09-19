@@ -264,6 +264,31 @@ export const api = {
     return res.data.profile;
   },
 
+  async patchProfile(profile: Partial<UserProfile>): Promise<UserProfile> {
+    const res = await client.patch<{ message: string; profile: UserProfile }>('/profile', profile);
+    return res.data.profile;
+  },
+
+  async updateEmail(email: string): Promise<{ success: boolean; message: string; email: string; profile: UserProfile }> {
+    const res = await client.patch<{ success: boolean; message: string; email: string; profile: UserProfile }>('/profile/email', { email });
+    return res.data;
+  },
+
+  async updateMobile(phone: string): Promise<{ success: boolean; message: string; phone: string; profile: UserProfile }> {
+    const res = await client.patch<{ success: boolean; message: string; phone: string; profile: UserProfile }>('/profile/mobile', { phone });
+    return res.data;
+  },
+
+  async uploadAvatar(data: FormData | { avatarUrl: string }): Promise<{ success: boolean; message: string; avatar: string; profile: UserProfile }> {
+    const isFormData = typeof FormData !== 'undefined' && data instanceof FormData;
+    const res = await client.post<{ success: boolean; message: string; avatar: string; profile: UserProfile }>(
+      '/profile/avatar',
+      data,
+      isFormData ? { headers: { 'Content-Type': 'multipart/form-data' } } : undefined
+    );
+    return res.data;
+  },
+
   // --- Products ---
   async getProducts(params?: { query?: string; category?: string; maxPrice?: number }): Promise<RetailProduct[]> {
     const res = await client.get<RetailProduct[]>('/products', { params });

@@ -15,6 +15,7 @@ interface AuthContextType extends AuthState {
   logout: () => Promise<void>;
   switchRole: (role: UserRole) => void;
   refreshUser: () => Promise<void>;
+  updateUser: (partial: Partial<UserProfile>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -98,8 +99,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch {}
   }, []);
 
+  const updateUser = useCallback((partial: Partial<UserProfile>) => {
+    setState((s) => ({
+      ...s,
+      user: s.user ? { ...s.user, ...partial } : (partial as any),
+    }));
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ ...state, login, register, logout, switchRole, refreshUser }}>
+    <AuthContext.Provider value={{ ...state, login, register, logout, switchRole, refreshUser, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

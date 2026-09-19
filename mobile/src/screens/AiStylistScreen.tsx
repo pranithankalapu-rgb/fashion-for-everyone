@@ -17,6 +17,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Shadows } from '../constants/theme';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../hooks/useAuth';
+import { useTheme } from '../hooks/useTheme';
 import api from '../services/api';
 import type { AiStylingResult, ChatMessage, ColorCombo } from '../types/fashion';
 import { OCCASIONS } from '../constants/config';
@@ -26,6 +27,7 @@ export default function AiStylistScreen({ route, navigation }: any) {
   const insets = useSafeAreaInsets();
   const scrollViewRef = useRef<ScrollView>(null);
   const { user } = useAuth();
+  const { colors, isDark } = useTheme();
   const [tab, setTab] = useState<'styling' | 'chat'>(route?.params?.colorCombo ? 'styling' : 'chat');
   const [occasion, setOccasion] = useState(route?.params?.colorCombo?.occasion || route?.params?.occasion || 'Casual');
   const [selectedCombo, setSelectedCombo] = useState<ColorCombo | null>(route?.params?.colorCombo || null);
@@ -37,23 +39,19 @@ export default function AiStylistScreen({ route, navigation }: any) {
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
     const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
 
-    const showSub = Keyboard.addListener(showEvent, (e) => {
-      const height = e?.endCoordinates?.height || 0;
-      setKeyboardHeight(height);
+    const showSub = Keyboard.addListener(showEvent, () => {
       setIsKeyboardVisible(true);
       setTimeout(() => {
         scrollViewRef.current?.scrollToEnd({ animated: true });
-      }, 50);
+      }, 80);
     });
 
     const hideSub = Keyboard.addListener(hideEvent, () => {
-      setKeyboardHeight(0);
       setIsKeyboardVisible(false);
     });
 
@@ -73,20 +71,18 @@ export default function AiStylistScreen({ route, navigation }: any) {
   };
 
   // Dynamic bottom spacing:
-  // KEYBOARD CLOSED:
-  // Add comfortable safe-area clearance above Android system navigation
-  // (both Android 3-button navigation ~48dp and gesture navigation ~16-24dp).
-  // KEYBOARD OPEN / TYPING:
-  // On Android, anchor the chat container directly above the keyboard:
-  // keyboardHeight + system navigation inset. The input bar itself keeps snug Spacing.sm padding.
-  // On iOS, KeyboardAvoidingView manages container displacement while input bar keeps snug Spacing.sm padding.
-  // In Android with softwareKeyboardLayoutMode="resize", Android OS automatically resizes
-  // the window to sit directly on top of the keyboard. No extra container bottom padding is needed.
-  const chatContainerBottomPadding = 0;
-
+  // 1. KEYBOARD CLOSED:
+  // Use the actual device bottom safe-area inset (e.g. ~24dp gesture nav, ~48dp 3-button nav)
+  // plus small breathing space (Spacing.xs = 4dp), or Spacing.md (16dp) if insets.bottom is 0.
+  // This keeps the input bar comfortably above Android system navigation, never overlapping buttons/gestures.
+  //
+  // 2. KEYBOARD OPEN:
+  // In Android with softwareKeyboardLayoutMode="resize", the window automatically resizes
+  // directly above the keyboard. The input bar sits with snug Spacing.sm (8dp) padding directly on top of the keyboard.
+  // No safe-area inset is added above the keyboard, preventing large blank gaps.
   const chatInputBottomPadding = isKeyboardVisible
     ? Spacing.sm
-    : (insets.bottom > 0 ? insets.bottom + Spacing.xs : Spacing.md);
+    : (insets.bottom > 0 ? insets.bottom + Spacing.xs : Spacing.lg);
 
   const handleGetStyling = async () => {
     setLoading(true);
@@ -182,45 +178,53 @@ export default function AiStylistScreen({ route, navigation }: any) {
     }
   };
 
+  const gradientTop = isDark ? '#1a103d' : '#e0e7ff';
+  const Container = Platform.OS === 'ios' ? KeyboardAvoidingView : View;
+  const containerProps = Platform.OS === 'ios' ? { behavior: 'padding' as const } : {};
+
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-      <KeyboardAvoidingView
-        style={styles.mainContainer}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    <SafeAreaView edges={['top', 'left', 'right']} style={[styles.safeArea, { backgroundColor: gradientTop }]}>
+      <Container
+        {...containerProps}
+        style={[styles.mainContainer, { backgroundColor: colors.background }]}
       >
-        {/* Header */}
-        <LinearGradient colors={['#1a103d', Colors.background]} style={styles.header}>
+        {/* Header with gradient */}
+        <LinearGradient colors={[gradientTop, colors.background]} style={styles.header}>
           <View style={styles.headerTop}>
             {navigation?.canGoBack?.() && (
               <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-                <Ionicons name="arrow-back" size={24} color={Colors.white} />
+                <Ionicons name="arrow-back" size={24} color={colors.text} />
               </TouchableOpacity>
             )}
             <View style={{ flex: 1 }}>
-              <Text style={styles.headerTitle}>AI Stylist ✦</Text>
-              <Text style={styles.headerSub}>Your personal fashion advisor</Text>
+              <Text style={[styles.headerTitle, { color: colors.text }]}>AI Stylist ✦</Text>
+              <Text style={[styles.headerSub, { color: colors.textSecondary }]}>Personalized fashion intelligence</Text>
             </View>
           </View>
 
-          {/* Tab switcher */}
-          <View style={styles.tabs}>
+          {/* Mode Switcher Tabs */}
+          <View style={[styles.tabs, { backgroundColor: colors.surface }]}>
             <TouchableOpacity
-              style={[styles.tab, tab === 'styling' && styles.tabActive]}
-              onPress={() => setTab('styling')}
-            >
-              <Text style={[styles.tabText, tab === 'styling' && styles.tabTextActive]}>AI Analysis</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.tab, tab === 'chat' && styles.tabActive]}
+              style={[styles.tab, tab === 'chat' && [styles.tabActive, { backgroundColor: colors.primaryFaded }]]}
               onPress={() => setTab('chat')}
             >
-              <Text style={[styles.tabText, tab === 'chat' && styles.tabTextActive]}>Stylist Chat</Text>
+              <Text style={[styles.tabText, tab === 'chat' && [styles.tabTextActive, { color: colors.primary }]]}>
+                💬 Chat Stylist
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.tab, tab === 'styling' && [styles.tabActive, { backgroundColor: colors.primaryFaded }]]}
+              onPress={() => setTab('styling')}
+            >
+              <Text style={[styles.tabText, tab === 'styling' && [styles.tabTextActive, { color: colors.primary }]]}>
+                ✨ Style Advice
+              </Text>
             </TouchableOpacity>
           </View>
         </LinearGradient>
 
         {tab === 'chat' ? (
-          <View style={[styles.chatContainer, { paddingBottom: chatContainerBottomPadding }]}>
+          <View style={styles.chatContainer}>
             {/* Chat Messages */}
             <ScrollView
               ref={scrollViewRef}
@@ -232,43 +236,53 @@ export default function AiStylistScreen({ route, navigation }: any) {
             >
               {messages.length === 0 && (
                 <View style={[styles.chatEmpty, isKeyboardVisible && styles.chatEmptyCompact]}>
-                  <Ionicons name="sparkles" size={isKeyboardVisible ? 32 : 48} color={Colors.primary} />
-                  <Text style={[styles.chatEmptyTitle, isKeyboardVisible && styles.chatEmptyTitleCompact]}>
+                  <Ionicons name="sparkles" size={isKeyboardVisible ? 32 : 48} color={colors.primary} />
+                  <Text style={[styles.chatEmptyTitle, { color: colors.text }, isKeyboardVisible && styles.chatEmptyTitleCompact]}>
                     Ask me anything!
                   </Text>
                   {!isKeyboardVisible && (
-                    <Text style={styles.chatEmptyText}>
+                    <Text style={[styles.chatEmptyText, { color: colors.textSecondary }]}>
                       "What should I wear to a summer wedding?" or "Find me casual outfits under $50"
                     </Text>
                   )}
                 </View>
               )}
               {messages.map((msg, i) => (
-                <View key={i} style={[styles.bubble, msg.role === 'user' ? styles.bubbleUser : styles.bubbleAi]}>
-                  <Text style={styles.bubbleText}>{msg.content}</Text>
+                <View
+                  key={i}
+                  style={[
+                    styles.bubble,
+                    msg.role === 'user'
+                      ? [styles.bubbleUser, { backgroundColor: colors.primary }]
+                      : [styles.bubbleAi, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }],
+                  ]}
+                >
+                  <Text style={[styles.bubbleText, { color: msg.role === 'user' ? '#FFFFFF' : colors.text }]}>
+                    {msg.content}
+                  </Text>
                   {msg.recommendedProducts?.map((p) => (
                     <TouchableOpacity
                       key={p.id}
-                      style={styles.recProduct}
+                      style={[styles.recProduct, { backgroundColor: colors.surfaceLight }]}
                       onPress={() => navigation.navigate('ProductDetail', { productId: p.id })}
                     >
-                      <Text style={styles.recProductTitle}>{p.title}</Text>
-                      <Text style={styles.recProductPrice}>${p.price.toFixed(2)}</Text>
+                      <Text style={[styles.recProductTitle, { color: colors.text }]}>{p.title}</Text>
+                      <Text style={[styles.recProductPrice, { color: colors.primary }]}>${p.price.toFixed(2)}</Text>
                     </TouchableOpacity>
                   ))}
                 </View>
               ))}
               {chatLoading && (
-                <View style={[styles.bubble, styles.bubbleAi]}>
-                  <Text style={styles.bubbleText}>Thinking...</Text>
+                <View style={[styles.bubble, styles.bubbleAi, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }]}>
+                  <Text style={[styles.bubbleText, { color: colors.text }]}>Thinking...</Text>
                 </View>
               )}
             </ScrollView>
 
             {/* Bottom input area: suggestions + chat bar */}
-            <View style={styles.inputWrapper}>
+            <View style={[styles.inputWrapper, { backgroundColor: colors.surface }]}>
               {aiSuggestions.length > 0 && (
-                <View style={styles.aiSuggestionsContainer}>
+                <View style={[styles.aiSuggestionsContainer, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
                   <ScrollView
                     horizontal
                     showsHorizontalScrollIndicator={false}
@@ -278,12 +292,12 @@ export default function AiStylistScreen({ route, navigation }: any) {
                     {aiSuggestions.map((suggestion, idx) => (
                       <TouchableOpacity
                         key={idx}
-                        style={styles.aiSuggestionChip}
+                        style={[styles.aiSuggestionChip, { backgroundColor: colors.surfaceLight, borderColor: colors.border }]}
                         onPress={() => handleSelectAiSuggestion(suggestion)}
                         activeOpacity={0.7}
                       >
-                        <Ionicons name="sparkles" size={13} color={Colors.primary} />
-                        <Text style={styles.aiSuggestionText}>{suggestion}</Text>
+                        <Ionicons name="sparkles" size={13} color={colors.primary} />
+                        <Text style={[styles.aiSuggestionText, { color: colors.text }]}>{suggestion}</Text>
                       </TouchableOpacity>
                     ))}
                   </ScrollView>
@@ -291,13 +305,19 @@ export default function AiStylistScreen({ route, navigation }: any) {
               )}
 
               {/* Chat Input placed right above the system navigation or keyboard */}
-              <View style={[styles.chatInputBar, { paddingBottom: chatInputBottomPadding }]}>
+              <View style={[styles.chatInputBar, { backgroundColor: colors.surface, borderTopColor: colors.border, paddingBottom: chatInputBottomPadding }]}>
                 <TextInput
-                  style={styles.chatTextInput}
+                  style={[styles.chatTextInput, { backgroundColor: colors.surfaceLight, color: colors.text }]}
                   placeholder="Ask your AI stylist..."
-                  placeholderTextColor={Colors.textMuted}
+                  placeholderTextColor={colors.textMuted}
                   value={chatInput}
                   onChangeText={setChatInput}
+                  onFocus={() => {
+                    setIsKeyboardVisible(true);
+                    setTimeout(() => {
+                      scrollViewRef.current?.scrollToEnd({ animated: true });
+                    }, 60);
+                  }}
                   onSubmitEditing={handleSendChat}
                   returnKeyType="send"
                   multiline={true}
@@ -305,12 +325,12 @@ export default function AiStylistScreen({ route, navigation }: any) {
                   autoCorrect={false}
                 />
                 <TouchableOpacity
-                  style={styles.sendBtn}
+                  style={[styles.sendBtn, { backgroundColor: colors.primary }]}
                   onPress={handleSendChat}
                   disabled={chatLoading}
                   activeOpacity={0.8}
                 >
-                  <Ionicons name="send" size={20} color={Colors.white} />
+                  <Ionicons name="send" size={20} color="#FFFFFF" />
                 </TouchableOpacity>
               </View>
             </View>
@@ -319,43 +339,43 @@ export default function AiStylistScreen({ route, navigation }: any) {
           <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: Spacing.lg }}>
             {/* Selected Color Combination Banner (when navigated from Color Voting) */}
             {selectedCombo && (
-              <View style={styles.selectedComboCard}>
+              <View style={[styles.selectedComboCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                 <View style={styles.selectedComboHeader}>
                   <View style={styles.selectedComboTag}>
-                    <Ionicons name="color-palette" size={15} color={Colors.accent} />
+                    <Ionicons name="color-palette" size={15} color={colors.accent} />
                     <Text style={styles.selectedComboTagText}>Selected Color Palette</Text>
                   </View>
-                  <View style={styles.selectedComboBadge}>
-                    <Text style={styles.selectedComboBadgeText}>{selectedCombo.occasion}</Text>
+                  <View style={[styles.selectedComboBadge, { backgroundColor: colors.primaryFaded }]}>
+                    <Text style={[styles.selectedComboBadgeText, { color: colors.primary }]}>{selectedCombo.occasion}</Text>
                   </View>
                 </View>
 
-                <Text style={styles.selectedComboTitle}>{selectedCombo.title}</Text>
-                <Text style={styles.selectedComboSub}>{selectedCombo.subType}</Text>
+                <Text style={[styles.selectedComboTitle, { color: colors.text }]}>{selectedCombo.title}</Text>
+                <Text style={[styles.selectedComboSub, { color: colors.textMuted }]}>{selectedCombo.subType}</Text>
 
                 <View style={styles.selectedComboColorRow}>
                   {selectedCombo.colors.map((c, i) => (
                     <View key={i} style={styles.selectedComboColorItem}>
-                      <View style={[styles.selectedComboSwatch, { backgroundColor: c.hex }]} />
-                      <Text style={styles.selectedComboColorName} numberOfLines={1}>{c.name}</Text>
-                      <Text style={styles.selectedComboHex}>{c.hex}</Text>
+                      <View style={[styles.selectedComboSwatch, { backgroundColor: c.hex, borderColor: colors.border }]} />
+                      <Text style={[styles.selectedComboColorName, { color: colors.text }]} numberOfLines={1}>{c.name}</Text>
+                      <Text style={[styles.selectedComboHex, { color: colors.textMuted }]}>{c.hex}</Text>
                     </View>
                   ))}
                 </View>
 
-                <View style={styles.selectedComboFooter}>
+                <View style={[styles.selectedComboFooter, { borderTopColor: colors.border }]}>
                   <View style={styles.selectedComboRating}>
-                    <Ionicons name="star" size={14} color={Colors.warning} />
+                    <Ionicons name="star" size={14} color={colors.warning} />
                     <Text style={styles.selectedComboRatingText}>{selectedCombo.rating.toFixed(1)}</Text>
-                    <Text style={styles.selectedComboVotesText}>({selectedCombo.votesCount.toLocaleString()} votes)</Text>
+                    <Text style={[styles.selectedComboVotesText, { color: colors.textMuted }]}>({selectedCombo.votesCount.toLocaleString()} votes)</Text>
                   </View>
-                  <Text style={styles.selectedComboHint}>Curating matching outfits below</Text>
+                  <Text style={[styles.selectedComboHint, { color: colors.primary }]}>Curating matching outfits below</Text>
                 </View>
               </View>
             )}
 
             {/* Occasion selector */}
-            <Text style={styles.label}>Select Occasion</Text>
+            <Text style={[styles.label, { color: colors.textSecondary }]}>Select Occasion</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: Spacing.xl }}>
               {OCCASIONS.map((occ) => (
                 <TouchableOpacity
@@ -391,22 +411,22 @@ export default function AiStylistScreen({ route, navigation }: any) {
                   <ScoreCard label="Overall" score={stylingResult.overallMatch} />
                 </View>
 
-                <View style={styles.adviceCard}>
-                  <Text style={styles.adviceLabel}>Palette Rationale</Text>
-                  <Text style={styles.adviceText}>{stylingResult.paletteRationale}</Text>
+                <View style={[styles.adviceCard, { backgroundColor: colors.surface }]}>
+                  <Text style={[styles.adviceLabel, { color: colors.primary }]}>Palette Rationale</Text>
+                  <Text style={[styles.adviceText, { color: colors.textSecondary }]}>{stylingResult.paletteRationale}</Text>
                 </View>
 
-                <View style={styles.adviceCard}>
-                  <Text style={styles.adviceLabel}>Body Shape Advice</Text>
-                  <Text style={styles.adviceText}>{stylingResult.bodyShapeAdvice}</Text>
+                <View style={[styles.adviceCard, { backgroundColor: colors.surface }]}>
+                  <Text style={[styles.adviceLabel, { color: colors.primary }]}>Body Shape Advice</Text>
+                  <Text style={[styles.adviceText, { color: colors.textSecondary }]}>{stylingResult.bodyShapeAdvice}</Text>
                 </View>
 
                 {stylingResult.recommendedPalette?.length > 0 && (
                   <View style={styles.paletteSection}>
-                    <Text style={styles.adviceLabel}>Recommended Palette</Text>
+                    <Text style={[styles.adviceLabel, { color: colors.primary }]}>Recommended Palette</Text>
                     <View style={styles.paletteRow}>
                       {stylingResult.recommendedPalette.map((color, i) => (
-                        <View key={i} style={[styles.paletteSwatch, { backgroundColor: color }]} />
+                        <View key={i} style={[styles.paletteSwatch, { backgroundColor: color, borderColor: colors.border }]} />
                       ))}
                     </View>
                   </View>
@@ -414,19 +434,19 @@ export default function AiStylistScreen({ route, navigation }: any) {
 
                 {stylingResult.curatedProducts?.length > 0 && (
                   <View style={styles.curatedSection}>
-                    <Text style={styles.adviceLabel}>Curated Matching Pieces ✨</Text>
+                    <Text style={[styles.adviceLabel, { color: colors.primary }]}>Curated Matching Pieces ✨</Text>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: Spacing.sm }}>
                       {stylingResult.curatedProducts.map((p: any) => (
                         <TouchableOpacity
                           key={p.id}
-                          style={styles.curatedCard}
+                          style={[styles.curatedCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
                           onPress={() => navigation.navigate('ProductDetail', { productId: p.id })}
                         >
                           <Image source={{ uri: p.imageUrl || 'https://via.placeholder.com/120' }} style={styles.curatedImage} />
                           <View style={styles.curatedInfo}>
-                            <Text style={styles.curatedBrand}>{p.brand}</Text>
-                            <Text style={styles.curatedTitle} numberOfLines={1}>{p.title}</Text>
-                            <Text style={styles.curatedPrice}>${Number(p.price).toFixed(2)}</Text>
+                            <Text style={[styles.curatedBrand, { color: colors.textMuted }]}>{p.brand}</Text>
+                            <Text style={[styles.curatedTitle, { color: colors.text }]} numberOfLines={1}>{p.title}</Text>
+                            <Text style={[styles.curatedPrice, { color: colors.primary }]}>${Number(p.price).toFixed(2)}</Text>
                           </View>
                         </TouchableOpacity>
                       ))}
@@ -438,17 +458,18 @@ export default function AiStylistScreen({ route, navigation }: any) {
             <View style={{ height: 100 }} />
           </ScrollView>
         )}
-      </KeyboardAvoidingView>
+      </Container>
     </SafeAreaView>
   );
 }
 
 function ScoreCard({ label, score }: { label: string; score: number }) {
+  const { colors } = useTheme();
   const percentage = Math.round(score > 1 ? score : score * 100);
   return (
-    <View style={scoreStyles.card}>
-      <Text style={scoreStyles.score}>{percentage}%</Text>
-      <Text style={scoreStyles.label}>{label}</Text>
+    <View style={[scoreStyles.card, { backgroundColor: colors.surface }]}>
+      <Text style={[scoreStyles.score, { color: colors.primary }]}>{percentage}%</Text>
+      <Text style={[scoreStyles.label, { color: colors.textMuted }]}>{label}</Text>
     </View>
   );
 }

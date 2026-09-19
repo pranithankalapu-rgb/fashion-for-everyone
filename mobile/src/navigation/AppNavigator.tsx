@@ -3,7 +3,8 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, FontSize } from '../constants/theme';
+import { FontSize } from '../constants/theme';
+import { useTheme } from '../hooks/useTheme';
 
 // Screens
 import SplashScreen from '../screens/SplashScreen';
@@ -21,6 +22,11 @@ import ColorVotingScreen from '../screens/ColorVotingScreen';
 import DesignerShowcaseScreen from '../screens/DesignerShowcaseScreen';
 import SocialFeedScreen from '../screens/SocialFeedScreen';
 import RetailerDashboardScreen from '../screens/RetailerDashboardScreen';
+import SettingsScreen from '../screens/SettingsScreen';
+import ThemeSettingsScreen from '../screens/ThemeSettingsScreen';
+import ChangeProfilePictureScreen from '../screens/ChangeProfilePictureScreen';
+import ChangeEmailScreen from '../screens/ChangeEmailScreen';
+import ChangeMobileScreen from '../screens/ChangeMobileScreen';
 
 import { useCart } from '../hooks/useCart';
 import type { ColorCombo } from '../types/fashion';
@@ -38,6 +44,11 @@ export type RootStackParamList = {
   DesignerShowcase: undefined;
   SocialFeed: undefined;
   RetailerDashboard: undefined;
+  Settings: undefined;
+  ThemeSettings: undefined;
+  ChangeProfilePicture: undefined;
+  ChangeEmail: undefined;
+  ChangeMobile: undefined;
 };
 
 export type TabParamList = {
@@ -54,6 +65,7 @@ const Tab = createBottomTabNavigator<TabParamList>();
 function MainTabs() {
   const { totalItems } = useCart();
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
 
   return (
     <Tab.Navigator
@@ -62,14 +74,14 @@ function MainTabs() {
         headerShown: false,
         tabBarHideOnKeyboard: true,
         tabBarStyle: {
-          backgroundColor: Colors.surface,
-          borderTopColor: Colors.border,
+          backgroundColor: colors.surface,
+          borderTopColor: colors.border,
           height: 65 + insets.bottom,
           paddingBottom: 8 + insets.bottom,
           paddingTop: 6,
         },
-        tabBarActiveTintColor: Colors.primary,
-        tabBarInactiveTintColor: Colors.textMuted,
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textMuted,
         tabBarLabelStyle: {
           fontSize: 10,
           fontWeight: '600',
@@ -96,8 +108,8 @@ function MainTabs() {
           tabBarLabel: 'Add to Bag',
           tabBarBadge: totalItems > 0 ? totalItems : undefined,
           tabBarBadgeStyle: {
-            backgroundColor: Colors.accent,
-            color: Colors.white,
+            backgroundColor: colors.accent,
+            color: '#FFFFFF',
             fontSize: 10,
             fontWeight: 'bold',
           },
@@ -110,11 +122,13 @@ function MainTabs() {
 }
 
 export default function AppNavigator() {
+  const { colors } = useTheme();
+
   return (
     <Stack.Navigator
       screenOptions={{
         headerShown: false,
-        contentStyle: { backgroundColor: Colors.background },
+        contentStyle: { backgroundColor: colors.background },
         animation: 'slide_from_right',
       }}
     >
@@ -130,6 +144,13 @@ export default function AppNavigator() {
       <Stack.Screen name="DesignerShowcase" component={DesignerShowcaseScreen} />
       <Stack.Screen name="SocialFeed" component={SocialFeedScreen} />
       <Stack.Screen name="RetailerDashboard" component={RetailerDashboardScreen} />
+      
+      {/* Settings Navigation Stack */}
+      <Stack.Screen name="Settings" component={SettingsScreen} />
+      <Stack.Screen name="ThemeSettings" component={ThemeSettingsScreen} />
+      <Stack.Screen name="ChangeProfilePicture" component={ChangeProfilePictureScreen} />
+      <Stack.Screen name="ChangeEmail" component={ChangeEmailScreen} />
+      <Stack.Screen name="ChangeMobile" component={ChangeMobileScreen} />
     </Stack.Navigator>
   );
 }

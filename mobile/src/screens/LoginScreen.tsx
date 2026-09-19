@@ -10,12 +10,14 @@ import {
   Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../constants/theme';
+import { FontSize, FontWeight, Spacing, BorderRadius } from '../constants/theme';
 import Input from '../components/Input';
 import Button from '../components/Button';
 import { useAuth } from '../hooks/useAuth';
+import { useTheme } from '../hooks/useTheme';
 
 export default function LoginScreen({ navigation }: any) {
+  const { colors, isDark } = useTheme();
   const { login, register, isLoading } = useAuth();
   const [isRegister, setIsRegister] = useState(false);
   const [name, setName] = useState('');
@@ -50,16 +52,18 @@ export default function LoginScreen({ navigation }: any) {
     { key: 'retailer' as const, label: 'Retailer', icon: '🏪' },
   ];
 
+  const gradientBottom = isDark ? '#1a103d' : '#e0e7ff';
+
   return (
-    <LinearGradient colors={[Colors.background, '#1a103d']} style={styles.container}>
+    <LinearGradient colors={[colors.background, gradientBottom]} style={styles.container}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
         <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
           <View style={styles.header}>
-            <Text style={styles.title}>{isRegister ? 'Create Account' : 'Welcome Back'}</Text>
-            <Text style={styles.subtitle}>
+            <Text style={[styles.title, { color: colors.text }]}>{isRegister ? 'Create Account' : 'Welcome Back'}</Text>
+            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
               {isRegister ? 'Join the fashion community' : 'Sign in to continue'}
             </Text>
           </View>
@@ -69,12 +73,20 @@ export default function LoginScreen({ navigation }: any) {
             {roles.map((role) => (
               <TouchableOpacity
                 key={role.key}
-                style={[styles.roleBtn, selectedRole === role.key && styles.roleBtnActive]}
+                style={[
+                  styles.roleBtn,
+                  { backgroundColor: colors.surface, borderColor: colors.border },
+                  selectedRole === role.key && { borderColor: colors.primary, backgroundColor: colors.primaryFaded },
+                ]}
                 onPress={() => setSelectedRole(role.key)}
               >
                 <Text style={styles.roleIcon}>{role.icon}</Text>
                 <Text
-                  style={[styles.roleLabel, selectedRole === role.key && styles.roleLabelActive]}
+                  style={[
+                    styles.roleLabel,
+                    { color: colors.textMuted },
+                    selectedRole === role.key && { color: colors.primary, fontWeight: FontWeight.bold },
+                  ]}
                 >
                   {role.label}
                 </Text>
@@ -121,15 +133,15 @@ export default function LoginScreen({ navigation }: any) {
           </View>
 
           <TouchableOpacity style={styles.toggleBtn} onPress={() => setIsRegister(!isRegister)}>
-            <Text style={styles.toggleText}>
+            <Text style={[styles.toggleText, { color: colors.textSecondary }]}>
               {isRegister ? 'Already have an account? ' : "Don't have an account? "}
-              <Text style={styles.toggleLink}>{isRegister ? 'Sign In' : 'Register'}</Text>
+              <Text style={[styles.toggleLink, { color: colors.primary }]}>{isRegister ? 'Sign In' : 'Register'}</Text>
             </Text>
           </TouchableOpacity>
 
           {/* Skip for dev */}
           <TouchableOpacity style={styles.skipBtn} onPress={() => navigation.replace('Main')}>
-            <Text style={styles.skipText}>Continue as Guest →</Text>
+            <Text style={[styles.skipText, { color: colors.textMuted }]}>Continue as Guest →</Text>
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -149,11 +161,9 @@ const styles = StyleSheet.create({
   title: {
     fontSize: FontSize.xxxl,
     fontWeight: FontWeight.extrabold,
-    color: Colors.white,
   },
   subtitle: {
     fontSize: FontSize.md,
-    color: Colors.textSecondary,
     marginTop: Spacing.xs,
   },
   roleContainer: {
@@ -165,26 +175,18 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     paddingVertical: Spacing.md,
-    backgroundColor: Colors.surface,
     borderRadius: BorderRadius.md,
     borderWidth: 1.5,
-    borderColor: Colors.border,
-  },
-  roleBtnActive: {
-    borderColor: Colors.primary,
-    backgroundColor: Colors.primaryFaded,
   },
   roleIcon: { fontSize: 22, marginBottom: 4 },
   roleLabel: {
-    color: Colors.textMuted,
     fontSize: FontSize.xs,
     fontWeight: FontWeight.medium,
   },
-  roleLabelActive: { color: Colors.primary },
   form: { gap: 0 },
   toggleBtn: { alignItems: 'center', marginTop: Spacing.xl },
-  toggleText: { color: Colors.textSecondary, fontSize: FontSize.md },
-  toggleLink: { color: Colors.primary, fontWeight: FontWeight.semibold },
+  toggleText: { fontSize: FontSize.md },
+  toggleLink: { fontWeight: FontWeight.semibold },
   skipBtn: { alignItems: 'center', marginTop: Spacing.xxl },
-  skipText: { color: Colors.textMuted, fontSize: FontSize.sm },
+  skipText: { fontSize: FontSize.sm },
 });

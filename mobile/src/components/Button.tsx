@@ -1,7 +1,8 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, ViewStyle, TextStyle } from 'react-native';
-import { Colors, BorderRadius, FontSize, FontWeight, Spacing, Shadows } from '../constants/theme';
+import { BorderRadius, FontSize, FontWeight, Spacing } from '../constants/theme';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useTheme } from '../hooks/useTheme';
 
 interface ButtonProps {
   title: string;
@@ -28,6 +29,8 @@ export default function Button({
   textStyle,
   fullWidth = false,
 }: ButtonProps) {
+  const { colors } = useTheme();
+
   const sizeStyles = {
     sm: { paddingVertical: Spacing.sm, paddingHorizontal: Spacing.lg, fontSize: FontSize.sm },
     md: { paddingVertical: Spacing.md, paddingHorizontal: Spacing.xl, fontSize: FontSize.md },
@@ -43,7 +46,7 @@ export default function Button({
         style={[fullWidth && { width: '100%' }, style]}
       >
         <LinearGradient
-          colors={[Colors.primary, Colors.accent]}
+          colors={[colors.primary, colors.accent]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={[
@@ -51,17 +54,23 @@ export default function Button({
             {
               paddingVertical: sizeStyles[size].paddingVertical,
               paddingHorizontal: sizeStyles[size].paddingHorizontal,
+              shadowColor: colors.primary,
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.35,
+              shadowRadius: 12,
+              elevation: 6,
             },
-            Shadows.glow,
             disabled && styles.disabled,
           ]}
         >
           {loading ? (
-            <ActivityIndicator color={Colors.white} size="small" />
+            <ActivityIndicator color="#FFFFFF" size="small" />
           ) : (
             <>
               {icon}
-              <Text style={[styles.text, { fontSize: sizeStyles[size].fontSize }, textStyle]}>{title}</Text>
+              <Text style={[styles.text, { fontSize: sizeStyles[size].fontSize, color: '#FFFFFF' }, textStyle]}>
+                {title}
+              </Text>
             </>
           )}
         </LinearGradient>
@@ -70,15 +79,15 @@ export default function Button({
   }
 
   const variantStyles: Record<string, ViewStyle> = {
-    secondary: { backgroundColor: Colors.surfaceLight },
-    outline: { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: Colors.primary },
+    secondary: { backgroundColor: colors.surfaceLight },
+    outline: { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: colors.primary },
     ghost: { backgroundColor: 'transparent' },
   };
 
   const variantTextColors: Record<string, string> = {
-    secondary: Colors.text,
-    outline: Colors.primary,
-    ghost: Colors.primary,
+    secondary: colors.text,
+    outline: colors.primary,
+    ghost: colors.primary,
   };
 
   return (
@@ -127,7 +136,6 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   text: {
-    color: Colors.white,
     fontWeight: FontWeight.semibold,
   },
   disabled: {

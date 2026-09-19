@@ -3,6 +3,8 @@ import { authService, type UserRole } from '../services/authService';
 import { sanitizeString } from '../security';
 import type { AuthenticatedRequest } from '../middleware/auth';
 
+import { prisma } from '../db';
+
 const COOKIE_OPTIONS = {
   httpOnly: true,
   secure: process.env.NODE_ENV === 'production',
@@ -121,9 +123,26 @@ export const authController = {
   },
 
   async getMe(req: AuthenticatedRequest, res: Response) {
-    if (!req.user) {
+    if (!req.user || !req.userId) {
       return res.status(401).json({ error: 'Unauthorized. Please login.' });
     }
+
+    try {
+      const profile = await prisma.userProfile.findFirst({
+        where: { id: req.userId },
+      });
+
+      if (profile) {
+        const { passwordHash: _ph, refreshToken: _rt, ...cleanProfile } = profile as any;
+        return res.json({
+          success: true,
+          user: cleanProfile,
+        });
+      }
+    } catch (err) {
+      console.warn('Could not fetch user profile from DB, falling back to session user:', err);
+    }
+
     return res.json({
       success: true,
       user: req.user,

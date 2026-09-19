@@ -1,16 +1,19 @@
 import React from 'react';
 import { View, ActivityIndicator, StyleSheet, Text } from 'react-native';
-import { Colors, FontSize } from '../constants/theme';
+import { FontSize } from '../constants/theme';
+import { useTheme } from '../hooks/useTheme';
 
 interface LoadingProps {
   message?: string;
 }
 
 export default function Loading({ message }: LoadingProps) {
+  const { colors } = useTheme();
+
   return (
-    <View style={styles.container}>
-      <ActivityIndicator size="large" color={Colors.primary} />
-      {message && <Text style={styles.text}>{message}</Text>}
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <ActivityIndicator size="large" color={colors.primary} />
+      {message && <Text style={[styles.text, { color: colors.textSecondary }]}>{message}</Text>}
     </View>
   );
 }
@@ -18,12 +21,10 @@ export default function Loading({ message }: LoadingProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
     alignItems: 'center',
     justifyContent: 'center',
   },
   text: {
-    color: Colors.textSecondary,
     fontSize: FontSize.md,
     marginTop: 12,
   },

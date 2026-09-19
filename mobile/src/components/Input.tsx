@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, TextInput, StyleSheet, TextInputProps, Text } from 'react-native';
-import { Colors, BorderRadius, FontSize, Spacing } from '../constants/theme';
+import { BorderRadius, FontSize, Spacing } from '../constants/theme';
+import { useTheme } from '../hooks/useTheme';
 import { Ionicons } from '@expo/vector-icons';
 
 interface InputProps extends TextInputProps {
@@ -10,37 +11,43 @@ interface InputProps extends TextInputProps {
 }
 
 export default function Input({ label, icon, error, style, ...props }: InputProps) {
+  const { colors } = useTheme();
+
   return (
     <View style={styles.wrapper}>
-      {label && <Text style={styles.label}>{label}</Text>}
+      {label && <Text style={[styles.label, { color: colors.textSecondary }]}>{label}</Text>}
       <View
         style={[
           styles.container,
+          {
+            backgroundColor: colors.surfaceLight,
+            borderColor: error ? colors.error : colors.border,
+          },
           props.multiline && styles.containerMultiline,
-          error ? styles.containerError : null,
         ]}
       >
         {icon && (
           <Ionicons
             name={icon}
             size={20}
-            color={Colors.textMuted}
+            color={colors.textMuted}
             style={[styles.icon, props.multiline && styles.iconMultiline]}
           />
         )}
         <TextInput
           style={[
             styles.input,
+            { color: colors.text },
             props.multiline && styles.inputMultiline,
             style,
           ]}
-          placeholderTextColor={Colors.textMuted}
-          selectionColor={Colors.primary}
+          placeholderTextColor={colors.textMuted}
+          selectionColor={colors.primary}
           textAlignVertical={props.multiline ? 'top' : 'center'}
           {...props}
         />
       </View>
-      {error && <Text style={styles.error}>{error}</Text>}
+      {error && <Text style={[styles.error, { color: colors.error }]}>{error}</Text>}
     </View>
   );
 }
@@ -48,7 +55,6 @@ export default function Input({ label, icon, error, style, ...props }: InputProp
 const styles = StyleSheet.create({
   wrapper: { marginBottom: Spacing.lg },
   label: {
-    color: Colors.textSecondary,
     fontSize: FontSize.sm,
     marginBottom: Spacing.xs,
     fontWeight: '500',
@@ -56,14 +62,9 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.surfaceLight,
     borderRadius: BorderRadius.md,
     borderWidth: 1,
-    borderColor: Colors.border,
     paddingHorizontal: Spacing.md,
-  },
-  containerError: {
-    borderColor: Colors.error,
   },
   containerMultiline: {
     alignItems: 'flex-start',
@@ -75,7 +76,6 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    color: Colors.text,
     fontSize: FontSize.md,
     paddingVertical: Spacing.md,
   },
@@ -83,7 +83,6 @@ const styles = StyleSheet.create({
     minHeight: 60,
   },
   error: {
-    color: Colors.error,
     fontSize: FontSize.xs,
     marginTop: Spacing.xs,
   },

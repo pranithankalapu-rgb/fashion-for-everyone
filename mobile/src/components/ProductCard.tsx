@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, BorderRadius, FontSize, FontWeight, Spacing, Shadows } from '../constants/theme';
+import { BorderRadius, FontSize, FontWeight, Spacing, Shadows } from '../constants/theme';
+import { useTheme } from '../hooks/useTheme';
 import type { RetailProduct } from '../types/fashion';
 
 const { width } = Dimensions.get('window');
@@ -15,13 +16,25 @@ interface ProductCardProps {
 }
 
 export default function ProductCard({ product, onPress, onWishlistToggle, isWishlisted }: ProductCardProps) {
+  const { colors } = useTheme();
   const hasDiscount = product.originalPrice && product.originalPrice > product.price;
   const discountPercent = hasDiscount
     ? Math.round(((product.originalPrice! - product.price) / product.originalPrice!) * 100)
     : 0;
 
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.85}>
+    <TouchableOpacity
+      style={[
+        styles.card,
+        {
+          backgroundColor: colors.surface,
+          borderColor: colors.border,
+          borderWidth: 1,
+        },
+      ]}
+      onPress={onPress}
+      activeOpacity={0.85}
+    >
       <View style={styles.imageContainer}>
         <Image
           source={{ uri: product.imageUrl || 'https://via.placeholder.com/200' }}
@@ -29,7 +42,7 @@ export default function ProductCard({ product, onPress, onWishlistToggle, isWish
           resizeMode="cover"
         />
         {hasDiscount && (
-          <View style={styles.discountBadge}>
+          <View style={[styles.discountBadge, { backgroundColor: colors.accent }]}>
             <Text style={styles.discountText}>-{discountPercent}%</Text>
           </View>
         )}
@@ -38,20 +51,22 @@ export default function ProductCard({ product, onPress, onWishlistToggle, isWish
             <Ionicons
               name={isWishlisted ? 'heart' : 'heart-outline'}
               size={20}
-              color={isWishlisted ? Colors.accent : Colors.white}
+              color={isWishlisted ? colors.accent : '#FFFFFF'}
             />
           </TouchableOpacity>
         )}
       </View>
       <View style={styles.info}>
-        <Text style={styles.brand}>{product.brand}</Text>
-        <Text style={styles.title} numberOfLines={1}>
+        <Text style={[styles.brand, { color: colors.textMuted }]}>{product.brand}</Text>
+        <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>
           {product.title}
         </Text>
         <View style={styles.priceRow}>
-          <Text style={styles.price}>${product.price.toFixed(2)}</Text>
+          <Text style={[styles.price, { color: colors.primary }]}>${product.price.toFixed(2)}</Text>
           {hasDiscount && (
-            <Text style={styles.originalPrice}>${product.originalPrice!.toFixed(2)}</Text>
+            <Text style={[styles.originalPrice, { color: colors.textMuted }]}>
+              ${product.originalPrice!.toFixed(2)}
+            </Text>
           )}
         </View>
       </View>
@@ -62,7 +77,6 @@ export default function ProductCard({ product, onPress, onWishlistToggle, isWish
 const styles = StyleSheet.create({
   card: {
     width: CARD_WIDTH,
-    backgroundColor: Colors.surface,
     borderRadius: BorderRadius.lg,
     overflow: 'hidden',
     ...Shadows.md,
@@ -81,13 +95,12 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: Spacing.sm,
     left: Spacing.sm,
-    backgroundColor: Colors.accent,
     paddingHorizontal: Spacing.sm,
     paddingVertical: 2,
     borderRadius: BorderRadius.sm,
   },
   discountText: {
-    color: Colors.white,
+    color: '#FFFFFF',
     fontSize: FontSize.xs,
     fontWeight: FontWeight.bold,
   },
@@ -106,14 +119,12 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
   },
   brand: {
-    color: Colors.textMuted,
     fontSize: FontSize.xs,
     fontWeight: FontWeight.medium,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   title: {
-    color: Colors.text,
     fontSize: FontSize.sm,
     fontWeight: FontWeight.semibold,
     marginTop: 2,
@@ -125,12 +136,10 @@ const styles = StyleSheet.create({
     marginTop: Spacing.xs,
   },
   price: {
-    color: Colors.primary,
     fontSize: FontSize.md,
     fontWeight: FontWeight.bold,
   },
   originalPrice: {
-    color: Colors.textMuted,
     fontSize: FontSize.sm,
     textDecorationLine: 'line-through',
   },

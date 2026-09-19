@@ -10,8 +10,9 @@ import {
   Keyboard,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Shadows } from '../constants/theme';
+import { FontSize, FontWeight, Spacing, BorderRadius, Shadows } from '../constants/theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '../hooks/useTheme';
 import ProductCard from '../components/ProductCard';
 import Loading from '../components/Loading';
 import api from '../services/api';
@@ -23,6 +24,7 @@ const CATEGORIES = ['All', 'Tops', 'Bottoms', 'Dresses', 'Outerwear', 'Accessori
 
 export default function ExploreScreen({ route, navigation }: any) {
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
   const [products, setProducts] = useState<RetailProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState(route?.params?.search || '');
@@ -83,15 +85,15 @@ export default function ExploreScreen({ route, navigation }: any) {
   const topPadding = insets.top > 0 ? insets.top + Spacing.sm : Spacing.lg;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Search */}
       <View style={[styles.searchContainer, { paddingTop: topPadding }]}>
-        <View style={styles.searchBar}>
-          <Ionicons name="search" size={20} color={Colors.textMuted} />
+        <View style={[styles.searchBar, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Ionicons name="search" size={20} color={colors.textMuted} />
           <TextInput
-            style={styles.searchInput}
+            style={[styles.searchInput, { color: colors.text }]}
             placeholder="Search products..."
-            placeholderTextColor={Colors.textMuted}
+            placeholderTextColor={colors.textMuted}
             value={search}
             onFocus={() => setIsFocused(true)}
             onChangeText={(text) => {
@@ -112,35 +114,36 @@ export default function ExploreScreen({ route, navigation }: any) {
                 fetchProducts('');
               }}
             >
-              <Ionicons name="close-circle" size={20} color={Colors.textMuted} />
+              <Ionicons name="close-circle" size={20} color={colors.textMuted} />
             </TouchableOpacity>
           )}
         </View>
 
         {/* Suggestions Card directly below the search bar */}
         {suggestions.length > 0 && (
-          <View style={styles.suggestionsCard}>
-            <View style={styles.suggestionsHeader}>
-              <Ionicons name="sparkles" size={13} color={Colors.primary} />
-              <Text style={styles.suggestionsHeaderTitle}>Category Suggestions</Text>
+          <View style={[styles.suggestionsCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View style={[styles.suggestionsHeader, { borderBottomColor: colors.border }]}>
+              <Ionicons name="sparkles" size={13} color={colors.primary} />
+              <Text style={[styles.suggestionsHeaderTitle, { color: colors.primary }]}>Category Suggestions</Text>
             </View>
             {suggestions.map((item, idx) => (
               <TouchableOpacity
                 key={idx}
                 style={[
                   styles.suggestionRow,
+                  { borderBottomColor: colors.border },
                   idx === suggestions.length - 1 && styles.suggestionRowLast,
                 ]}
                 onPress={() => handleSelectSuggestion(item)}
                 activeOpacity={0.7}
               >
-                <View style={styles.suggestionIconCircle}>
-                  <Ionicons name="search" size={13} color={Colors.primary} />
+                <View style={[styles.suggestionIconCircle, { backgroundColor: colors.primaryFaded }]}>
+                  <Ionicons name="search" size={13} color={colors.primary} />
                 </View>
-                <Text style={styles.suggestionText} numberOfLines={1}>
+                <Text style={[styles.suggestionText, { color: colors.text }]} numberOfLines={1}>
                   {item}
                 </Text>
-                <Ionicons name="arrow-forward" size={14} color={Colors.textMuted} />
+                <Ionicons name="arrow-forward" size={14} color={colors.textMuted} />
               </TouchableOpacity>
             ))}
           </View>
@@ -156,14 +159,33 @@ export default function ExploreScreen({ route, navigation }: any) {
         contentContainerStyle={{ paddingHorizontal: Spacing.lg }}
         keyExtractor={(item) => item}
         keyboardShouldPersistTaps="handled"
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={[styles.catPill, category === item && styles.catPillActive]}
-            onPress={() => setCategory(item)}
-          >
-            <Text style={[styles.catText, category === item && styles.catTextActive]}>{item}</Text>
-          </TouchableOpacity>
-        )}
+        renderItem={({ item }) => {
+          const isActive = category === item;
+          return (
+            <TouchableOpacity
+              style={[
+                styles.catPill,
+                {
+                  backgroundColor: isActive ? colors.primaryFaded : colors.surface,
+                  borderColor: isActive ? colors.primary : colors.border,
+                },
+              ]}
+              onPress={() => setCategory(item)}
+            >
+              <Text
+                style={[
+                  styles.catText,
+                  {
+                    color: isActive ? colors.primary : colors.textMuted,
+                    fontWeight: isActive ? FontWeight.semibold : FontWeight.medium,
+                  },
+                ]}
+              >
+                {item}
+              </Text>
+            </TouchableOpacity>
+          );
+        }}
       />
 
       {/* Product Grid */}
@@ -176,11 +198,11 @@ export default function ExploreScreen({ route, navigation }: any) {
         columnWrapperStyle={{ gap: Spacing.lg }}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Ionicons name="bag-outline" size={64} color={Colors.textMuted} />
-            <Text style={styles.emptyText}>No products found</Text>
+            <Ionicons name="bag-outline" size={64} color={colors.textMuted} />
+            <Text style={[styles.emptyText, { color: colors.textMuted }]}>No products found</Text>
           </View>
         }
         renderItem={({ item }) => (
@@ -197,40 +219,32 @@ export default function ExploreScreen({ route, navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
+  container: { flex: 1 },
   searchContainer: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.md },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.surface,
     borderRadius: BorderRadius.lg,
     paddingHorizontal: Spacing.md,
     gap: Spacing.sm,
     borderWidth: 1,
-    borderColor: Colors.border,
   },
-  searchInput: { flex: 1, color: Colors.text, fontSize: FontSize.md, paddingVertical: Spacing.md },
+  searchInput: { flex: 1, fontSize: FontSize.md, paddingVertical: Spacing.md },
   catList: { marginTop: Spacing.md, maxHeight: 44 },
   catPill: {
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.sm,
     borderRadius: BorderRadius.full,
-    backgroundColor: Colors.surface,
     marginRight: Spacing.sm,
     borderWidth: 1,
-    borderColor: Colors.border,
   },
-  catPillActive: { backgroundColor: Colors.primaryFaded, borderColor: Colors.primary },
-  catText: { color: Colors.textMuted, fontSize: FontSize.sm, fontWeight: FontWeight.medium },
-  catTextActive: { color: Colors.primary },
+  catText: { fontSize: FontSize.sm },
   grid: { padding: Spacing.lg },
   empty: { alignItems: 'center', paddingTop: 80 },
-  emptyText: { color: Colors.textMuted, fontSize: FontSize.md, marginTop: Spacing.md },
+  emptyText: { fontSize: FontSize.md, marginTop: Spacing.md },
   suggestionsCard: {
-    backgroundColor: Colors.surface,
     borderRadius: BorderRadius.lg,
     borderWidth: 1,
-    borderColor: Colors.border,
     marginTop: Spacing.sm,
     overflow: 'hidden',
     ...Shadows.md,
@@ -243,10 +257,8 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.sm,
     paddingBottom: 6,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
   },
   suggestionsHeaderTitle: {
-    color: Colors.primary,
     fontSize: FontSize.xs,
     fontWeight: FontWeight.bold,
     textTransform: 'uppercase',
@@ -258,7 +270,6 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: Spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
     gap: Spacing.sm,
   },
   suggestionRowLast: {
@@ -268,13 +279,11 @@ const styles = StyleSheet.create({
     width: 26,
     height: 26,
     borderRadius: 13,
-    backgroundColor: Colors.primaryFaded,
     alignItems: 'center',
     justifyContent: 'center',
   },
   suggestionText: {
     flex: 1,
-    color: Colors.text,
     fontSize: FontSize.sm,
     fontWeight: FontWeight.medium,
   },

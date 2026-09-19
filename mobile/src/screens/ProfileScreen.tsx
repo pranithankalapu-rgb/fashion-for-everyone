@@ -10,15 +10,17 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Shadows } from '../constants/theme';
+import { FontSize, FontWeight, Spacing, BorderRadius, Shadows } from '../constants/theme';
 import Button from '../components/Button';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../hooks/useAuth';
+import { useTheme } from '../hooks/useTheme';
 import api from '../services/api';
 import type { UserProfile } from '../types/fashion';
 
 export default function ProfileScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
+  const { colors, isDark } = useTheme();
   const { user, role, logout, switchRole, isAuthenticated } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
 
@@ -29,8 +31,8 @@ export default function ProfileScreen({ navigation }: any) {
   }, [isAuthenticated]);
 
   const handleLogout = () => {
-    Alert.alert('Logout', 'Are you sure?', [
-      { text: 'Cancel' },
+    Alert.alert('Logout', 'Are you sure you want to sign out?', [
+      { text: 'Cancel', style: 'cancel' },
       {
         text: 'Logout',
         style: 'destructive',
@@ -45,6 +47,7 @@ export default function ProfileScreen({ navigation }: any) {
   const displayProfile = profile || user;
 
   const menuItems = [
+    { icon: 'settings-outline', label: 'Settings', screen: 'Settings' },
     { icon: 'receipt-outline', label: 'My Orders', screen: 'Orders' },
     { icon: 'heart-outline', label: 'Wishlist', screen: 'Wishlist' },
     { icon: 'cart-outline', label: 'Cart', screen: 'Cart' },
@@ -68,41 +71,65 @@ export default function ProfileScreen({ navigation }: any) {
   ];
 
   const headerPaddingTop = insets.top > 0 ? insets.top + Spacing.lg : 60;
+  const gradientTop = isDark ? '#1a103d' : '#e0e7ff';
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Profile Header */}
-      <LinearGradient colors={['#1a103d', Colors.background]} style={[styles.header, { paddingTop: headerPaddingTop }]}>
-        <View style={styles.avatarContainer}>
+      <LinearGradient
+        colors={[gradientTop, colors.background]}
+        style={[styles.header, { paddingTop: headerPaddingTop }]}
+      >
+        <TouchableOpacity
+          style={styles.avatarContainer}
+          onPress={() => navigation.navigate('ChangeProfilePicture')}
+          activeOpacity={0.8}
+        >
           {displayProfile?.avatar ? (
-            <Image source={{ uri: displayProfile.avatar }} style={styles.avatar} />
+            <Image source={{ uri: displayProfile.avatar }} style={[styles.avatar, { borderColor: colors.primary }]} />
           ) : (
-            <View style={styles.avatarPlaceholder}>
-              <Ionicons name="person" size={40} color={Colors.textMuted} />
+            <View style={[styles.avatarPlaceholder, { backgroundColor: colors.surface }]}>
+              <Ionicons name="person" size={40} color={colors.textMuted} />
             </View>
           )}
-        </View>
-        <Text style={styles.name}>{displayProfile?.name || 'Guest User'}</Text>
-        <Text style={styles.email}>{displayProfile?.email || 'Not signed in'}</Text>
+          <View style={[styles.cameraBadge, { backgroundColor: colors.primary }]}>
+            <Ionicons name="camera" size={14} color="#FFF" />
+          </View>
+        </TouchableOpacity>
+
+        <Text style={[styles.name, { color: colors.text }]}>{displayProfile?.name || 'Guest User'}</Text>
+        <Text style={[styles.email, { color: colors.textSecondary }]}>{displayProfile?.email || 'Not signed in'}</Text>
         {displayProfile?.role && (
-          <View style={styles.roleBadge}>
-            <Text style={styles.roleText}>{displayProfile.role.toUpperCase()}</Text>
+          <View style={[styles.roleBadge, { backgroundColor: colors.primaryFaded }]}>
+            <Text style={[styles.roleText, { color: colors.primary }]}>{displayProfile.role.toUpperCase()}</Text>
           </View>
         )}
       </LinearGradient>
 
       {/* Role Switcher */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Switch Role</Text>
+        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Switch Role</Text>
         <View style={styles.roleRow}>
           {roles.map((r) => (
             <TouchableOpacity
               key={r.key}
-              style={[styles.roleBtn, role === r.key && styles.roleBtnActive]}
+              style={[
+                styles.roleBtn,
+                { backgroundColor: colors.surface, borderColor: colors.border },
+                role === r.key && { borderColor: colors.primary, backgroundColor: colors.primaryFaded },
+              ]}
               onPress={() => switchRole(r.key)}
             >
               <Text style={styles.roleIcon}>{r.icon}</Text>
-              <Text style={[styles.roleLabel, role === r.key && styles.roleLabelActive]}>{r.label}</Text>
+              <Text
+                style={[
+                  styles.roleLabel,
+                  { color: colors.textMuted },
+                  role === r.key && { color: colors.primary, fontWeight: FontWeight.bold },
+                ]}
+              >
+                {r.label}
+              </Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -111,27 +138,28 @@ export default function ProfileScreen({ navigation }: any) {
       {/* Body shape & skin info */}
       {displayProfile?.bodyShape && (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Style Profile</Text>
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Style Profile</Text>
           <View style={styles.infoGrid}>
-            <InfoTile icon="body-outline" label="Body Shape" value={displayProfile.bodyShape} />
-            <InfoTile icon="color-fill-outline" label="Skin Tone" value={displayProfile.skinTone} />
-            <InfoTile icon="water-outline" label="Undertone" value={displayProfile.undertone} />
+            <InfoTile icon="body-outline" label="Body Shape" value={displayProfile.bodyShape} colors={colors} />
+            <InfoTile icon="color-fill-outline" label="Skin Tone" value={displayProfile.skinTone} colors={colors} />
+            <InfoTile icon="water-outline" label="Undertone" value={displayProfile.undertone} colors={colors} />
           </View>
         </View>
       )}
 
       {/* Menu Items */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Quick Links</Text>
+        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Quick Links</Text>
         {menuItems.map((item) => (
           <TouchableOpacity
-            key={item.screen}
-            style={styles.menuItem}
+            key={item.screen + item.label}
+            style={[styles.menuItem, { backgroundColor: colors.surface, borderColor: colors.border }]}
             onPress={() => navigation.navigate(item.screen)}
+            activeOpacity={0.7}
           >
-            <Ionicons name={item.icon as any} size={22} color={Colors.textSecondary} />
-            <Text style={styles.menuLabel}>{item.label}</Text>
-            <Ionicons name="chevron-forward" size={18} color={Colors.textMuted} />
+            <Ionicons name={item.icon as any} size={22} color={colors.primary} />
+            <Text style={[styles.menuLabel, { color: colors.text }]}>{item.label}</Text>
+            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
           </TouchableOpacity>
         ))}
       </View>
@@ -149,12 +177,12 @@ export default function ProfileScreen({ navigation }: any) {
   );
 }
 
-function InfoTile({ icon, label, value }: { icon: string; label: string; value: string }) {
+function InfoTile({ icon, label, value, colors }: { icon: string; label: string; value: string; colors: any }) {
   return (
-    <View style={tileStyles.tile}>
-      <Ionicons name={icon as any} size={20} color={Colors.primary} />
-      <Text style={tileStyles.label}>{label}</Text>
-      <Text style={tileStyles.value}>{value}</Text>
+    <View style={[tileStyles.tile, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+      <Ionicons name={icon as any} size={20} color={colors.primary} />
+      <Text style={[tileStyles.label, { color: colors.textMuted }]}>{label}</Text>
+      <Text style={[tileStyles.value, { color: colors.text }]}>{value}</Text>
     </View>
   );
 }
@@ -162,65 +190,73 @@ function InfoTile({ icon, label, value }: { icon: string; label: string; value: 
 const tileStyles = StyleSheet.create({
   tile: {
     flex: 1,
-    backgroundColor: Colors.surfaceLight,
     borderRadius: BorderRadius.md,
+    borderWidth: 1,
     padding: Spacing.md,
     alignItems: 'center',
     gap: 4,
     minWidth: 90,
+    ...Shadows.sm,
   },
-  label: { color: Colors.textMuted, fontSize: FontSize.xs },
-  value: { color: Colors.text, fontSize: FontSize.sm, fontWeight: FontWeight.semibold, textAlign: 'center' },
+  label: { fontSize: FontSize.xs },
+  value: { fontSize: FontSize.sm, fontWeight: FontWeight.semibold, textAlign: 'center' },
 });
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
+  container: { flex: 1 },
   header: { alignItems: 'center', paddingTop: 60, paddingBottom: Spacing.xxl },
-  avatarContainer: { marginBottom: Spacing.md },
-  avatar: { width: 80, height: 80, borderRadius: 40, borderWidth: 3, borderColor: Colors.primary },
+  avatarContainer: { marginBottom: Spacing.md, position: 'relative' },
+  avatar: { width: 84, height: 84, borderRadius: 42, borderWidth: 3 },
   avatarPlaceholder: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: Colors.surface,
+    width: 84,
+    height: 84,
+    borderRadius: 42,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  name: { color: Colors.white, fontSize: FontSize.xxl, fontWeight: FontWeight.bold },
-  email: { color: Colors.textSecondary, fontSize: FontSize.md, marginTop: 2 },
+  cameraBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#FFF',
+  },
+  name: { fontSize: FontSize.xxl, fontWeight: FontWeight.bold },
+  email: { fontSize: FontSize.md, marginTop: 2 },
   roleBadge: {
     marginTop: Spacing.sm,
-    backgroundColor: Colors.primaryFaded,
     paddingHorizontal: Spacing.md,
     paddingVertical: 3,
     borderRadius: BorderRadius.full,
   },
-  roleText: { color: Colors.primary, fontSize: FontSize.xs, fontWeight: FontWeight.semibold },
+  roleText: { fontSize: FontSize.xs, fontWeight: FontWeight.semibold },
   section: { paddingHorizontal: Spacing.lg, marginBottom: Spacing.xl },
-  sectionTitle: { color: Colors.textSecondary, fontSize: FontSize.sm, fontWeight: FontWeight.semibold, marginBottom: Spacing.md },
+  sectionTitle: { fontSize: FontSize.sm, fontWeight: FontWeight.semibold, marginBottom: Spacing.md },
   roleRow: { flexDirection: 'row', gap: Spacing.md },
   roleBtn: {
     flex: 1,
     alignItems: 'center',
     paddingVertical: Spacing.md,
-    backgroundColor: Colors.surface,
     borderRadius: BorderRadius.md,
     borderWidth: 1.5,
-    borderColor: Colors.border,
   },
-  roleBtnActive: { borderColor: Colors.primary, backgroundColor: Colors.primaryFaded },
   roleIcon: { fontSize: 20, marginBottom: 4 },
-  roleLabel: { color: Colors.textMuted, fontSize: FontSize.xs, fontWeight: FontWeight.medium },
-  roleLabelActive: { color: Colors.primary },
+  roleLabel: { fontSize: FontSize.xs, fontWeight: FontWeight.medium },
   infoGrid: { flexDirection: 'row', gap: Spacing.md, flexWrap: 'wrap' },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.surface,
     borderRadius: BorderRadius.md,
+    borderWidth: 1,
     padding: Spacing.lg,
     marginBottom: Spacing.sm,
     gap: Spacing.md,
+    ...Shadows.sm,
   },
-  menuLabel: { flex: 1, color: Colors.text, fontSize: FontSize.md },
+  menuLabel: { flex: 1, fontSize: FontSize.md, fontWeight: FontWeight.medium },
 });

@@ -10,13 +10,15 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Shadows } from '../constants/theme';
+import { FontSize, FontWeight, Spacing, BorderRadius } from '../constants/theme';
 import Loading from '../components/Loading';
+import { useTheme } from '../hooks/useTheme';
 import api from '../services/api';
 import type { OutfitLook } from '../types/fashion';
 
 export default function SocialFeedScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
   const [looks, setLooks] = useState<OutfitLook[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -50,17 +52,17 @@ export default function SocialFeedScreen({ navigation }: any) {
   if (loading) return <Loading message="Loading feed..." />;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { paddingTop: Math.max(insets.top + 10, 50) }]}>
         <View style={styles.headerRow}>
           {navigation?.canGoBack?.() && (
             <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-              <Ionicons name="arrow-back" size={24} color={Colors.white} />
+              <Ionicons name="arrow-back" size={24} color={colors.text} />
             </TouchableOpacity>
           )}
           <View style={{ flex: 1 }}>
-            <Text style={styles.title}>Style Feed ✨</Text>
-            <Text style={styles.subtitle}>Community outfit inspiration</Text>
+            <Text style={[styles.title, { color: colors.text }]}>Style Feed ✨</Text>
+            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Community outfit inspiration</Text>
           </View>
         </View>
       </View>
@@ -69,24 +71,24 @@ export default function SocialFeedScreen({ navigation }: any) {
         data={looks}
         keyExtractor={(item) => item.id}
         contentContainerStyle={{ paddingBottom: 50 + insets.bottom }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Ionicons name="images-outline" size={64} color={Colors.textMuted} />
-            <Text style={styles.emptyText}>No outfits yet</Text>
+            <Ionicons name="images-outline" size={64} color={colors.textMuted} />
+            <Text style={[styles.emptyText, { color: colors.textMuted }]}>No outfits yet</Text>
           </View>
         }
         renderItem={({ item }) => (
-          <View style={styles.card}>
+          <View style={[styles.card, { backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border }]}>
             {/* Creator header */}
             <View style={styles.creatorRow}>
               <Image source={{ uri: item.creatorAvatar }} style={styles.avatar} />
               <View style={{ flex: 1 }}>
-                <Text style={styles.creatorName}>{item.creatorName}</Text>
-                <Text style={styles.creatorHandle}>@{item.creatorHandle}</Text>
+                <Text style={[styles.creatorName, { color: colors.text }]}>{item.creatorName}</Text>
+                <Text style={[styles.creatorHandle, { color: colors.textMuted }]}>@{item.creatorHandle}</Text>
               </View>
-              <View style={styles.occasionBadge}>
-                <Text style={styles.occasionText}>{item.occasion}</Text>
+              <View style={[styles.occasionBadge, { backgroundColor: colors.primaryFaded }]}>
+                <Text style={[styles.occasionText, { color: colors.primary }]}>{item.occasion}</Text>
               </View>
             </View>
 
@@ -99,26 +101,26 @@ export default function SocialFeedScreen({ navigation }: any) {
 
             {/* Title & Actions */}
             <View style={styles.content}>
-              <Text style={styles.lookTitle}>{item.title}</Text>
+              <Text style={[styles.lookTitle, { color: colors.text }]}>{item.title}</Text>
               <View style={styles.actions}>
                 <TouchableOpacity style={styles.actionBtn} onPress={() => handleLike(item.id)}>
                   <Ionicons
                     name={item.userLiked ? 'heart' : 'heart-outline'}
                     size={22}
-                    color={item.userLiked ? Colors.accent : Colors.textSecondary}
+                    color={item.userLiked ? colors.accent : colors.textSecondary}
                   />
-                  <Text style={styles.actionText}>{item.likes}</Text>
+                  <Text style={[styles.actionText, { color: colors.textSecondary }]}>{item.likes}</Text>
                 </TouchableOpacity>
                 <View style={styles.actionBtn}>
-                  <Ionicons name="share-outline" size={22} color={Colors.textSecondary} />
-                  <Text style={styles.actionText}>{item.reshares}</Text>
+                  <Ionicons name="share-outline" size={22} color={colors.textSecondary} />
+                  <Text style={[styles.actionText, { color: colors.textSecondary }]}>{item.reshares}</Text>
                 </View>
               </View>
 
               {/* Tagged Products */}
               {item.taggedProducts?.length > 0 && (
                 <View style={styles.taggedSection}>
-                  <Text style={styles.taggedLabel}>Shop this look</Text>
+                  <Text style={[styles.taggedLabel, { color: colors.textMuted }]}>Shop this look</Text>
                   <FlatList
                     data={item.taggedProducts}
                     horizontal
@@ -126,12 +128,12 @@ export default function SocialFeedScreen({ navigation }: any) {
                     keyExtractor={(p) => p.id}
                     renderItem={({ item: prod }) => (
                       <TouchableOpacity
-                        style={styles.taggedProduct}
+                        style={[styles.taggedProduct, { backgroundColor: colors.surfaceLight, borderColor: colors.border, borderWidth: 1 }]}
                         onPress={() => navigation.navigate('ProductDetail', { productId: prod.id })}
                       >
                         <Image source={{ uri: prod.imageUrl }} style={styles.taggedImage} />
-                        <Text style={styles.taggedTitle} numberOfLines={1}>{prod.title}</Text>
-                        <Text style={styles.taggedPrice}>${prod.price.toFixed(0)}</Text>
+                        <Text style={[styles.taggedTitle, { color: colors.text }]} numberOfLines={1}>{prod.title}</Text>
+                        <Text style={[styles.taggedPrice, { color: colors.primary }]}>${prod.price.toFixed(0)}</Text>
                       </TouchableOpacity>
                     )}
                   />
@@ -146,14 +148,13 @@ export default function SocialFeedScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
+  container: { flex: 1 },
   header: { paddingHorizontal: Spacing.lg, paddingBottom: Spacing.md },
   headerRow: { flexDirection: 'row', alignItems: 'center' },
   backBtn: { marginRight: Spacing.md, padding: 4 },
-  title: { color: Colors.white, fontSize: FontSize.xxl, fontWeight: FontWeight.bold },
-  subtitle: { color: Colors.textSecondary, fontSize: FontSize.md, marginTop: 2 },
+  title: { fontSize: FontSize.xxl, fontWeight: FontWeight.bold },
+  subtitle: { fontSize: FontSize.md, marginTop: 2 },
   card: {
-    backgroundColor: Colors.surface,
     marginBottom: Spacing.md,
   },
   creatorRow: {
@@ -163,33 +164,31 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   avatar: { width: 40, height: 40, borderRadius: 20 },
-  creatorName: { color: Colors.text, fontSize: FontSize.md, fontWeight: FontWeight.semibold },
-  creatorHandle: { color: Colors.textMuted, fontSize: FontSize.sm },
+  creatorName: { fontSize: FontSize.md, fontWeight: FontWeight.semibold },
+  creatorHandle: { fontSize: FontSize.sm },
   occasionBadge: {
-    backgroundColor: Colors.primaryFaded,
     paddingHorizontal: Spacing.sm,
     paddingVertical: 3,
     borderRadius: BorderRadius.sm,
   },
-  occasionText: { color: Colors.primary, fontSize: FontSize.xs, fontWeight: FontWeight.medium },
+  occasionText: { fontSize: FontSize.xs, fontWeight: FontWeight.medium },
   image: { width: '100%', height: 300 },
   content: { padding: Spacing.md },
-  lookTitle: { color: Colors.white, fontSize: FontSize.lg, fontWeight: FontWeight.semibold },
+  lookTitle: { fontSize: FontSize.lg, fontWeight: FontWeight.semibold },
   actions: { flexDirection: 'row', gap: Spacing.xl, marginTop: Spacing.md },
   actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  actionText: { color: Colors.textSecondary, fontSize: FontSize.sm },
+  actionText: { fontSize: FontSize.sm },
   taggedSection: { marginTop: Spacing.lg },
-  taggedLabel: { color: Colors.textMuted, fontSize: FontSize.sm, fontWeight: FontWeight.semibold, marginBottom: Spacing.sm },
+  taggedLabel: { fontSize: FontSize.sm, fontWeight: FontWeight.semibold, marginBottom: Spacing.sm },
   taggedProduct: {
     width: 100,
     marginRight: Spacing.sm,
-    backgroundColor: Colors.surfaceLight,
     borderRadius: BorderRadius.md,
     overflow: 'hidden',
   },
   taggedImage: { width: '100%', height: 100 },
-  taggedTitle: { color: Colors.text, fontSize: FontSize.xs, padding: 4 },
-  taggedPrice: { color: Colors.primary, fontSize: FontSize.xs, fontWeight: FontWeight.bold, paddingHorizontal: 4, paddingBottom: 4 },
+  taggedTitle: { fontSize: FontSize.xs, padding: 4 },
+  taggedPrice: { fontSize: FontSize.xs, fontWeight: FontWeight.bold, paddingHorizontal: 4, paddingBottom: 4 },
   empty: { alignItems: 'center', paddingTop: 80 },
-  emptyText: { color: Colors.textMuted, fontSize: FontSize.md, marginTop: Spacing.md },
+  emptyText: { fontSize: FontSize.md, marginTop: Spacing.md },
 });

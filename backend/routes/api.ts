@@ -104,6 +104,10 @@ router.use('/admin/dashboard', adminDashboardRouter);
 // Profile Routes
 router.get('/profile', profileController.getProfile);
 router.put('/profile', profileController.updateProfile);
+router.patch('/profile', profileController.updateProfile);
+router.patch('/profile/email', requireAuth, profileController.updateEmail);
+router.patch('/profile/mobile', requireAuth, profileController.updateMobile);
+router.post('/profile/avatar', requireAuth, upload.single('avatar'), profileController.uploadAvatar);
 
 // AI Engine, Conversational Stylist & VTON Routes
 router.post('/ai/styling', aiController.getStyling);

@@ -11,9 +11,10 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Shadows } from '../constants/theme';
+import { FontSize, FontWeight, Spacing, BorderRadius } from '../constants/theme';
 import Button from '../components/Button';
 import Loading from '../components/Loading';
+import { useTheme } from '../hooks/useTheme';
 import api from '../services/api';
 import { useCart } from '../hooks/useCart';
 import { useWishlist } from '../hooks/useWishlist';
@@ -23,6 +24,7 @@ const { width } = Dimensions.get('window');
 
 export default function ProductDetailScreen({ route, navigation }: any) {
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
   const { productId } = route.params;
   const [product, setProduct] = useState<RetailProduct | null>(null);
   const [loading, setLoading] = useState(true);
@@ -59,7 +61,7 @@ export default function ProductDetailScreen({ route, navigation }: any) {
   const topInset = Math.max(insets.top + 8, 44);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 110 + insets.bottom }}
@@ -72,7 +74,7 @@ export default function ProductDetailScreen({ route, navigation }: any) {
             resizeMode="cover"
           />
           <TouchableOpacity style={[styles.backBtn, { top: topInset }]} onPress={() => navigation.goBack()}>
-            <Ionicons name="arrow-back" size={24} color={Colors.white} />
+            <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.heartBtn, { top: topInset }]}
@@ -81,21 +83,21 @@ export default function ProductDetailScreen({ route, navigation }: any) {
             <Ionicons
               name={isWishlisted(product.id) ? 'heart' : 'heart-outline'}
               size={24}
-              color={isWishlisted(product.id) ? Colors.accent : Colors.white}
+              color={isWishlisted(product.id) ? colors.accent : '#FFFFFF'}
             />
           </TouchableOpacity>
         </View>
 
         <View style={styles.details}>
-          <Text style={styles.brand}>{product.brand}</Text>
-          <Text style={styles.title}>{product.title}</Text>
+          <Text style={[styles.brand, { color: colors.textMuted }]}>{product.brand}</Text>
+          <Text style={[styles.title, { color: colors.text }]}>{product.title}</Text>
 
           <View style={styles.priceRow}>
-            <Text style={styles.price}>${product.price.toFixed(2)}</Text>
+            <Text style={[styles.price, { color: colors.primary }]}>${product.price.toFixed(2)}</Text>
             {product.originalPrice && product.originalPrice > product.price && (
               <>
-                <Text style={styles.originalPrice}>${product.originalPrice.toFixed(2)}</Text>
-                <View style={styles.discountBadge}>
+                <Text style={[styles.originalPrice, { color: colors.textMuted }]}>${product.originalPrice.toFixed(2)}</Text>
+                <View style={[styles.discountBadge, { backgroundColor: colors.accent }]}>
                   <Text style={styles.discountText}>
                     -{Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}%
                   </Text>
@@ -105,16 +107,16 @@ export default function ProductDetailScreen({ route, navigation }: any) {
           </View>
 
           {product.description && (
-            <Text style={styles.description}>{product.description}</Text>
+            <Text style={[styles.description, { color: colors.textSecondary }]}>{product.description}</Text>
           )}
 
           {/* Colors */}
           {product.colors?.length > 0 && (
             <View style={styles.section}>
-              <Text style={styles.sectionLabel}>Colors</Text>
+              <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>Colors</Text>
               <View style={styles.colorRow}>
                 {product.colors.map((color, i) => (
-                  <View key={i} style={[styles.colorDot, { backgroundColor: color }]} />
+                  <View key={i} style={[styles.colorDot, { backgroundColor: color, borderColor: colors.border }]} />
                 ))}
               </View>
             </View>
@@ -123,40 +125,57 @@ export default function ProductDetailScreen({ route, navigation }: any) {
           {/* Sizes */}
           {product.sizes?.length ? (
             <View style={styles.section}>
-              <Text style={styles.sectionLabel}>Size</Text>
+              <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>Size</Text>
               <View style={styles.sizeRow}>
-                {product.sizes.map((size) => (
-                  <TouchableOpacity
-                    key={size}
-                    style={[styles.sizePill, selectedSize === size && styles.sizePillActive]}
-                    onPress={() => setSelectedSize(size)}
-                  >
-                    <Text style={[styles.sizeText, selectedSize === size && styles.sizeTextActive]}>
-                      {size}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                {product.sizes.map((size) => {
+                  const isSelected = selectedSize === size;
+                  return (
+                    <TouchableOpacity
+                      key={size}
+                      style={[
+                        styles.sizePill,
+                        {
+                          backgroundColor: isSelected ? colors.primaryFaded : colors.surface,
+                          borderColor: isSelected ? colors.primary : colors.border,
+                        },
+                      ]}
+                      onPress={() => setSelectedSize(size)}
+                    >
+                      <Text
+                        style={[
+                          styles.sizeText,
+                          {
+                            color: isSelected ? colors.primary : colors.textMuted,
+                            fontWeight: isSelected ? FontWeight.semibold : FontWeight.medium,
+                          },
+                        ]}
+                      >
+                        {size}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             </View>
           ) : null}
 
           {/* Info */}
           <View style={styles.infoGrid}>
-            <View style={styles.infoItem}>
-              <Ionicons name="shirt-outline" size={18} color={Colors.textMuted} />
-              <Text style={styles.infoLabel}>Category</Text>
-              <Text style={styles.infoValue}>{product.category}</Text>
+            <View style={[styles.infoItem, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }]}>
+              <Ionicons name="shirt-outline" size={18} color={colors.textMuted} />
+              <Text style={[styles.infoLabel, { color: colors.textMuted }]}>Category</Text>
+              <Text style={[styles.infoValue, { color: colors.text }]}>{product.category}</Text>
             </View>
-            <View style={styles.infoItem}>
-              <Ionicons name="body-outline" size={18} color={Colors.textMuted} />
-              <Text style={styles.infoLabel}>Silhouette</Text>
-              <Text style={styles.infoValue}>{product.silhouette}</Text>
+            <View style={[styles.infoItem, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }]}>
+              <Ionicons name="body-outline" size={18} color={colors.textMuted} />
+              <Text style={[styles.infoLabel, { color: colors.textMuted }]}>Silhouette</Text>
+              <Text style={[styles.infoValue, { color: colors.text }]}>{product.silhouette}</Text>
             </View>
             {product.stockQuantity !== undefined && (
-              <View style={styles.infoItem}>
-                <Ionicons name="cube-outline" size={18} color={Colors.textMuted} />
-                <Text style={styles.infoLabel}>Stock</Text>
-                <Text style={[styles.infoValue, product.stockQuantity < 5 && { color: Colors.warning }]}>
+              <View style={[styles.infoItem, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }]}>
+                <Ionicons name="cube-outline" size={18} color={colors.textMuted} />
+                <Text style={[styles.infoLabel, { color: colors.textMuted }]}>Stock</Text>
+                <Text style={[styles.infoValue, { color: colors.text }, product.stockQuantity < 5 && { color: colors.warning }]}>
                   {product.stockQuantity} left
                 </Text>
               </View>
@@ -167,12 +186,12 @@ export default function ProductDetailScreen({ route, navigation }: any) {
       </ScrollView>
 
       {/* Bottom action bar */}
-      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) + Spacing.md }]}>
+      <View style={[styles.bottomBar, { backgroundColor: colors.surface, borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, 16) + Spacing.md }]}>
         <TouchableOpacity
-          style={styles.cartIconBtn}
+          style={[styles.cartIconBtn, { backgroundColor: colors.primaryFaded }]}
           onPress={() => navigation.navigate('Cart')}
         >
-          <Ionicons name="cart-outline" size={24} color={Colors.primary} />
+          <Ionicons name="cart-outline" size={24} color={colors.primary} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Button title="Add to Cart" onPress={handleAddToCart} size="lg" fullWidth />
@@ -183,12 +202,11 @@ export default function ProductDetailScreen({ route, navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
+  container: { flex: 1 },
   imageContainer: { width, height: width * 1.1, position: 'relative' },
   image: { width: '100%', height: '100%' },
   backBtn: {
     position: 'absolute',
-    top: 50,
     left: Spacing.lg,
     width: 40,
     height: 40,
@@ -199,7 +217,6 @@ const styles = StyleSheet.create({
   },
   heartBtn: {
     position: 'absolute',
-    top: 50,
     right: Spacing.lg,
     width: 40,
     height: 40,
@@ -210,47 +227,41 @@ const styles = StyleSheet.create({
   },
   details: { padding: Spacing.xl },
   brand: {
-    color: Colors.textMuted,
     fontSize: FontSize.sm,
     fontWeight: FontWeight.medium,
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
-  title: { color: Colors.white, fontSize: FontSize.xxl, fontWeight: FontWeight.bold, marginTop: 4 },
+  title: { fontSize: FontSize.xxl, fontWeight: FontWeight.bold, marginTop: 4 },
   priceRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginTop: Spacing.md },
-  price: { color: Colors.primary, fontSize: FontSize.xxl, fontWeight: FontWeight.bold },
-  originalPrice: { color: Colors.textMuted, fontSize: FontSize.lg, textDecorationLine: 'line-through' },
-  discountBadge: { backgroundColor: Colors.accent, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
-  discountText: { color: Colors.white, fontSize: FontSize.xs, fontWeight: FontWeight.bold },
-  description: { color: Colors.textSecondary, fontSize: FontSize.md, marginTop: Spacing.lg, lineHeight: 22 },
+  price: { fontSize: FontSize.xxl, fontWeight: FontWeight.bold },
+  originalPrice: { fontSize: FontSize.lg, textDecorationLine: 'line-through' },
+  discountBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
+  discountText: { color: '#FFFFFF', fontSize: FontSize.xs, fontWeight: FontWeight.bold },
+  description: { fontSize: FontSize.md, marginTop: Spacing.lg, lineHeight: 22 },
   section: { marginTop: Spacing.xl },
-  sectionLabel: { color: Colors.textSecondary, fontSize: FontSize.sm, fontWeight: FontWeight.semibold, marginBottom: Spacing.sm },
+  sectionLabel: { fontSize: FontSize.sm, fontWeight: FontWeight.semibold, marginBottom: Spacing.sm },
   colorRow: { flexDirection: 'row', gap: Spacing.sm },
-  colorDot: { width: 28, height: 28, borderRadius: 14, borderWidth: 2, borderColor: Colors.border },
+  colorDot: { width: 28, height: 28, borderRadius: 14, borderWidth: 2 },
   sizeRow: { flexDirection: 'row', gap: Spacing.sm, flexWrap: 'wrap' },
   sizePill: {
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.sm,
     borderRadius: BorderRadius.md,
-    backgroundColor: Colors.surface,
     borderWidth: 1,
-    borderColor: Colors.border,
   },
-  sizePillActive: { borderColor: Colors.primary, backgroundColor: Colors.primaryFaded },
-  sizeText: { color: Colors.textMuted, fontSize: FontSize.sm, fontWeight: FontWeight.medium },
-  sizeTextActive: { color: Colors.primary },
+  sizeText: { fontSize: FontSize.sm, fontWeight: FontWeight.medium },
   infoGrid: { flexDirection: 'row', gap: Spacing.md, marginTop: Spacing.xxl, flexWrap: 'wrap' },
   infoItem: {
     flex: 1,
     minWidth: 90,
-    backgroundColor: Colors.surface,
     borderRadius: BorderRadius.md,
     padding: Spacing.md,
     alignItems: 'center',
     gap: 4,
   },
-  infoLabel: { color: Colors.textMuted, fontSize: FontSize.xs },
-  infoValue: { color: Colors.text, fontSize: FontSize.sm, fontWeight: FontWeight.semibold },
+  infoLabel: { fontSize: FontSize.xs },
+  infoValue: { fontSize: FontSize.sm, fontWeight: FontWeight.semibold },
   bottomBar: {
     position: 'absolute',
     bottom: 0,
@@ -260,16 +271,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.md,
     padding: Spacing.lg,
-    paddingBottom: Spacing.xxxl,
-    backgroundColor: Colors.surface,
     borderTopWidth: 1,
-    borderTopColor: Colors.border,
   },
   cartIconBtn: {
     width: 50,
     height: 50,
     borderRadius: BorderRadius.lg,
-    backgroundColor: Colors.primaryFaded,
     alignItems: 'center',
     justifyContent: 'center',
   },

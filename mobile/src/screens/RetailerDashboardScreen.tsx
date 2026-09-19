@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Shadows } from '../constants/theme';
+import { useTheme } from '../hooks/useTheme';
 import Loading from '../components/Loading';
 import { useAuth } from '../hooks/useAuth';
 import api from '../services/api';
@@ -20,6 +21,7 @@ import type { RetailProduct, CustomerOrder, RetailerCustomer } from '../types/fa
 
 export default function RetailerDashboardScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
+  const { colors, isDark } = useTheme();
   const { role, switchRole } = useAuth();
   const isRetailer = role === 'retailer' || role === 'admin';
 
@@ -93,13 +95,13 @@ export default function RetailerDashboardScreen({ navigation }: any) {
   ];
 
   return (
-    <View style={styles.container}>
-      <LinearGradient colors={['#1a103d', Colors.background]} style={[styles.header, { paddingTop }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <LinearGradient colors={isDark ? ['#1a103d', colors.background] : ['#EEF2FF', colors.background]} style={[styles.header, { paddingTop }]}>
         <View style={styles.headerTop}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-            <Ionicons name="arrow-back" size={24} color={Colors.white} />
+          <TouchableOpacity style={[styles.backBtn, { backgroundColor: colors.surface }]} onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
           </TouchableOpacity>
-          <Text style={styles.title}>Retailer Dashboard 🏪</Text>
+          <Text style={[styles.title, { color: colors.text }]}>Retailer Dashboard 🏪</Text>
         </View>
 
         {isRetailer && (
@@ -107,11 +109,11 @@ export default function RetailerDashboardScreen({ navigation }: any) {
             {tabs.map((t) => (
               <TouchableOpacity
                 key={t.key}
-                style={[styles.tabBtn, tab === t.key && styles.tabBtnActive]}
+                style={[styles.tabBtn, { backgroundColor: colors.surface }, tab === t.key && styles.tabBtnActive]}
                 onPress={() => setTab(t.key)}
               >
-                <Ionicons name={t.icon as any} size={16} color={tab === t.key ? Colors.primary : Colors.textMuted} />
-                <Text style={[styles.tabLabel, tab === t.key && styles.tabLabelActive]}>{t.label}</Text>
+                <Ionicons name={t.icon as any} size={16} color={tab === t.key ? colors.primary : colors.textMuted} />
+                <Text style={[styles.tabLabel, { color: colors.textMuted }, tab === t.key && styles.tabLabelActive]}>{t.label}</Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -120,9 +122,9 @@ export default function RetailerDashboardScreen({ navigation }: any) {
 
       {!isRetailer ? (
         <View style={styles.guardContainer}>
-          <Ionicons name="shield-outline" size={64} color={Colors.warning} />
-          <Text style={styles.guardTitle}>Retailer Access Required</Text>
-          <Text style={styles.guardSubtitle}>
+          <Ionicons name="shield-outline" size={64} color={colors.warning} />
+          <Text style={[styles.guardTitle, { color: colors.text }]}>Retailer Access Required</Text>
+          <Text style={[styles.guardSubtitle, { color: colors.textSecondary }]}>
             This dashboard is reserved for retailers to manage store inventory, stock quantities, and customer orders.
           </Text>
           <TouchableOpacity
@@ -132,7 +134,7 @@ export default function RetailerDashboardScreen({ navigation }: any) {
             <Text style={styles.switchRoleBtnText}>Switch to Retailer Mode</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.goBackBtn} onPress={() => navigation.goBack()}>
-            <Text style={styles.goBackBtnText}>Go Back</Text>
+            <Text style={[styles.goBackBtnText, { color: colors.textMuted }]}>Go Back</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -167,10 +169,10 @@ export default function RetailerDashboardScreen({ navigation }: any) {
               keyExtractor={(item) => item.id}
               contentContainerStyle={styles.content}
               renderItem={({ item }) => (
-                <View style={styles.listCard}>
+                <View style={[styles.listCard, { backgroundColor: colors.surface }]}>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.listTitle}>{item.title}</Text>
-                    <Text style={styles.listSub}>{item.brand} · ${item.price.toFixed(2)}</Text>
+                    <Text style={[styles.listTitle, { color: colors.text }]}>{item.title}</Text>
+                    <Text style={[styles.listSub, { color: colors.textMuted }]}>{item.brand} · ${item.price.toFixed(2)}</Text>
                   </View>
                   <View style={styles.stockControl}>
                     <TouchableOpacity
@@ -179,8 +181,8 @@ export default function RetailerDashboardScreen({ navigation }: any) {
                     >
                       <Ionicons name="remove" size={16} color={Colors.white} />
                     </TouchableOpacity>
-                    <View style={[styles.stockBadge, (item.stockQuantity || 0) < 10 && { backgroundColor: Colors.warning + '20' }]}>
-                      <Text style={[styles.stockText, (item.stockQuantity || 0) < 10 && { color: Colors.warning }]}>
+                    <View style={[styles.stockBadge, { backgroundColor: colors.surfaceLight }, (item.stockQuantity || 0) < 10 && { backgroundColor: colors.warning + '20' }]}>
+                      <Text style={[styles.stockText, { color: colors.text }, (item.stockQuantity || 0) < 10 && { color: colors.warning }]}>
                         {item.stockQuantity ?? '0'}
                       </Text>
                     </View>
@@ -204,19 +206,19 @@ export default function RetailerDashboardScreen({ navigation }: any) {
               contentContainerStyle={styles.content}
               renderItem={({ item }) => (
                 <TouchableOpacity
-                  style={styles.listCard}
+                  style={[styles.listCard, { backgroundColor: colors.surface }]}
                   activeOpacity={0.8}
                   onPress={() => handleUpdateOrderStatus(item)}
                 >
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.listTitle}>#{item.orderNumber}</Text>
-                    <Text style={styles.listSub}>{item.customerName} · {item.items.length} items</Text>
+                    <Text style={[styles.listTitle, { color: colors.text }]}>#{item.orderNumber}</Text>
+                    <Text style={[styles.listSub, { color: colors.textMuted }]}>{item.customerName} · {item.items.length} items</Text>
                   </View>
                   <View style={{ alignItems: 'flex-end', gap: 4 }}>
-                    <Text style={[styles.statusText, { color: item.status === 'Delivered' ? Colors.success : Colors.warning }]}>
+                    <Text style={[styles.statusText, { color: item.status === 'Delivered' ? colors.success : colors.warning }]}>
                       {item.status}
                     </Text>
-                    <Text style={styles.tapToChange}>Tap to advance</Text>
+                    <Text style={[styles.tapToChange, { color: colors.textMuted }]}>Tap to advance</Text>
                   </View>
                 </TouchableOpacity>
               )}
@@ -230,12 +232,12 @@ export default function RetailerDashboardScreen({ navigation }: any) {
               keyExtractor={(item) => item.id}
               contentContainerStyle={styles.content}
               renderItem={({ item }) => (
-                <View style={styles.listCard}>
+                <View style={[styles.listCard, { backgroundColor: colors.surface }]}>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.listTitle}>{item.name}</Text>
-                    <Text style={styles.listSub}>{item.email} · {item.ordersCount} orders</Text>
+                    <Text style={[styles.listTitle, { color: colors.text }]}>{item.name}</Text>
+                    <Text style={[styles.listSub, { color: colors.textMuted }]}>{item.email} · {item.ordersCount} orders</Text>
                   </View>
-                  <Text style={styles.custSpent}>${item.totalSpent.toFixed(0)}</Text>
+                  <Text style={[styles.custSpent, { color: colors.primary }]}>${item.totalSpent.toFixed(0)}</Text>
                 </View>
               )}
             />
@@ -247,11 +249,12 @@ export default function RetailerDashboardScreen({ navigation }: any) {
 }
 
 function StatCard({ label, value, icon, color }: { label: string; value: string; icon: string; color: string }) {
+  const { colors } = useTheme();
   return (
-    <View style={statStyles.card}>
+    <View style={[statStyles.card, { backgroundColor: colors.surface }]}>
       <Ionicons name={icon as any} size={24} color={color} />
       <Text style={[statStyles.value, { color }]}>{value}</Text>
-      <Text style={statStyles.label}>{label}</Text>
+      <Text style={[statStyles.label, { color: colors.textMuted }]}>{label}</Text>
     </View>
   );
 }

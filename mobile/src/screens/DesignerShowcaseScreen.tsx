@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Shadows } from '../constants/theme';
+import { useTheme } from '../hooks/useTheme';
 import Loading from '../components/Loading';
 import Button from '../components/Button';
 import { useAuth } from '../hooks/useAuth';
@@ -34,6 +35,7 @@ const SAMPLE_IMAGE_OPTIONS = [
 
 export default function DesignerShowcaseScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
+  const { colors, isDark } = useTheme();
   const { user, role } = useAuth();
   const isDesigner = role === 'designer' || role === 'admin';
 
@@ -118,35 +120,35 @@ export default function DesignerShowcaseScreen({ navigation }: any) {
   const totalVotes = designs.reduce((acc, d) => acc + (d.votesCount || 0), 3210);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { paddingTop }]}>
         <View style={styles.headerTop}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-            <Ionicons name="arrow-back" size={24} color={Colors.white} />
+          <TouchableOpacity style={[styles.backBtn, { backgroundColor: colors.surface }]} onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
           </TouchableOpacity>
-          <Text style={styles.title}>Designer Showcase 🎨</Text>
+          <Text style={[styles.title, { color: colors.text }]}>Designer Showcase 🎨</Text>
         </View>
 
-        <View style={styles.tabs}>
+        <View style={[styles.tabs, { backgroundColor: colors.surface }]}>
           {isDesigner && (
             <TouchableOpacity
               style={[styles.tab, tab === 'studio' && styles.tabActive]}
               onPress={() => setTab('studio')}
             >
-              <Text style={[styles.tabText, tab === 'studio' && styles.tabTextActive]}>My Studio</Text>
+              <Text style={[styles.tabText, { color: colors.textMuted }, tab === 'studio' && styles.tabTextActive]}>My Studio</Text>
             </TouchableOpacity>
           )}
           <TouchableOpacity
             style={[styles.tab, tab === 'designers' && styles.tabActive]}
             onPress={() => setTab('designers')}
           >
-            <Text style={[styles.tabText, tab === 'designers' && styles.tabTextActive]}>Designers</Text>
+            <Text style={[styles.tabText, { color: colors.textMuted }, tab === 'designers' && styles.tabTextActive]}>Designers</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.tab, tab === 'designs' && styles.tabActive]}
             onPress={() => setTab('designs')}
           >
-            <Text style={[styles.tabText, tab === 'designs' && styles.tabTextActive]}>Designs</Text>
+            <Text style={[styles.tabText, { color: colors.textMuted }, tab === 'designs' && styles.tabTextActive]}>Designs</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -155,36 +157,36 @@ export default function DesignerShowcaseScreen({ navigation }: any) {
         <ScrollView
           style={{ flex: 1 }}
           contentContainerStyle={{ padding: Spacing.lg, paddingBottom: 110 + insets.bottom }}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
         >
           {/* Studio Profile Banner */}
-          <LinearGradient colors={['#1a103d', Colors.surface]} style={styles.studioBanner}>
+          <LinearGradient colors={isDark ? ['#1a103d', colors.surface] : ['#EEF2FF', colors.surface]} style={[styles.studioBanner, { borderColor: colors.border }]}>
             <View style={styles.studioHeader}>
               <View style={styles.studioAvatarBadge}>
-                <Ionicons name="brush" size={28} color={Colors.primary} />
+                <Ionicons name="brush" size={28} color={colors.primary} />
               </View>
               <View style={{ flex: 1, marginLeft: Spacing.md }}>
-                <Text style={styles.studioName}>{user?.name || 'Pro Designer Studio'}</Text>
+                <Text style={[styles.studioName, { color: colors.text }]}>{user?.name || 'Pro Designer Studio'}</Text>
                 <Text style={styles.studioHandle}>Verified Fashion Creator ✦</Text>
               </View>
             </View>
 
             <View style={styles.statsGrid}>
               <View style={styles.statBox}>
-                <Text style={styles.statBoxVal}>142.8k</Text>
-                <Text style={styles.statBoxLabel}>Views</Text>
+                <Text style={[styles.statBoxVal, { color: colors.text }]}>142.8k</Text>
+                <Text style={[styles.statBoxLabel, { color: colors.textMuted }]}>Views</Text>
               </View>
               <View style={styles.statBox}>
-                <Text style={styles.statBoxVal}>{totalVotes}</Text>
-                <Text style={styles.statBoxLabel}>Likes & Votes</Text>
+                <Text style={[styles.statBoxVal, { color: colors.text }]}>{totalVotes}</Text>
+                <Text style={[styles.statBoxLabel, { color: colors.textMuted }]}>Likes & Votes</Text>
               </View>
               <View style={styles.statBox}>
-                <Text style={styles.statBoxVal}>4.9 ★</Text>
-                <Text style={styles.statBoxLabel}>Merit Score</Text>
+                <Text style={[styles.statBoxVal, { color: colors.text }]}>4.9 ★</Text>
+                <Text style={[styles.statBoxLabel, { color: colors.textMuted }]}>Merit Score</Text>
               </View>
               <View style={styles.statBox}>
-                <Text style={styles.statBoxVal}>#1</Text>
-                <Text style={styles.statBoxLabel}>Rank</Text>
+                <Text style={[styles.statBoxVal, { color: colors.text }]}>#1</Text>
+                <Text style={[styles.statBoxLabel, { color: colors.textMuted }]}>Rank</Text>
               </View>
             </View>
           </LinearGradient>
@@ -200,17 +202,17 @@ export default function DesignerShowcaseScreen({ navigation }: any) {
           </View>
 
           {/* Published Catalog */}
-          <Text style={styles.sectionHeading}>My Portfolio & Designs ({designs.length})</Text>
+          <Text style={[styles.sectionHeading, { color: colors.textSecondary }]}>My Portfolio & Designs ({designs.length})</Text>
           {designs.map((item) => (
-            <View key={item.id} style={styles.studioDesignRow}>
+            <View key={item.id} style={[styles.studioDesignRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <Image source={{ uri: item.imageUrl || SAMPLE_IMAGE_OPTIONS[0] }} style={styles.studioDesignThumb} />
               <View style={{ flex: 1, marginLeft: Spacing.md }}>
-                <Text style={styles.designTitle} numberOfLines={1}>{item.title}</Text>
-                <Text style={styles.designDesigner}>{item.collection}</Text>
+                <Text style={[styles.designTitle, { color: colors.text }]} numberOfLines={1}>{item.title}</Text>
+                <Text style={[styles.designDesigner, { color: colors.textMuted }]}>{item.collection}</Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.md, marginTop: Spacing.xs }}>
-                  <Text style={styles.designPrice}>${item.price.toFixed(0)}</Text>
+                  <Text style={[styles.designPrice, { color: colors.primary }]}>${item.price.toFixed(0)}</Text>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
-                    <Ionicons name="star" size={13} color={Colors.warning} />
+                    <Ionicons name="star" size={13} color={colors.warning} />
                     <Text style={styles.miniVoteText}>{item.rating.toFixed(1)} ({item.votesCount} votes)</Text>
                   </View>
                 </View>
@@ -223,25 +225,25 @@ export default function DesignerShowcaseScreen({ navigation }: any) {
           data={designers}
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ padding: Spacing.lg, paddingBottom: 110 + insets.bottom }}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
           renderItem={({ item }) => (
-            <View style={styles.designerCard}>
+            <View style={[styles.designerCard, { backgroundColor: colors.surface }]}>
               <Image source={{ uri: item.avatar }} style={styles.designerAvatar} />
               <View style={styles.designerInfo}>
                 <View style={styles.nameRow}>
-                  <Text style={styles.designerName}>{item.name}</Text>
-                  {item.verified && <Ionicons name="checkmark-circle" size={16} color={Colors.primary} />}
+                  <Text style={[styles.designerName, { color: colors.text }]}>{item.name}</Text>
+                  {item.verified && <Ionicons name="checkmark-circle" size={16} color={colors.primary} />}
                 </View>
-                <Text style={styles.designerHandle}>@{item.handle}</Text>
-                <Text style={styles.designerBio} numberOfLines={2}>{item.bio}</Text>
+                <Text style={[styles.designerHandle, { color: colors.textMuted }]}>@{item.handle}</Text>
+                <Text style={[styles.designerBio, { color: colors.textSecondary }]} numberOfLines={2}>{item.bio}</Text>
                 <View style={styles.statsRow}>
                   <View style={styles.stat}>
-                    <Text style={styles.statValue}>{item.followers}</Text>
-                    <Text style={styles.statLabel}>followers</Text>
+                    <Text style={[styles.statValue, { color: colors.text }]}>{item.followers}</Text>
+                    <Text style={[styles.statLabel, { color: colors.textMuted }]}>followers</Text>
                   </View>
                   <View style={styles.stat}>
-                    <Ionicons name="star" size={12} color={Colors.warning} />
-                    <Text style={styles.statValue}>{item.avgRating.toFixed(1)}</Text>
+                    <Ionicons name="star" size={12} color={colors.warning} />
+                    <Text style={[styles.statValue, { color: colors.text }]}>{item.avgRating.toFixed(1)}</Text>
                   </View>
                   {item.badges.map((badge, i) => (
                     <View key={i} style={styles.badgePill}>
@@ -260,17 +262,17 @@ export default function DesignerShowcaseScreen({ navigation }: any) {
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ padding: Spacing.lg, paddingBottom: 110 + insets.bottom }}
           columnWrapperStyle={{ gap: Spacing.md }}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
           renderItem={({ item }) => (
-            <View style={styles.designCard}>
+            <View style={[styles.designCard, { backgroundColor: colors.surface }]}>
               <Image source={{ uri: item.imageUrl || SAMPLE_IMAGE_OPTIONS[0] }} style={styles.designImage} />
               <View style={styles.designInfo}>
-                <Text style={styles.designTitle} numberOfLines={1}>{item.title}</Text>
-                <Text style={styles.designDesigner}>{item.designerName}</Text>
+                <Text style={[styles.designTitle, { color: colors.text }]} numberOfLines={1}>{item.title}</Text>
+                <Text style={[styles.designDesigner, { color: colors.textMuted }]}>{item.designerName}</Text>
                 <View style={styles.designBottom}>
-                  <Text style={styles.designPrice}>${item.price.toFixed(0)}</Text>
+                  <Text style={[styles.designPrice, { color: colors.primary }]}>${item.price.toFixed(0)}</Text>
                   <TouchableOpacity onPress={() => handleVote(item.id, 5)} style={styles.miniVoteBtn}>
-                    <Ionicons name="star" size={14} color={Colors.warning} />
+                    <Ionicons name="star" size={14} color={colors.warning} />
                     <Text style={styles.miniVoteText}>{item.rating.toFixed(1)}</Text>
                   </TouchableOpacity>
                 </View>
@@ -286,52 +288,52 @@ export default function DesignerShowcaseScreen({ navigation }: any) {
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={styles.modalOverlay}
         >
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Upload New Design ✦</Text>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>Upload New Design ✦</Text>
               <TouchableOpacity onPress={() => setIsUploadModalOpen(false)}>
-                <Ionicons name="close" size={24} color={Colors.textMuted} />
+                <Ionicons name="close" size={24} color={colors.textMuted} />
               </TouchableOpacity>
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
-              <Text style={styles.inputLabel}>Design Title</Text>
+              <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Design Title</Text>
               <TextInput
-                style={styles.modalInput}
+                style={[styles.modalInput, { backgroundColor: colors.surfaceLight, color: colors.text, borderColor: colors.border }]}
                 placeholder="e.g. Asymmetric Cashmere Blazer"
-                placeholderTextColor={Colors.textMuted}
+                placeholderTextColor={colors.textMuted}
                 value={newTitle}
                 onChangeText={setNewTitle}
               />
 
-              <Text style={styles.inputLabel}>Collection Name</Text>
+              <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Collection Name</Text>
               <TextInput
-                style={styles.modalInput}
+                style={[styles.modalInput, { backgroundColor: colors.surfaceLight, color: colors.text, borderColor: colors.border }]}
                 placeholder="e.g. Resort Elegance 2026"
-                placeholderTextColor={Colors.textMuted}
+                placeholderTextColor={colors.textMuted}
                 value={newCollection}
                 onChangeText={setNewCollection}
               />
 
-              <Text style={styles.inputLabel}>Select Photo Look</Text>
+              <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Select Photo Look</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: Spacing.md }}>
                 {SAMPLE_IMAGE_OPTIONS.map((img, i) => (
                   <TouchableOpacity
                     key={i}
                     onPress={() => setNewImageUrl(img)}
-                    style={[styles.imgOption, newImageUrl === img && styles.imgOptionActive]}
+                    style={[styles.imgOption, { borderColor: colors.border }, newImageUrl === img && styles.imgOptionActive]}
                   >
                     <Image source={{ uri: img }} style={styles.imgOptionPhoto} />
                   </TouchableOpacity>
                 ))}
               </ScrollView>
 
-              <Text style={styles.inputLabel}>Occasion</Text>
+              <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Occasion</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: Spacing.md }}>
                 {OCCASIONS.map((occ) => (
                   <TouchableOpacity
                     key={occ}
-                    style={[styles.occPill, newOccasion === occ && styles.occPillActive]}
+                    style={[styles.occPill, { backgroundColor: colors.surfaceLight, borderColor: colors.border }, newOccasion === occ && styles.occPillActive]}
                     onPress={() => setNewOccasion(occ)}
                   >
                     <Text style={[styles.occText, newOccasion === occ && styles.occTextActive]}>{occ}</Text>
@@ -339,11 +341,11 @@ export default function DesignerShowcaseScreen({ navigation }: any) {
                 ))}
               </ScrollView>
 
-              <Text style={styles.inputLabel}>Target Price ($)</Text>
+              <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Target Price ($)</Text>
               <TextInput
-                style={styles.modalInput}
+                style={[styles.modalInput, { backgroundColor: colors.surfaceLight, color: colors.text, borderColor: colors.border }]}
                 placeholder="290"
-                placeholderTextColor={Colors.textMuted}
+                placeholderTextColor={colors.textMuted}
                 keyboardType="numeric"
                 value={newPrice}
                 onChangeText={setNewPrice}

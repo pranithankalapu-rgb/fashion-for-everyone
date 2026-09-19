@@ -1,11 +1,13 @@
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Colors, FontSize, FontWeight } from '../constants/theme';
+import { FontSize, FontWeight } from '../constants/theme';
 import { useAuth } from '../hooks/useAuth';
+import { useTheme } from '../hooks/useTheme';
 
 export default function SplashScreen({ navigation }: any) {
   const { isAuthenticated, isLoading } = useAuth();
+  const { colors, isDark } = useTheme();
 
   useEffect(() => {
     if (!isLoading) {
@@ -20,21 +22,23 @@ export default function SplashScreen({ navigation }: any) {
     }
   }, [isLoading, isAuthenticated, navigation]);
 
+  const gradientMid = isDark ? '#1a103d' : '#e0e7ff';
+
   return (
-    <LinearGradient colors={[Colors.background, '#1a103d', Colors.background]} style={styles.container}>
+    <LinearGradient colors={[colors.background, gradientMid, colors.background]} style={styles.container}>
       <View style={styles.logoContainer}>
         <LinearGradient
-          colors={[Colors.primary, Colors.accent]}
+          colors={[colors.primary, colors.accent]}
           style={styles.logoCircle}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
         >
           <Text style={styles.logoIcon}>✦</Text>
         </LinearGradient>
-        <Text style={styles.title}>Fashion</Text>
-        <Text style={styles.subtitle}>for Everyone</Text>
+        <Text style={[styles.title, { color: colors.text }]}>Fashion</Text>
+        <Text style={[styles.subtitle, { color: colors.primary }]}>for Everyone</Text>
       </View>
-      <Text style={styles.tagline}>AI-Powered Style, Inclusive Fashion</Text>
+      <Text style={[styles.tagline, { color: colors.textSecondary }]}>AI-Powered Style, Inclusive Fashion</Text>
     </LinearGradient>
   );
 }
@@ -59,22 +63,18 @@ const styles = StyleSheet.create({
   },
   logoIcon: {
     fontSize: 36,
-    color: Colors.white,
+    color: '#FFFFFF',
   },
   title: {
     fontSize: FontSize.hero,
     fontWeight: FontWeight.extrabold,
-    color: Colors.white,
     letterSpacing: 1,
   },
   subtitle: {
-    fontSize: FontSize.xl,
-    fontWeight: FontWeight.medium,
-    color: Colors.primaryLight,
-    marginTop: -4,
+    fontSize: FontSize.xxl,
+    fontWeight: FontWeight.bold,
   },
   tagline: {
-    color: Colors.textSecondary,
     fontSize: FontSize.md,
   },
 });

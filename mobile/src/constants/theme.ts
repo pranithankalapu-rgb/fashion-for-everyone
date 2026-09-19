@@ -1,6 +1,6 @@
 // Design tokens & theme for the mobile app
 
-export const Colors = {
+export const DarkColors = {
   // Primary palette
   primary: '#6C63FF',
   primaryDark: '#5A52D5',
@@ -47,6 +47,59 @@ export const Colors = {
   gradientStart: '#6C63FF',
   gradientEnd: '#FF6B9D',
 };
+
+export const LightColors = {
+  // Primary palette
+  primary: '#6C63FF',
+  primaryDark: '#5A52D5',
+  primaryLight: '#8B85FF',
+  primaryFaded: 'rgba(108, 99, 255, 0.10)',
+
+  // Accent
+  accent: '#FF6B9D',
+  accentDark: '#E0548A',
+  accentLight: '#FF8FB8',
+
+  // Background
+  background: '#F8F9FD',
+  surface: '#FFFFFF',
+  surfaceLight: '#F0F2F9',
+  surfaceElevated: '#FFFFFF',
+  card: '#FFFFFF',
+
+  // Text
+  text: '#111827',
+  textSecondary: '#4B5563',
+  textMuted: '#9CA3AF',
+  textInverse: '#FFFFFF',
+
+  // Status
+  success: '#16A34A',
+  successDark: '#15803D',
+  warning: '#D97706',
+  warningDark: '#B45309',
+  error: '#DC2626',
+  errorDark: '#B91C1C',
+  info: '#2563EB',
+
+  // Misc
+  border: '#E5E7EB',
+  borderLight: '#F3F4F6',
+  overlay: 'rgba(0, 0, 0, 0.45)',
+  shimmer: '#E5E7EB',
+  white: '#FFFFFF',
+  black: '#000000',
+  transparent: 'transparent',
+
+  // Gradient stops
+  gradientStart: '#6C63FF',
+  gradientEnd: '#FF6B9D',
+};
+
+export type ThemeColors = typeof DarkColors;
+
+// Backwards compatibility default
+export const Colors = DarkColors;
 
 export const Spacing = {
   xs: 4,
@@ -110,7 +163,7 @@ export const Shadows = {
     elevation: 8,
   },
   glow: {
-    shadowColor: Colors.primary,
+    shadowColor: DarkColors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.35,
     shadowRadius: 12,
