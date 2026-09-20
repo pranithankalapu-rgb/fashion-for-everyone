@@ -290,17 +290,45 @@ export const api = {
     return updated;
   },
 
-  async updateEmail(email: string): Promise<{ success: boolean; message: string; email: string; profile: UserProfile }> {
-    const res = await client.patch<{ success: boolean; message: string; email: string; profile: UserProfile }>('/profile/email', { email });
+  async requestEmailVerification(email: string): Promise<{ success: boolean; message: string; resendCooldown?: number }> {
+    const res = await client.post<{ success: boolean; message: string; resendCooldown?: number }>('/profile/email/request-verification', { email });
+    return res.data;
+  },
+
+  async verifyAndUpdateEmail(email: string, code: string): Promise<{ success: boolean; message: string; email: string; profile: UserProfile }> {
+    const res = await client.post<{ success: boolean; message: string; email: string; profile: UserProfile }>('/profile/email/verify', { email, code });
     const data = res.data;
     if (data.profile?.avatar) data.profile.avatar = resolveMediaUrl(data.profile.avatar);
+    if (data.profile?.photoUrl) data.profile.photoUrl = resolveMediaUrl(data.profile.photoUrl);
     return data;
   },
 
-  async updateMobile(phone: string): Promise<{ success: boolean; message: string; phone: string; profile: UserProfile }> {
-    const res = await client.patch<{ success: boolean; message: string; phone: string; profile: UserProfile }>('/profile/mobile', { phone });
+  async requestMobileVerification(phone: string): Promise<{ success: boolean; message: string; resendCooldown?: number }> {
+    const res = await client.post<{ success: boolean; message: string; resendCooldown?: number }>('/profile/mobile/request-verification', { phone });
+    return res.data;
+  },
+
+  async verifyAndUpdateMobile(phone: string, code: string): Promise<{ success: boolean; message: string; phone: string; profile: UserProfile }> {
+    const res = await client.post<{ success: boolean; message: string; phone: string; profile: UserProfile }>('/profile/mobile/verify', { phone, code });
     const data = res.data;
     if (data.profile?.avatar) data.profile.avatar = resolveMediaUrl(data.profile.avatar);
+    if (data.profile?.photoUrl) data.profile.photoUrl = resolveMediaUrl(data.profile.photoUrl);
+    return data;
+  },
+
+  async updateEmail(email: string, code?: string): Promise<{ success: boolean; message: string; email: string; profile: UserProfile }> {
+    const res = await client.patch<{ success: boolean; message: string; email: string; profile: UserProfile }>('/profile/email', { email, code });
+    const data = res.data;
+    if (data.profile?.avatar) data.profile.avatar = resolveMediaUrl(data.profile.avatar);
+    if (data.profile?.photoUrl) data.profile.photoUrl = resolveMediaUrl(data.profile.photoUrl);
+    return data;
+  },
+
+  async updateMobile(phone: string, code?: string): Promise<{ success: boolean; message: string; phone: string; profile: UserProfile }> {
+    const res = await client.patch<{ success: boolean; message: string; phone: string; profile: UserProfile }>('/profile/mobile', { phone, code });
+    const data = res.data;
+    if (data.profile?.avatar) data.profile.avatar = resolveMediaUrl(data.profile.avatar);
+    if (data.profile?.photoUrl) data.profile.photoUrl = resolveMediaUrl(data.profile.photoUrl);
     return data;
   },
 

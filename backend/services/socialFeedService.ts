@@ -150,4 +150,21 @@ export const socialFeedService = {
     });
     return { success: true, id: sanitizedId };
   },
+
+  // Method aliases for backwards compatibility with controllers
+  createLook(dto: CreateOutfitLookDTO): Promise<OutfitLook> {
+    return this.createOutfitLook(dto);
+  },
+
+  getFeed(params?: { occasion?: string; sortBy?: string }): Promise<OutfitLook[]> {
+    return this.getSocialFeed(params?.occasion);
+  },
+
+  toggleLike(id: string): Promise<OutfitLook> {
+    return this.toggleLikeOutfitLook(id);
+  },
+
+  deleteLook(id: string): Promise<{ success: boolean; id: string }> {
+    return this.deleteOutfitLook(id);
+  },
 };

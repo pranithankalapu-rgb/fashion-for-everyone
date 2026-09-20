@@ -29,11 +29,29 @@ model UserProfile {
   status              String    @default("Active")
   requestedRole       String?
   rejectionReason     String?
-  phone               String?
+  phone               String?   @unique
   bio                 String?
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @default(now()) @updatedAt
 }
+
+model VerificationCode {
+  id          String    @id @default(uuid())
+  userId      String
+  target      String
+  type        String
+  codeHash    String
+  expiresAt   DateTime
+  attempts    Int       @default(0)
+  maxAttempts Int       @default(5)
+  resendAfter DateTime
+  consumedAt  DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([userId, type])
+  @@index([target])
+}
+
 
 model ColorCombo {
   id              String      @id @default(uuid())

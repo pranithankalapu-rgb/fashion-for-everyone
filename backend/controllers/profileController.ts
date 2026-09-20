@@ -3,6 +3,7 @@ import type { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
 import { sanitizeObject, sanitizeString } from '../security';
 import { mediaService, resolveMediaUrl } from '../services/mediaService';
+import { verificationService, VerificationError } from '../services/verificationService';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_REGEX = /^\+?[0-9\s\-()]{7,20}$/;
@@ -42,8 +43,8 @@ export const profileController = {
       const userId = req.userId || 'user_01';
       const sanitizedBody = sanitizeObject(req.body);
 
-      // Prevent overwriting id or passwordHash directly through profile update
-      const { id: _id, passwordHash: _ph, role: _r, ...updateData } = sanitizedBody as any;
+      // Explicitly prevent overwriting id, passwordHash, role, email, or phone directly through general profile update
+      const { id: _id, passwordHash: _ph, role: _r, email: _e, phone: _p, mobile: _m, ...updateData } = sanitizedBody as any;
 
       const updatedProfile = await prisma.userProfile.upsert({
         where: { id: userId },
@@ -71,97 +72,133 @@ export const profileController = {
     }
   },
 
-  async updateEmail(req: AuthenticatedRequest, res: Response) {
+  // -------------------------------------------------------------
+  // Dedicated Verification Endpoints
+  // -------------------------------------------------------------
+
+  async requestEmailVerification(req: AuthenticatedRequest, res: Response) {
     try {
       const userId = req.userId;
       if (!userId) {
         return res.status(401).json({ error: 'Unauthorized: Authentication required.' });
       }
 
-      const emailRaw = req.body?.email;
-      if (!emailRaw || typeof emailRaw !== 'string') {
-        return res.status(400).json({ error: 'A valid email address is required.' });
+      const email = req.body?.email;
+      const result = await verificationService.requestEmailVerification(userId, email);
+      return res.json(result);
+    } catch (err: any) {
+      if (err instanceof VerificationError) {
+        return res.status(err.statusCode).json({ error: err.message, code: err.code });
       }
-
-      const normalizedEmail = sanitizeString(emailRaw.trim().toLowerCase());
-      if (!EMAIL_REGEX.test(normalizedEmail)) {
-        return res.status(400).json({ error: 'Invalid email address format.' });
-      }
-
-      // Check if email is already used by another account
-      const existingUser = await prisma.userProfile.findFirst({
-        where: {
-          email: { equals: normalizedEmail, mode: 'insensitive' },
-          NOT: { id: userId },
-        },
-      });
-
-      if (existingUser) {
-        return res.status(409).json({ error: 'This email is already associated with another account.' });
-      }
-
-      const updatedProfile = await prisma.userProfile.update({
-        where: { id: userId },
-        data: { email: normalizedEmail },
-      });
-
-      return res.json({
-        success: true,
-        message: 'Email updated successfully',
-        email: updatedProfile.email,
-        profile: updatedProfile,
-      });
-    } catch (err) {
-      console.error('Error updating email:', err);
-      return res.status(500).json({ error: 'Failed to update email' });
+      console.error('Unexpected error requesting email verification:', err);
+      return res.status(500).json({ error: 'Failed to process email verification request.' });
     }
   },
 
-  async updateMobile(req: AuthenticatedRequest, res: Response) {
+  async verifyEmail(req: AuthenticatedRequest, res: Response) {
     try {
       const userId = req.userId;
       if (!userId) {
         return res.status(401).json({ error: 'Unauthorized: Authentication required.' });
       }
 
-      const phoneRaw = req.body?.phone || req.body?.mobile;
-      if (!phoneRaw || typeof phoneRaw !== 'string') {
-        return res.status(400).json({ error: 'A valid mobile number is required.' });
-      }
+      const email = req.body?.email;
+      const code = req.body?.code;
+      const result = await verificationService.verifyAndUpdateEmail(userId, email, code);
 
-      const normalizedPhone = sanitizeString(phoneRaw.trim());
-      if (!PHONE_REGEX.test(normalizedPhone)) {
-        return res.status(400).json({ error: 'Invalid mobile number format. Please enter a valid 7-15 digit phone number.' });
-      }
-
-      // Check if mobile is used by another account if unique constraint desired
-      const existingUser = await prisma.userProfile.findFirst({
-        where: {
-          phone: normalizedPhone,
-          NOT: { id: userId },
-        },
-      });
-
-      if (existingUser) {
-        return res.status(409).json({ error: 'This mobile number is already associated with another account.' });
-      }
-
-      const updatedProfile = await prisma.userProfile.update({
-        where: { id: userId },
-        data: { phone: normalizedPhone },
-      });
+      const cleanProfile = {
+        ...result.profile,
+        avatar: resolveMediaUrl(result.profile.avatar, req),
+        photoUrl: result.profile.photoUrl ? resolveMediaUrl(result.profile.photoUrl, req) : resolveMediaUrl(result.profile.avatar, req),
+      };
 
       return res.json({
-        success: true,
-        message: 'Mobile number updated successfully',
-        phone: updatedProfile.phone,
-        mobile: updatedProfile.phone,
-        profile: updatedProfile,
+        ...result,
+        profile: cleanProfile,
       });
-    } catch (err) {
-      console.error('Error updating mobile number:', err);
-      return res.status(500).json({ error: 'Failed to update mobile number' });
+    } catch (err: any) {
+      if (err instanceof VerificationError) {
+        return res.status(err.statusCode).json({ error: err.message, code: err.code });
+      }
+      console.error('Unexpected error verifying email:', err);
+      return res.status(500).json({ error: 'Failed to verify email.' });
     }
+  },
+
+  async requestMobileVerification(req: AuthenticatedRequest, res: Response) {
+    try {
+      const userId = req.userId;
+      if (!userId) {
+        return res.status(401).json({ error: 'Unauthorized: Authentication required.' });
+      }
+
+      const phone = req.body?.phone || req.body?.mobile;
+      const result = await verificationService.requestMobileVerification(userId, phone);
+      return res.json(result);
+    } catch (err: any) {
+      if (err instanceof VerificationError) {
+        return res.status(err.statusCode).json({ error: err.message, code: err.code });
+      }
+      console.error('Unexpected error requesting mobile verification:', err);
+      return res.status(500).json({ error: 'Failed to process mobile verification request.' });
+    }
+  },
+
+  async verifyMobile(req: AuthenticatedRequest, res: Response) {
+    try {
+      const userId = req.userId;
+      if (!userId) {
+        return res.status(401).json({ error: 'Unauthorized: Authentication required.' });
+      }
+
+      const phone = req.body?.phone || req.body?.mobile;
+      const code = req.body?.code;
+      const result = await verificationService.verifyAndUpdateMobile(userId, phone, code);
+
+      const cleanProfile = {
+        ...result.profile,
+        avatar: resolveMediaUrl(result.profile.avatar, req),
+        photoUrl: result.profile.photoUrl ? resolveMediaUrl(result.profile.photoUrl, req) : resolveMediaUrl(result.profile.avatar, req),
+      };
+
+      return res.json({
+        ...result,
+        profile: cleanProfile,
+      });
+    } catch (err: any) {
+      if (err instanceof VerificationError) {
+        return res.status(err.statusCode).json({ error: err.message, code: err.code });
+      }
+      console.error('Unexpected error verifying mobile:', err);
+      return res.status(500).json({ error: 'Failed to verify mobile number.' });
+    }
+  },
+
+  // -------------------------------------------------------------
+  // Legacy / Backwards-Compatible Contact Update Endpoints
+  // Protected: Requires OTP code, preventing unverified bypass
+  // -------------------------------------------------------------
+
+  async updateEmail(req: AuthenticatedRequest, res: Response) {
+    const code = req.body?.code;
+    if (!code) {
+      return res.status(400).json({
+        error: 'Verification code is required to update email address. Please request a verification code first.',
+        requiresVerification: true,
+      });
+    }
+    return profileController.verifyEmail(req, res);
+  },
+
+  async updateMobile(req: AuthenticatedRequest, res: Response) {
+    const code = req.body?.code;
+    if (!code) {
+      return res.status(400).json({
+        error: 'Verification code is required to update mobile number. Please request a verification code first.',
+        requiresVerification: true,
+      });
+    }
+    return profileController.verifyMobile(req, res);
   },
 
   async uploadAvatar(req: AuthenticatedRequest, res: Response) {

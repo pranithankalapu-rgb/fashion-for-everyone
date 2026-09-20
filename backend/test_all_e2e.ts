@@ -58,6 +58,24 @@ async function testAll() {
   });
 
   // 3. User Profile
+  await prisma.userProfile.upsert({
+    where: { id: 'user_01' },
+    update: { name: 'Sophia Laurent' },
+    create: {
+      id: 'user_01',
+      name: 'Sophia Laurent',
+      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
+      skinTone: 'Warm Golden',
+      undertone: 'Warm',
+      hairColor: 'Chestnut Brown',
+      bodyShape: 'Hourglass',
+      measurements: { heightCm: 170, chestCm: 88, waistCm: 68, hipsCm: 94 },
+      role: 'customer',
+      approvalStatus: 'Approved',
+      status: 'Active',
+    },
+  });
+
   await assertTest('Get User Profile from PostgreSQL', async () => {
     const res = await fetch(`${BASE_URL}/profile`, {
       headers: { 'x-user-id': 'user_01' },
@@ -399,11 +417,26 @@ async function testAll() {
       method: 'POST',
     });
     const likeData = await likeRes.json();
-    return res.status === 201 && likeRes.status === 200;
+    const ok = res.status === 201 && likeRes.status === 200;
+    if (createdLookId) {
+      await prisma.outfitLook.delete({ where: { id: createdLookId } }).catch(() => {});
+    }
+    return ok;
   });
 
   // 12. Store Reservation Transaction
   await assertTest('Create Store Reservation in PostgreSQL with Transaction', async () => {
+    const store = await prisma.storeStock.findUnique({ where: { id: 'store_1' } });
+    if (store) {
+      const stock = (store.sizeStock as Record<string, number>) || {};
+      if ((stock.S || 0) < 2) {
+        await prisma.storeStock.update({
+          where: { id: 'store_1' },
+          data: { sizeStock: { ...stock, S: 10 } },
+        });
+      }
+    }
+
     const res = await fetch(`${BASE_URL}/stores/reserve`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -416,7 +449,19 @@ async function testAll() {
       }),
     });
     const data = await res.json();
-    return res.status === 201 && data.reservation.status === 'CONFIRMED';
+    const ok = res.status === 201 && data.reservation?.status === 'CONFIRMED';
+    if (data.reservation?.id) {
+      await prisma.reservation.delete({ where: { id: data.reservation.id } }).catch(() => {});
+      const afterStore = await prisma.storeStock.findUnique({ where: { id: 'store_1' } });
+      if (afterStore) {
+        const afterStock = (afterStore.sizeStock as Record<string, number>) || {};
+        await prisma.storeStock.update({
+          where: { id: 'store_1' },
+          data: { sizeStock: { ...afterStock, S: (afterStock.S || 0) + 1 } },
+        });
+      }
+    }
+    return ok;
   });
 
   // 13. AI Styling & Photo Analysis
