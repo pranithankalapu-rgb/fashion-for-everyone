@@ -82,7 +82,7 @@ export default function AiStylistScreen({ route, navigation }: any) {
   // No safe-area inset is added above the keyboard, preventing large blank gaps.
   const chatInputBottomPadding = isKeyboardVisible
     ? Spacing.sm
-    : (insets.bottom > 0 ? insets.bottom + Spacing.xs : Spacing.lg);
+    : (insets.bottom > 0 ? insets.bottom + Spacing.xs : Spacing.md);
 
   const handleGetStyling = async () => {
     setLoading(true);
@@ -179,20 +179,25 @@ export default function AiStylistScreen({ route, navigation }: any) {
   };
 
   const gradientTop = isDark ? '#1a103d' : '#e0e7ff';
-  const Container = Platform.OS === 'ios' ? KeyboardAvoidingView : View;
-  const containerProps = Platform.OS === 'ios' ? { behavior: 'padding' as const } : {};
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={[styles.safeArea, { backgroundColor: gradientTop }]}>
-      <Container
-        {...containerProps}
+      <KeyboardAvoidingView
+        behavior="padding"
+        keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
         style={[styles.mainContainer, { backgroundColor: colors.background }]}
       >
         {/* Header with gradient */}
         <LinearGradient colors={[gradientTop, colors.background]} style={styles.header}>
           <View style={styles.headerTop}>
             {navigation?.canGoBack?.() && (
-              <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+              <TouchableOpacity
+                style={styles.backBtn}
+                onPress={() => {
+                  Keyboard.dismiss();
+                  navigation.goBack();
+                }}
+              >
                 <Ionicons name="arrow-back" size={24} color={colors.text} />
               </TouchableOpacity>
             )}
@@ -206,7 +211,10 @@ export default function AiStylistScreen({ route, navigation }: any) {
           <View style={[styles.tabs, { backgroundColor: colors.surface }]}>
             <TouchableOpacity
               style={[styles.tab, tab === 'chat' && [styles.tabActive, { backgroundColor: colors.primaryFaded }]]}
-              onPress={() => setTab('chat')}
+              onPress={() => {
+                Keyboard.dismiss();
+                setTab('chat');
+              }}
             >
               <Text style={[styles.tabText, tab === 'chat' && [styles.tabTextActive, { color: colors.primary }]]}>
                 💬 Chat Stylist
@@ -214,7 +222,10 @@ export default function AiStylistScreen({ route, navigation }: any) {
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.tab, tab === 'styling' && [styles.tabActive, { backgroundColor: colors.primaryFaded }]]}
-              onPress={() => setTab('styling')}
+              onPress={() => {
+                Keyboard.dismiss();
+                setTab('styling');
+              }}
             >
               <Text style={[styles.tabText, tab === 'styling' && [styles.tabTextActive, { color: colors.primary }]]}>
                 ✨ Style Advice
@@ -235,7 +246,11 @@ export default function AiStylistScreen({ route, navigation }: any) {
               onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
             >
               {messages.length === 0 && (
-                <View style={[styles.chatEmpty, isKeyboardVisible && styles.chatEmptyCompact]}>
+                <TouchableOpacity
+                  activeOpacity={1}
+                  onPress={Keyboard.dismiss}
+                  style={[styles.chatEmpty, isKeyboardVisible && styles.chatEmptyCompact]}
+                >
                   <Ionicons name="sparkles" size={isKeyboardVisible ? 32 : 48} color={colors.primary} />
                   <Text style={[styles.chatEmptyTitle, { color: colors.text }, isKeyboardVisible && styles.chatEmptyTitleCompact]}>
                     Ask me anything!
@@ -245,7 +260,7 @@ export default function AiStylistScreen({ route, navigation }: any) {
                       "What should I wear to a summer wedding?" or "Find me casual outfits under $50"
                     </Text>
                   )}
-                </View>
+                </TouchableOpacity>
               )}
               {messages.map((msg, i) => (
                 <View
@@ -313,10 +328,9 @@ export default function AiStylistScreen({ route, navigation }: any) {
                   value={chatInput}
                   onChangeText={setChatInput}
                   onFocus={() => {
-                    setIsKeyboardVisible(true);
                     setTimeout(() => {
                       scrollViewRef.current?.scrollToEnd({ animated: true });
-                    }, 60);
+                    }, 100);
                   }}
                   onSubmitEditing={handleSendChat}
                   returnKeyType="send"
@@ -458,7 +472,7 @@ export default function AiStylistScreen({ route, navigation }: any) {
             <View style={{ height: 100 }} />
           </ScrollView>
         )}
-      </Container>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

@@ -57,6 +57,7 @@
     "vite": "^8.2.0"
   },
   "overrides": {
+    "image-size": "^2.0.4",
     "undici": "^6.28.1",
     "@tootallnate/once": "^2.0.1",
     "tar": "^7.5.22",
