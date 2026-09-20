@@ -2,7 +2,7 @@ import type { Response } from 'express';
 import type { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
 import { sanitizeObject, sanitizeString } from '../security';
-import { mediaService } from '../services/mediaService';
+import { mediaService, resolveMediaUrl } from '../services/mediaService';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_REGEX = /^\+?[0-9\s\-()]{7,20}$/;
@@ -24,7 +24,13 @@ export const profileController = {
         return res.status(404).json({ error: 'No user profile found. Complete onboarding first.' });
       }
 
-      res.json(profile);
+      const cleanProfile = {
+        ...profile,
+        avatar: resolveMediaUrl(profile.avatar, req),
+        photoUrl: profile.photoUrl ? resolveMediaUrl(profile.photoUrl, req) : resolveMediaUrl(profile.avatar, req),
+      };
+
+      res.json(cleanProfile);
     } catch (err) {
       console.error('Error fetching user profile:', err);
       res.status(500).json({ error: 'Failed to fetch user profile' });
@@ -186,11 +192,18 @@ export const profileController = {
         },
       });
 
+      const resolvedUrl = resolveMediaUrl(avatarUrl, req);
+      const cleanProfile = {
+        ...updatedProfile,
+        avatar: resolvedUrl,
+        photoUrl: resolvedUrl,
+      };
+
       return res.json({
         success: true,
         message: 'Profile picture updated successfully',
-        avatar: avatarUrl,
-        profile: updatedProfile,
+        avatar: resolvedUrl,
+        profile: cleanProfile,
       });
     } catch (err: any) {
       console.error('Error updating avatar:', err);

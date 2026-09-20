@@ -4,6 +4,7 @@ import { sanitizeString } from '../security';
 import type { AuthenticatedRequest } from '../middleware/auth';
 
 import { prisma } from '../db';
+import { resolveMediaUrl } from '../services/mediaService';
 
 const COOKIE_OPTIONS = {
   httpOnly: true,
@@ -134,6 +135,12 @@ export const authController = {
 
       if (profile) {
         const { passwordHash: _ph, refreshToken: _rt, ...cleanProfile } = profile as any;
+        if (cleanProfile.avatar) {
+          cleanProfile.avatar = resolveMediaUrl(cleanProfile.avatar, req);
+        }
+        if (cleanProfile.photoUrl) {
+          cleanProfile.photoUrl = resolveMediaUrl(cleanProfile.photoUrl, req);
+        }
         return res.json({
           success: true,
           user: cleanProfile,

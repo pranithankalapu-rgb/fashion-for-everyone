@@ -84,7 +84,7 @@ export default function ChangeEmailScreen({ navigation }: any) {
         >
           <Ionicons name="arrow-back" size={22} color={colors.text} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Change Email</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Set Mail</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -140,7 +140,7 @@ export default function ChangeEmailScreen({ navigation }: any) {
         {/* Action Button */}
         <View style={styles.actionContainer}>
           <Button
-            title={loading ? 'Updating Email...' : 'Save New Email'}
+            title={loading ? 'Updating Email...' : 'Set Mail'}
             onPress={handleSave}
             loading={loading}
             disabled={loading || !newEmail.trim()}

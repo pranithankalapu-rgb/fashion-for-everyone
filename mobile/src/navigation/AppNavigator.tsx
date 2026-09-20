@@ -27,15 +27,17 @@ import ThemeSettingsScreen from '../screens/ThemeSettingsScreen';
 import ChangeProfilePictureScreen from '../screens/ChangeProfilePictureScreen';
 import ChangeEmailScreen from '../screens/ChangeEmailScreen';
 import ChangeMobileScreen from '../screens/ChangeMobileScreen';
+import DesignDetailScreen from '../screens/DesignDetailScreen';
 
 import { useCart } from '../hooks/useCart';
-import type { ColorCombo } from '../types/fashion';
+import type { ColorCombo, Design } from '../types/fashion';
 
 export type RootStackParamList = {
   Splash: undefined;
   Login: undefined;
   Main: undefined;
   ProductDetail: { productId: string };
+  DesignDetail: { designId: string; design?: Design };
   Cart: undefined;
   Checkout: undefined;
   Orders: undefined;
@@ -136,6 +138,7 @@ export default function AppNavigator() {
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Main" component={MainTabs} />
       <Stack.Screen name="ProductDetail" component={ProductDetailScreen} />
+      <Stack.Screen name="DesignDetail" component={DesignDetailScreen} />
       <Stack.Screen name="Cart" component={CartScreen} options={{ animation: 'slide_from_bottom' }} />
       <Stack.Screen name="Checkout" component={CheckoutScreen} />
       <Stack.Screen name="Orders" component={OrdersScreen} />

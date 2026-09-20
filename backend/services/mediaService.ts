@@ -110,3 +110,23 @@ export const mediaService = {
     return provider.upload(file);
   },
 };
+
+export function resolveMediaUrl(url?: string | null, req?: any): string {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
+    return url;
+  }
+  const cleanUrl = url.startsWith('/') ? url : `/${url}`;
+  if (req && typeof req.get === 'function') {
+    const host = req.get('x-forwarded-host') || req.get('host');
+    const protocol = req.get('x-forwarded-proto') || req.protocol || 'http';
+    if (host) {
+      return `${protocol}://${host}${cleanUrl}`;
+    }
+  }
+  const serverUrl = process.env.SERVER_URL || process.env.BACKEND_URL;
+  if (serverUrl) {
+    return `${serverUrl.replace(/\/+$/, '')}${cleanUrl}`;
+  }
+  return cleanUrl;
+}

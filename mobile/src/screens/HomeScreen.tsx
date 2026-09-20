@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -11,12 +11,14 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useFocusEffect } from '@react-navigation/native';
 import { FontSize, FontWeight, Spacing, BorderRadius, Shadows } from '../constants/theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
 import { useWishlist } from '../hooks/useWishlist';
 import api from '../services/api';
+import Avatar from '../components/Avatar';
 import type { RetailProduct, OutfitLook } from '../types/fashion';
 
 const CATEGORIES = ['All', 'Tops', 'Bottoms', 'Dresses', 'Outerwear', 'Accessories', 'Footwear'];
@@ -24,7 +26,7 @@ const CATEGORIES = ['All', 'Tops', 'Bottoms', 'Dresses', 'Outerwear', 'Accessori
 export default function HomeScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
-  const { user, role } = useAuth();
+  const { user, role, refreshUser } = useAuth();
   const { toggleWishlist, isWishlisted } = useWishlist();
   const [products, setProducts] = useState<RetailProduct[]>([]);
   const [socialFeed, setSocialFeed] = useState<OutfitLook[]>([]);
@@ -46,9 +48,19 @@ export default function HomeScreen({ navigation }: any) {
     loadData();
   }, []);
 
+  // Sync profile when Home tab is focused
+  useFocusEffect(
+    useCallback(() => {
+      refreshUser().catch(() => {});
+    }, [refreshUser])
+  );
+
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadData();
+    await Promise.all([
+      loadData(),
+      refreshUser().catch(() => {}),
+    ]);
     setRefreshing(false);
   };
 
@@ -74,16 +86,21 @@ export default function HomeScreen({ navigation }: any) {
       {/* Header */}
       <LinearGradient colors={[gradientTop, colors.background]} style={[styles.header, { paddingTop: headerPaddingTop }]}>
         <View style={styles.headerTop}>
-          <View>
-            <Text style={[styles.greeting, { color: colors.text }]}>Hello{user?.name ? `, ${user.name}` : ''}! 👋</Text>
+          <View style={{ flex: 1, marginRight: Spacing.md }}>
+            <Text style={[styles.greeting, { color: colors.text }]} numberOfLines={1}>
+              Hello{user?.name ? `, ${user.name}` : ''}! 👋
+            </Text>
             <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>Discover your perfect style</Text>
           </View>
-          <TouchableOpacity
-            style={styles.notifBtn}
+          <Avatar
+            uri={user?.avatar}
+            name={user?.name || 'Hello'}
+            size={42}
+            borderColor={colors.primary}
+            borderWidth={1.5}
             onPress={() => navigation.navigate('Profile')}
-          >
-            <Ionicons name="person-circle-outline" size={36} color={colors.primary} />
-          </TouchableOpacity>
+            accessibilityLabel="View Profile"
+          />
         </View>
 
         {/* Search bar */}

@@ -291,6 +291,7 @@ router.put('/store-settings', requireRole(['retailer']), retailerController.upda
 // Designer Showcase & Voting Routes
 router.get('/designers', designerController.getDesigners);
 router.get('/designs', designerController.getDesigns);
+router.get('/designs/:id', designerController.getDesignById);
 router.post('/designs', requireRole(['designer', 'retailer']), designerController.createDesign);
 router.post('/designs/:id/vote', designerController.voteDesign);
 

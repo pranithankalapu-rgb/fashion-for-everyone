@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,8 +10,10 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useFocusEffect } from '@react-navigation/native';
 import { FontSize, FontWeight, Spacing, BorderRadius, Shadows } from '../constants/theme';
 import Button from '../components/Button';
+import Avatar from '../components/Avatar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
@@ -24,11 +26,13 @@ export default function ProfileScreen({ navigation }: any) {
   const { user, role, logout, switchRole, isAuthenticated } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      api.getProfile().then(setProfile).catch(() => {});
-    }
-  }, [isAuthenticated]);
+  useFocusEffect(
+    useCallback(() => {
+      if (isAuthenticated) {
+        api.getProfile().then(setProfile).catch(() => {});
+      }
+    }, [isAuthenticated])
+  );
 
   const handleLogout = () => {
     Alert.alert('Logout', 'Are you sure you want to sign out?', [
@@ -80,22 +84,18 @@ export default function ProfileScreen({ navigation }: any) {
         colors={[gradientTop, colors.background]}
         style={[styles.header, { paddingTop: headerPaddingTop }]}
       >
-        <TouchableOpacity
-          style={styles.avatarContainer}
-          onPress={() => navigation.navigate('ChangeProfilePicture')}
-          activeOpacity={0.8}
-        >
-          {displayProfile?.avatar ? (
-            <Image source={{ uri: displayProfile.avatar }} style={[styles.avatar, { borderColor: colors.primary }]} />
-          ) : (
-            <View style={[styles.avatarPlaceholder, { backgroundColor: colors.surface }]}>
-              <Ionicons name="person" size={40} color={colors.textMuted} />
-            </View>
-          )}
-          <View style={[styles.cameraBadge, { backgroundColor: colors.primary }]}>
-            <Ionicons name="camera" size={14} color="#FFF" />
-          </View>
-        </TouchableOpacity>
+        <View style={styles.avatarContainer}>
+          <Avatar
+            uri={displayProfile?.avatar}
+            name={displayProfile?.name}
+            size={96}
+            borderColor={colors.primary}
+            borderWidth={3}
+            showCameraBadge
+            onPress={() => navigation.navigate('ChangeProfilePicture')}
+            accessibilityLabel="Change profile picture"
+          />
+        </View>
 
         <Text style={[styles.name, { color: colors.text }]}>{displayProfile?.name || 'Guest User'}</Text>
         <Text style={[styles.email, { color: colors.textSecondary }]}>{displayProfile?.email || 'Not signed in'}</Text>

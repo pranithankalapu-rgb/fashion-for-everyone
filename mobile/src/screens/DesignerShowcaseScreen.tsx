@@ -25,6 +25,7 @@ import { useAuth } from '../hooks/useAuth';
 import api from '../services/api';
 import type { Designer, Design } from '../types/fashion';
 import { OCCASIONS } from '../constants/config';
+import { resolveMediaUrl } from '../utils/media';
 
 const SAMPLE_IMAGE_OPTIONS = [
   'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=600&q=80',
@@ -73,6 +74,14 @@ export default function DesignerShowcaseScreen({ navigation }: any) {
     setRefreshing(true);
     await loadData();
     setRefreshing(false);
+  };
+
+  const lastPressRef = React.useRef(0);
+  const handleOpenDesign = (item: Design) => {
+    const now = Date.now();
+    if (now - lastPressRef.current < 600) return;
+    lastPressRef.current = now;
+    navigation.navigate('DesignDetail', { designId: item.id, design: item });
   };
 
   const handleVote = async (id: string, rating: number) => {
@@ -204,20 +213,25 @@ export default function DesignerShowcaseScreen({ navigation }: any) {
           {/* Published Catalog */}
           <Text style={[styles.sectionHeading, { color: colors.textSecondary }]}>My Portfolio & Designs ({designs.length})</Text>
           {designs.map((item) => (
-            <View key={item.id} style={[styles.studioDesignRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <Image source={{ uri: item.imageUrl || SAMPLE_IMAGE_OPTIONS[0] }} style={styles.studioDesignThumb} />
+            <TouchableOpacity
+              key={item.id}
+              style={[styles.studioDesignRow, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              onPress={() => handleOpenDesign(item)}
+              activeOpacity={0.8}
+            >
+              <Image source={{ uri: resolveMediaUrl(item.imageUrl) || SAMPLE_IMAGE_OPTIONS[0] }} style={styles.studioDesignThumb} />
               <View style={{ flex: 1, marginLeft: Spacing.md }}>
-                <Text style={[styles.designTitle, { color: colors.text }]} numberOfLines={1}>{item.title}</Text>
-                <Text style={[styles.designDesigner, { color: colors.textMuted }]}>{item.collection}</Text>
+                <Text style={[styles.designTitle, { color: colors.text }]} numberOfLines={1}>{item.title || 'Exclusive Look'}</Text>
+                <Text style={[styles.designDesigner, { color: colors.textMuted }]}>{item.collection || 'Collection'}</Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.md, marginTop: Spacing.xs }}>
-                  <Text style={[styles.designPrice, { color: colors.primary }]}>${item.price.toFixed(0)}</Text>
+                  <Text style={[styles.designPrice, { color: colors.primary }]}>${(item.price ?? 0).toFixed(0)}</Text>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
                     <Ionicons name="star" size={13} color={colors.warning} />
-                    <Text style={styles.miniVoteText}>{item.rating.toFixed(1)} ({item.votesCount} votes)</Text>
+                    <Text style={styles.miniVoteText}>{(item.rating ?? 5).toFixed(1)} ({item.votesCount ?? 0} votes)</Text>
                   </View>
                 </View>
               </View>
-            </View>
+            </TouchableOpacity>
           ))}
         </ScrollView>
       ) : tab === 'designers' ? (
@@ -228,7 +242,7 @@ export default function DesignerShowcaseScreen({ navigation }: any) {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
           renderItem={({ item }) => (
             <View style={[styles.designerCard, { backgroundColor: colors.surface }]}>
-              <Image source={{ uri: item.avatar }} style={styles.designerAvatar} />
+              <Image source={{ uri: resolveMediaUrl(item.avatar) }} style={styles.designerAvatar} />
               <View style={styles.designerInfo}>
                 <View style={styles.nameRow}>
                   <Text style={[styles.designerName, { color: colors.text }]}>{item.name}</Text>
@@ -243,7 +257,7 @@ export default function DesignerShowcaseScreen({ navigation }: any) {
                   </View>
                   <View style={styles.stat}>
                     <Ionicons name="star" size={12} color={colors.warning} />
-                    <Text style={[styles.statValue, { color: colors.text }]}>{item.avgRating.toFixed(1)}</Text>
+                    <Text style={[styles.statValue, { color: colors.text }]}>{(item.avgRating ?? 5).toFixed(1)}</Text>
                   </View>
                   {item.badges.map((badge, i) => (
                     <View key={i} style={styles.badgePill}>
@@ -264,20 +278,30 @@ export default function DesignerShowcaseScreen({ navigation }: any) {
           columnWrapperStyle={{ gap: Spacing.md }}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
           renderItem={({ item }) => (
-            <View style={[styles.designCard, { backgroundColor: colors.surface }]}>
-              <Image source={{ uri: item.imageUrl || SAMPLE_IMAGE_OPTIONS[0] }} style={styles.designImage} />
+            <TouchableOpacity
+              style={[styles.designCard, { backgroundColor: colors.surface }]}
+              onPress={() => handleOpenDesign(item)}
+              activeOpacity={0.8}
+            >
+              <Image source={{ uri: resolveMediaUrl(item.imageUrl) || SAMPLE_IMAGE_OPTIONS[0] }} style={styles.designImage} />
               <View style={styles.designInfo}>
-                <Text style={[styles.designTitle, { color: colors.text }]} numberOfLines={1}>{item.title}</Text>
-                <Text style={[styles.designDesigner, { color: colors.textMuted }]}>{item.designerName}</Text>
+                <Text style={[styles.designTitle, { color: colors.text }]} numberOfLines={1}>{item.title || 'Exclusive Look'}</Text>
+                <Text style={[styles.designDesigner, { color: colors.textMuted }]}>{item.designerName || 'Designer'}</Text>
                 <View style={styles.designBottom}>
-                  <Text style={[styles.designPrice, { color: colors.primary }]}>${item.price.toFixed(0)}</Text>
-                  <TouchableOpacity onPress={() => handleVote(item.id, 5)} style={styles.miniVoteBtn}>
+                  <Text style={[styles.designPrice, { color: colors.primary }]}>${(item.price ?? 0).toFixed(0)}</Text>
+                  <TouchableOpacity
+                    onPress={() => {
+                      handleVote(item.id, 5);
+                    }}
+                    style={styles.miniVoteBtn}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
                     <Ionicons name="star" size={14} color={colors.warning} />
-                    <Text style={styles.miniVoteText}>{item.rating.toFixed(1)}</Text>
+                    <Text style={styles.miniVoteText}>{(item.rating ?? 5).toFixed(1)}</Text>
                   </TouchableOpacity>
                 </View>
               </View>
-            </View>
+            </TouchableOpacity>
           )}
         />
       )}

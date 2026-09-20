@@ -1,6 +1,7 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import { API_BASE_URL, PRODUCTION_API_URL, FALLBACK_API_URL } from '../constants/config';
+import { resolveMediaUrl } from '../utils/media';
 import type {
   UserProfile,
   RetailProduct,
@@ -250,33 +251,57 @@ export const api = {
 
   async getMe() {
     const res = await client.get<{ success: boolean; user: any }>('/auth/me');
-    return res.data;
+    const data = res.data;
+    if (data.user?.avatar) {
+      data.user.avatar = resolveMediaUrl(data.user.avatar);
+    }
+    if (data.user?.photoUrl) {
+      data.user.photoUrl = resolveMediaUrl(data.user.photoUrl);
+    }
+    return data;
   },
 
   // --- Profile ---
   async getProfile(): Promise<UserProfile> {
     const res = await client.get<UserProfile>('/profile');
-    return res.data;
+    const profile = res.data;
+    if (profile?.avatar) {
+      profile.avatar = resolveMediaUrl(profile.avatar);
+    }
+    if (profile?.photoUrl) {
+      profile.photoUrl = resolveMediaUrl(profile.photoUrl);
+    }
+    return profile;
   },
 
   async updateProfile(profile: Partial<UserProfile>): Promise<UserProfile> {
     const res = await client.put<{ message: string; profile: UserProfile }>('/profile', profile);
-    return res.data.profile;
+    const updated = res.data.profile;
+    if (updated?.avatar) updated.avatar = resolveMediaUrl(updated.avatar);
+    if (updated?.photoUrl) updated.photoUrl = resolveMediaUrl(updated.photoUrl);
+    return updated;
   },
 
   async patchProfile(profile: Partial<UserProfile>): Promise<UserProfile> {
     const res = await client.patch<{ message: string; profile: UserProfile }>('/profile', profile);
-    return res.data.profile;
+    const updated = res.data.profile;
+    if (updated?.avatar) updated.avatar = resolveMediaUrl(updated.avatar);
+    if (updated?.photoUrl) updated.photoUrl = resolveMediaUrl(updated.photoUrl);
+    return updated;
   },
 
   async updateEmail(email: string): Promise<{ success: boolean; message: string; email: string; profile: UserProfile }> {
     const res = await client.patch<{ success: boolean; message: string; email: string; profile: UserProfile }>('/profile/email', { email });
-    return res.data;
+    const data = res.data;
+    if (data.profile?.avatar) data.profile.avatar = resolveMediaUrl(data.profile.avatar);
+    return data;
   },
 
   async updateMobile(phone: string): Promise<{ success: boolean; message: string; phone: string; profile: UserProfile }> {
     const res = await client.patch<{ success: boolean; message: string; phone: string; profile: UserProfile }>('/profile/mobile', { phone });
-    return res.data;
+    const data = res.data;
+    if (data.profile?.avatar) data.profile.avatar = resolveMediaUrl(data.profile.avatar);
+    return data;
   },
 
   async uploadAvatar(data: FormData | { avatarUrl: string }): Promise<{ success: boolean; message: string; avatar: string; profile: UserProfile }> {
@@ -284,9 +309,26 @@ export const api = {
     const res = await client.post<{ success: boolean; message: string; avatar: string; profile: UserProfile }>(
       '/profile/avatar',
       data,
-      isFormData ? { headers: { 'Content-Type': 'multipart/form-data' } } : undefined
+      isFormData
+        ? {
+            headers: {
+              'Content-Type': 'multipart/form-data',
+            },
+            transformRequest: (d) => d,
+          }
+        : undefined
     );
-    return res.data;
+    const result = res.data;
+    if (result.avatar) {
+      result.avatar = resolveMediaUrl(result.avatar);
+    }
+    if (result.profile?.avatar) {
+      result.profile.avatar = resolveMediaUrl(result.profile.avatar);
+    }
+    if (result.profile?.photoUrl) {
+      result.profile.photoUrl = resolveMediaUrl(result.profile.photoUrl);
+    }
+    return result;
   },
 
   // --- Products ---
@@ -384,6 +426,18 @@ export const api = {
     const params = occasion && occasion !== 'All' ? { occasion } : undefined;
     const res = await client.get<Design[]>('/designs', { params });
     return res.data;
+  },
+
+  async getDesignById(id: string): Promise<Design> {
+    try {
+      const res = await client.get<Design>(`/designs/${id}`);
+      return res.data;
+    } catch (err) {
+      const all = await api.getDesigns().catch(() => []);
+      const match = all.find((d) => d.id === id);
+      if (match) return match;
+      throw err;
+    }
   },
 
   async voteDesign(id: string, rating: number): Promise<Design> {

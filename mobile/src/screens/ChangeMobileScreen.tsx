@@ -84,7 +84,7 @@ export default function ChangeMobileScreen({ navigation }: any) {
         >
           <Ionicons name="arrow-back" size={22} color={colors.text} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Change Mobile Number</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Set Phone Number</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -140,7 +140,7 @@ export default function ChangeMobileScreen({ navigation }: any) {
         {/* Action Button */}
         <View style={styles.actionContainer}>
           <Button
-            title={loading ? 'Updating Mobile...' : 'Save Mobile Number'}
+            title={loading ? 'Updating Phone Number...' : 'Set Phone Number'}
             onPress={handleSave}
             loading={loading}
             disabled={loading || !newPhone.trim()}

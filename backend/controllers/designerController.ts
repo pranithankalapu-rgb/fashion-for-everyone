@@ -37,6 +37,24 @@ export const designerController = {
     }
   },
 
+  async getDesignById(req: AuthenticatedRequest, res: Response) {
+    try {
+      const id = sanitizeString(req.params.id);
+      const design = await prisma.design.findUnique({
+        where: { id },
+      });
+
+      if (!design) {
+        return res.status(404).json({ error: 'Design not found' });
+      }
+
+      res.json(design);
+    } catch (err) {
+      console.error('Error fetching design by id:', err);
+      res.status(500).json({ error: 'Failed to fetch design' });
+    }
+  },
+
   async createDesign(req: AuthenticatedRequest, res: Response) {
     try {
       const title = sanitizeString(req.body.title);

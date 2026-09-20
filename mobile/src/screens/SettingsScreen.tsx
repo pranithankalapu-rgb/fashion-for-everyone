@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FontSize, FontWeight, Spacing, BorderRadius, Shadows } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
 import { useAuth } from '../hooks/useAuth';
+import Avatar from '../components/Avatar';
 
 export default function SettingsScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
@@ -57,13 +58,13 @@ export default function SettingsScreen({ navigation }: any) {
       >
         {/* User Mini Card */}
         <View style={[styles.userCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          {user?.avatar ? (
-            <Image source={{ uri: user.avatar }} style={styles.userAvatar} />
-          ) : (
-            <View style={[styles.avatarPlaceholder, { backgroundColor: colors.surfaceLight }]}>
-              <Ionicons name="person" size={28} color={colors.textMuted} />
-            </View>
-          )}
+          <Avatar
+            uri={user?.avatar}
+            name={user?.name || 'Fashion Member'}
+            size={56}
+            borderColor={colors.primary}
+            borderWidth={1.5}
+          />
           <View style={styles.userInfo}>
             <Text style={[styles.userName, { color: colors.text }]} numberOfLines={1}>
               {user?.name || 'Fashion Member'}
@@ -78,17 +79,18 @@ export default function SettingsScreen({ navigation }: any) {
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>ACCOUNT</Text>
           <View style={[styles.cardGroup, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            {/* Change Profile Picture */}
+            {/* Set Profile Picture */}
             <TouchableOpacity
               style={styles.row}
               onPress={() => navigation.navigate('ChangeProfilePicture')}
               activeOpacity={0.7}
+              accessibilityLabel="Set Profile Picture"
             >
               <View style={[styles.iconBox, { backgroundColor: colors.primaryFaded }]}>
                 <Ionicons name="camera-outline" size={20} color={colors.primary} />
               </View>
               <View style={styles.rowContent}>
-                <Text style={[styles.rowLabel, { color: colors.text }]}>Change Profile Picture</Text>
+                <Text style={[styles.rowLabel, { color: colors.text }]}>Set Profile Picture</Text>
                 <Text style={[styles.rowSubtitle, { color: colors.textMuted }]}>
                   Update avatar or pick a photo
                 </Text>
@@ -98,19 +100,20 @@ export default function SettingsScreen({ navigation }: any) {
 
             <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
-            {/* Change Email */}
+            {/* Set Phone Number */}
             <TouchableOpacity
               style={styles.row}
-              onPress={() => navigation.navigate('ChangeEmail')}
+              onPress={() => navigation.navigate('ChangeMobile')}
               activeOpacity={0.7}
+              accessibilityLabel="Set Phone Number"
             >
               <View style={[styles.iconBox, { backgroundColor: colors.primaryFaded }]}>
-                <Ionicons name="mail-outline" size={20} color={colors.primary} />
+                <Ionicons name="call-outline" size={20} color={colors.primary} />
               </View>
               <View style={styles.rowContent}>
-                <Text style={[styles.rowLabel, { color: colors.text }]}>Change Email</Text>
+                <Text style={[styles.rowLabel, { color: colors.text }]}>Set Phone Number</Text>
                 <Text style={[styles.rowSubtitle, { color: colors.textMuted }]} numberOfLines={1}>
-                  {user?.email || 'Set your email address'}
+                  {user?.phone || 'Not set'}
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
@@ -118,19 +121,20 @@ export default function SettingsScreen({ navigation }: any) {
 
             <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
-            {/* Change Mobile Number */}
+            {/* Set Mail */}
             <TouchableOpacity
               style={styles.row}
-              onPress={() => navigation.navigate('ChangeMobile')}
+              onPress={() => navigation.navigate('ChangeEmail')}
               activeOpacity={0.7}
+              accessibilityLabel="Set Mail"
             >
               <View style={[styles.iconBox, { backgroundColor: colors.primaryFaded }]}>
-                <Ionicons name="call-outline" size={20} color={colors.primary} />
+                <Ionicons name="mail-outline" size={20} color={colors.primary} />
               </View>
               <View style={styles.rowContent}>
-                <Text style={[styles.rowLabel, { color: colors.text }]}>Change Mobile Number</Text>
+                <Text style={[styles.rowLabel, { color: colors.text }]}>Set Mail</Text>
                 <Text style={[styles.rowSubtitle, { color: colors.textMuted }]} numberOfLines={1}>
-                  {user?.phone || 'Not set'}
+                  {user?.email || 'Set your email address'}
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />

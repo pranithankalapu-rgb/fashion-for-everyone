@@ -18,6 +18,8 @@ import { useTheme } from '../hooks/useTheme';
 import { useAuth } from '../hooks/useAuth';
 import api from '../services/api';
 import Button from '../components/Button';
+import Avatar from '../components/Avatar';
+import { resolveMediaUrl } from '../utils/media';
 
 // High-resolution curated fashion avatars
 const AVATAR_PRESETS = [
@@ -37,6 +39,7 @@ export default function ChangeProfilePictureScreen({ navigation }: any) {
   const [currentAvatar, setCurrentAvatar] = useState<string>(
     user?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=500&q=80'
   );
+  const [selectedAsset, setSelectedAsset] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null);
   const [selectedPresetUrl, setSelectedPresetUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -58,7 +61,7 @@ export default function ChangeProfilePictureScreen({ navigation }: any) {
         mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 0.8,
+        quality: 0.85,
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
@@ -70,6 +73,7 @@ export default function ChangeProfilePictureScreen({ navigation }: any) {
           return;
         }
 
+        setSelectedAsset(asset);
         setSelectedImageUri(asset.uri);
         setSelectedPresetUrl(null);
       }
@@ -82,6 +86,7 @@ export default function ChangeProfilePictureScreen({ navigation }: any) {
   const handleSelectPreset = (url: string) => {
     setSelectedPresetUrl(url);
     setSelectedImageUri(null);
+    setSelectedAsset(null);
   };
 
   const handleSave = async () => {
@@ -95,14 +100,37 @@ export default function ChangeProfilePictureScreen({ navigation }: any) {
       let updatedAvatarUrl = '';
 
       if (selectedImageUri) {
-        const uriParts = selectedImageUri.split('.');
-        const fileType = uriParts[uriParts.length - 1] || 'jpg';
+        // Safe MIME type and extension detection
+        let mimeType = selectedAsset?.mimeType || '';
+        let ext = 'jpg';
+
+        if (!mimeType) {
+          const lowerUri = selectedImageUri.toLowerCase();
+          if (lowerUri.endsWith('.png')) {
+            mimeType = 'image/png';
+            ext = 'png';
+          } else if (lowerUri.endsWith('.webp')) {
+            mimeType = 'image/webp';
+            ext = 'webp';
+          } else if (lowerUri.endsWith('.gif')) {
+            mimeType = 'image/gif';
+            ext = 'gif';
+          } else {
+            mimeType = 'image/jpeg';
+            ext = 'jpg';
+          }
+        } else {
+          if (mimeType.includes('png')) ext = 'png';
+          else if (mimeType.includes('webp')) ext = 'webp';
+          else if (mimeType.includes('gif')) ext = 'gif';
+          else ext = 'jpg';
+        }
 
         const formData = new FormData();
         formData.append('avatar', {
           uri: Platform.OS === 'android' ? selectedImageUri : selectedImageUri.replace('file://', ''),
-          name: `avatar_${Date.now()}.${fileType}`,
-          type: `image/${fileType === 'jpg' ? 'jpeg' : fileType}`,
+          name: `avatar_${Date.now()}.${ext}`,
+          type: mimeType || 'image/jpeg',
         } as any);
 
         const res = await api.uploadAvatar(formData);
@@ -112,12 +140,16 @@ export default function ChangeProfilePictureScreen({ navigation }: any) {
         updatedAvatarUrl = res.avatar;
       }
 
+      // Ensure URL is fully resolved so it never renders black on Android
+      const resolvedUrl = resolveMediaUrl(updatedAvatarUrl, Date.now());
+
       // Update state locally and refresh throughout app
-      setCurrentAvatar(updatedAvatarUrl);
-      updateUser({ avatar: updatedAvatarUrl, photoUrl: updatedAvatarUrl });
+      setCurrentAvatar(resolvedUrl);
+      updateUser({ avatar: resolvedUrl, photoUrl: resolvedUrl });
       await refreshUser().catch(() => {});
 
       setSelectedImageUri(null);
+      setSelectedAsset(null);
       setSelectedPresetUrl(null);
 
       Alert.alert(
@@ -147,7 +179,7 @@ export default function ChangeProfilePictureScreen({ navigation }: any) {
         >
           <Ionicons name="arrow-back" size={22} color={colors.text} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Change Profile Picture</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Set Profile Picture</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -158,14 +190,14 @@ export default function ChangeProfilePictureScreen({ navigation }: any) {
       >
         {/* Avatar Preview */}
         <View style={styles.previewSection}>
-          <View style={[styles.avatarRing, { borderColor: colors.primary }]}>
-            <Image source={{ uri: previewUri }} style={styles.avatarImage} />
-            {(selectedImageUri || selectedPresetUrl) && (
-              <View style={[styles.selectedBadge, { backgroundColor: colors.accent }]}>
-                <Ionicons name="checkmark" size={16} color={colors.white} />
-              </View>
-            )}
-          </View>
+          <Avatar
+            uri={previewUri}
+            name={user?.name}
+            size={120}
+            borderColor={colors.primary}
+            borderWidth={3}
+            showSelectedBadge={Boolean(selectedImageUri || selectedPresetUrl)}
+          />
           <Text style={[styles.previewHint, { color: colors.textSecondary }]}>
             {selectedImageUri || selectedPresetUrl ? 'New picture preview' : 'Current profile picture'}
           </Text>
@@ -225,7 +257,7 @@ export default function ChangeProfilePictureScreen({ navigation }: any) {
         {/* Save Button */}
         <View style={styles.actionContainer}>
           <Button
-            title={loading ? 'Uploading Picture...' : 'Save Profile Picture'}
+            title={loading ? 'Uploading Picture...' : 'Set Profile Picture'}
             onPress={handleSave}
             loading={loading}
             disabled={loading || (!selectedImageUri && !selectedPresetUrl)}
