@@ -20,11 +20,49 @@ import { useTheme } from '../hooks/useTheme';
 import api from '../services/api';
 import type { UserProfile } from '../types/fashion';
 
+import StyleProfileModal, { StyleCategory } from '../components/StyleProfileModal';
+
+const SKIN_TONE_SWATCH_MAP: Record<string, string> = {
+  'very fair': '#FCEFE6',
+  fair: '#F5D7C2',
+  light: '#E6B998',
+  medium: '#C98C5D',
+  tan: '#A46338',
+  deep: '#6E3C22',
+  'very deep': '#3D2012',
+  'warm golden': '#C98C5D',
+  'cool rose': '#E8A5B8',
+  'deep rich': '#6E3C22',
+  'olive neutral': '#A89F68',
+  'fair porcelain': '#FCEFE6',
+};
+
+const UNDERTONE_SWATCH_MAP: Record<string, string> = {
+  warm: '#E8A87C',
+  cool: '#E8A5B8',
+  neutral: '#D7BAA2',
+  olive: '#A89F68',
+};
+
+function getSkinToneSwatch(tone?: string) {
+  if (!tone) return undefined;
+  return SKIN_TONE_SWATCH_MAP[tone.toLowerCase().trim()];
+}
+
+function getUndertoneSwatch(tone?: string) {
+  if (!tone) return undefined;
+  return UNDERTONE_SWATCH_MAP[tone.toLowerCase().trim()];
+}
+
 export default function ProfileScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
-  const { user, role, logout, switchRole, isAuthenticated } = useAuth();
+  const { user, role, logout, switchRole, isAuthenticated, updateUser } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
+
+  // Style Profile Modal state
+  const [activeModalCategory, setActiveModalCategory] = useState<StyleCategory | null>(null);
+  const [isSavingStyle, setIsSavingStyle] = useState<boolean>(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -49,6 +87,24 @@ export default function ProfileScreen({ navigation }: any) {
   };
 
   const displayProfile = profile || user;
+
+  const handleSaveStyleOption = async (category: StyleCategory, value: string) => {
+    setIsSavingStyle(true);
+    try {
+      const updated = await api.updateProfile({ [category]: value });
+      setProfile(updated);
+      updateUser({ [category]: value });
+      setActiveModalCategory(null);
+    } catch (err: any) {
+      const msg =
+        err?.response?.data?.error ||
+        err?.message ||
+        'Could not save your selection. Please try again.';
+      Alert.alert('Save Failed', msg);
+    } finally {
+      setIsSavingStyle(false);
+    }
+  };
 
   const menuItems = [
     { icon: 'settings-outline', label: 'Settings', screen: 'Settings' },
@@ -135,17 +191,38 @@ export default function ProfileScreen({ navigation }: any) {
         </View>
       </View>
 
-      {/* Body shape & skin info */}
-      {displayProfile?.bodyShape && (
-        <View style={styles.section}>
+      {/* Style Profile Section */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeaderRow}>
           <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Style Profile</Text>
-          <View style={styles.infoGrid}>
-            <InfoTile icon="body-outline" label="Body Shape" value={displayProfile.bodyShape} colors={colors} />
-            <InfoTile icon="color-fill-outline" label="Skin Tone" value={displayProfile.skinTone} colors={colors} />
-            <InfoTile icon="water-outline" label="Undertone" value={displayProfile.undertone} colors={colors} />
-          </View>
+          <Text style={[styles.sectionSubtitleHint, { color: colors.primary }]}>Tap to edit ✦</Text>
         </View>
-      )}
+        <View style={styles.infoGrid}>
+          <InfoTile
+            icon="body-outline"
+            label="Body Shape"
+            value={displayProfile?.bodyShape || 'Hourglass'}
+            colors={colors}
+            onPress={() => setActiveModalCategory('bodyShape')}
+          />
+          <InfoTile
+            icon="color-fill-outline"
+            label="Skin Tone"
+            value={displayProfile?.skinTone || 'Warm Golden'}
+            swatch={getSkinToneSwatch(displayProfile?.skinTone)}
+            colors={colors}
+            onPress={() => setActiveModalCategory('skinTone')}
+          />
+          <InfoTile
+            icon="water-outline"
+            label="Undertone"
+            value={displayProfile?.undertone || 'Warm'}
+            swatch={getUndertoneSwatch(displayProfile?.undertone)}
+            colors={colors}
+            onPress={() => setActiveModalCategory('undertone')}
+          />
+        </View>
+      </View>
 
       {/* Menu Items */}
       <View style={styles.section}>
@@ -173,17 +250,66 @@ export default function ProfileScreen({ navigation }: any) {
         )}
       </View>
       <View style={{ height: 100 }} />
+
+      {/* Style Profile Selection Modal */}
+      <StyleProfileModal
+        visible={activeModalCategory !== null}
+        category={activeModalCategory}
+        currentValue={
+          activeModalCategory === 'bodyShape'
+            ? displayProfile?.bodyShape || 'Hourglass'
+            : activeModalCategory === 'skinTone'
+            ? displayProfile?.skinTone || 'Medium'
+            : activeModalCategory === 'undertone'
+            ? displayProfile?.undertone || 'Warm'
+            : ''
+        }
+        isLoading={isSavingStyle}
+        onClose={() => setActiveModalCategory(null)}
+        onSave={handleSaveStyleOption}
+      />
     </ScrollView>
   );
 }
 
-function InfoTile({ icon, label, value, colors }: { icon: string; label: string; value: string; colors: any }) {
+function InfoTile({
+  icon,
+  label,
+  value,
+  swatch,
+  colors,
+  onPress,
+}: {
+  icon: string;
+  label: string;
+  value: string;
+  swatch?: string;
+  colors: any;
+  onPress: () => void;
+}) {
   return (
-    <View style={[tileStyles.tile, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-      <Ionicons name={icon as any} size={20} color={colors.primary} />
+    <TouchableOpacity
+      style={[tileStyles.tile, { backgroundColor: colors.surface, borderColor: colors.border }]}
+      onPress={onPress}
+      activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityLabel={`Edit ${label}, currently ${value}`}
+    >
+      <View style={tileStyles.topRow}>
+        {swatch ? (
+          <View style={[tileStyles.swatch, { backgroundColor: swatch, borderColor: colors.borderLight }]} />
+        ) : (
+          <Ionicons name={icon as any} size={20} color={colors.primary} />
+        )}
+        <View style={[tileStyles.editBadge, { backgroundColor: colors.primaryFaded }]}>
+          <Ionicons name="pencil" size={10} color={colors.primary} />
+        </View>
+      </View>
       <Text style={[tileStyles.label, { color: colors.textMuted }]}>{label}</Text>
-      <Text style={[tileStyles.value, { color: colors.text }]}>{value}</Text>
-    </View>
+      <Text style={[tileStyles.value, { color: colors.text }]} numberOfLines={2}>
+        {value}
+      </Text>
+    </TouchableOpacity>
   );
 }
 
@@ -194,11 +320,34 @@ const tileStyles = StyleSheet.create({
     borderWidth: 1,
     padding: Spacing.md,
     alignItems: 'center',
-    gap: 4,
-    minWidth: 90,
+    gap: 6,
+    minWidth: 95,
     ...Shadows.sm,
   },
-  label: { fontSize: FontSize.xs },
+  topRow: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  swatch: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 1.5,
+  },
+  editBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  label: { fontSize: FontSize.xs, marginTop: 2 },
   value: { fontSize: FontSize.sm, fontWeight: FontWeight.semibold, textAlign: 'center' },
 });
 
@@ -236,7 +385,14 @@ const styles = StyleSheet.create({
   },
   roleText: { fontSize: FontSize.xs, fontWeight: FontWeight.semibold },
   section: { paddingHorizontal: Spacing.lg, marginBottom: Spacing.xl },
-  sectionTitle: { fontSize: FontSize.sm, fontWeight: FontWeight.semibold, marginBottom: Spacing.md },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+  },
+  sectionTitle: { fontSize: FontSize.sm, fontWeight: FontWeight.semibold },
+  sectionSubtitleHint: { fontSize: FontSize.xs, fontWeight: FontWeight.medium },
   roleRow: { flexDirection: 'row', gap: Spacing.md },
   roleBtn: {
     flex: 1,

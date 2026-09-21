@@ -9,6 +9,24 @@ export type UserRole = 'customer' | 'designer' | 'retailer' | 'admin';
 export type OrderStatus = 'Pending' | 'Processing' | 'Shipped' | 'Delivered' | 'Cancelled' | 'Returned';
 export type ProductStatus = 'Active' | 'Draft' | 'Low Stock' | 'Out of Stock' | 'Archived';
 
+export type BodyShapeOption =
+  | 'Hourglass'
+  | 'Pear (Triangle)'
+  | 'Apple (Oval)'
+  | 'Rectangle (Straight)'
+  | 'Inverted Triangle';
+
+export type SkinToneOption =
+  | 'Very Fair'
+  | 'Fair'
+  | 'Light'
+  | 'Medium'
+  | 'Tan'
+  | 'Deep'
+  | 'Very Deep';
+
+export type UndertoneOption = 'Warm' | 'Cool' | 'Neutral' | 'Olive';
+
 export interface UserProfile {
   id: string;
   name: string;

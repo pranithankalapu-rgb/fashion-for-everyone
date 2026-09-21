@@ -3,10 +3,45 @@ import type { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
 import { sanitizeObject, sanitizeString } from '../security';
 import { mediaService, resolveMediaUrl } from '../services/mediaService';
-import { verificationService, VerificationError } from '../services/verificationService';
+import { verificationService, VerificationError, sanitizeContact } from '../services/verificationService';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_REGEX = /^\+?[0-9\s\-()]{7,20}$/;
+
+export const VALID_BODY_SHAPES = [
+  'Hourglass',
+  'Pear (Triangle)',
+  'Apple (Oval)',
+  'Rectangle (Straight)',
+  'Inverted Triangle',
+  // Backward compatibility with legacy seeds/tests
+  'Pear',
+  'Rectangle',
+  'Oval',
+];
+
+export const VALID_SKIN_TONES = [
+  'Very Fair',
+  'Fair',
+  'Light',
+  'Medium',
+  'Tan',
+  'Deep',
+  'Very Deep',
+  // Backward compatibility with legacy seeds/tests
+  'Warm Golden',
+  'Cool Rose',
+  'Deep Rich',
+  'Olive Neutral',
+  'Fair Porcelain',
+];
+
+export const VALID_UNDERTONES = [
+  'Warm',
+  'Cool',
+  'Neutral',
+  'Olive',
+];
 
 export const profileController = {
   async getProfile(req: AuthenticatedRequest, res: Response) {
@@ -43,8 +78,43 @@ export const profileController = {
       const userId = req.userId || 'user_01';
       const sanitizedBody = sanitizeObject(req.body);
 
+      // Prevent unauthorized updates: users can only update their own profile
+      if (sanitizedBody.id && sanitizedBody.id !== userId) {
+        return res.status(403).json({ error: 'Forbidden: You can only update your own profile.' });
+      }
+      if (sanitizedBody.userId && sanitizedBody.userId !== userId) {
+        return res.status(403).json({ error: 'Forbidden: You can only update your own profile.' });
+      }
+
       // Explicitly prevent overwriting id, passwordHash, role, email, or phone directly through general profile update
       const { id: _id, passwordHash: _ph, role: _r, email: _e, phone: _p, mobile: _m, ...updateData } = sanitizedBody as any;
+
+      // Validate bodyShape against supported options
+      if (updateData.bodyShape !== undefined) {
+        if (!VALID_BODY_SHAPES.includes(updateData.bodyShape)) {
+          return res.status(400).json({
+            error: `Invalid bodyShape: "${updateData.bodyShape}". Supported options: Hourglass, Pear (Triangle), Apple (Oval), Rectangle (Straight), Inverted Triangle`,
+          });
+        }
+      }
+
+      // Validate skinTone against supported options
+      if (updateData.skinTone !== undefined) {
+        if (!VALID_SKIN_TONES.includes(updateData.skinTone)) {
+          return res.status(400).json({
+            error: `Invalid skinTone: "${updateData.skinTone}". Supported options: Very Fair, Fair, Light, Medium, Tan, Deep, Very Deep`,
+          });
+        }
+      }
+
+      // Validate undertone against supported options
+      if (updateData.undertone !== undefined) {
+        if (!VALID_UNDERTONES.includes(updateData.undertone)) {
+          return res.status(400).json({
+            error: `Invalid undertone: "${updateData.undertone}". Supported options: Warm, Cool, Neutral, Olive`,
+          });
+        }
+      }
 
       const updatedProfile = await prisma.userProfile.upsert({
         where: { id: userId },
@@ -180,6 +250,33 @@ export const profileController = {
   // -------------------------------------------------------------
 
   async updateEmail(req: AuthenticatedRequest, res: Response) {
+    const userId = req.userId;
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized: Authentication required.' });
+    }
+
+    const email = req.body?.email;
+    if (!email || typeof email !== 'string') {
+      return res.status(400).json({ error: 'A valid email address is required.' });
+    }
+
+    const sanitizedEmail = sanitizeContact(email).toLowerCase();
+    if (!EMAIL_REGEX.test(sanitizedEmail)) {
+      return res.status(400).json({ error: 'Invalid email address format.' });
+    }
+
+    // Check duplicate email
+    const existing = await prisma.userProfile.findFirst({
+      where: {
+        email: { equals: sanitizedEmail, mode: 'insensitive' },
+        NOT: { id: userId },
+      },
+    });
+
+    if (existing) {
+      return res.status(409).json({ error: 'This email address cannot be used. Please choose another.' });
+    }
+
     const code = req.body?.code;
     if (!code) {
       return res.status(400).json({
@@ -191,6 +288,33 @@ export const profileController = {
   },
 
   async updateMobile(req: AuthenticatedRequest, res: Response) {
+    const userId = req.userId;
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized: Authentication required.' });
+    }
+
+    const phone = req.body?.phone || req.body?.mobile;
+    if (!phone || typeof phone !== 'string') {
+      return res.status(400).json({ error: 'A valid mobile number is required.' });
+    }
+
+    const sanitizedPhone = sanitizeContact(phone);
+    if (!PHONE_REGEX.test(sanitizedPhone)) {
+      return res.status(400).json({ error: 'Invalid phone number format.' });
+    }
+
+    // Check duplicate phone
+    const existing = await prisma.userProfile.findFirst({
+      where: {
+        phone: sanitizedPhone,
+        NOT: { id: userId },
+      },
+    });
+
+    if (existing) {
+      return res.status(409).json({ error: 'This mobile number cannot be used. Please choose another.' });
+    }
+
     const code = req.body?.code;
     if (!code) {
       return res.status(400).json({
