@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  Image,
   TouchableOpacity,
   Alert,
 } from 'react-native';
@@ -57,7 +56,7 @@ function getUndertoneSwatch(tone?: string) {
 export default function ProfileScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
-  const { user, role, logout, switchRole, isAuthenticated, updateUser } = useAuth();
+  const { user, role, logout, isAuthenticated, updateUser } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
 
   // Style Profile Modal state
@@ -115,29 +114,26 @@ export default function ProfileScreen({ navigation }: any) {
     }
   };
 
-  const menuItems = [
-    { icon: 'settings-outline', label: 'Settings', screen: 'Settings' },
-    { icon: 'receipt-outline', label: 'My Orders', screen: 'Orders' },
-    { icon: 'heart-outline', label: 'Wishlist', screen: 'Wishlist' },
-    { icon: 'cart-outline', label: 'Cart', screen: 'Cart' },
-    { icon: 'color-palette-outline', label: 'Color Voting', screen: 'ColorVoting' },
-    { icon: 'brush-outline', label: 'Designer Showcase', screen: 'DesignerShowcase' },
-    { icon: 'videocam-outline', label: 'Style Feed', screen: 'SocialFeed' },
-  ];
-
-  if (role === 'designer') {
-    menuItems.push({ icon: 'brush-outline', label: 'Designer Studio & Upload', screen: 'DesignerShowcase' });
-  }
+  const menuItems: Array<{ icon: string; label: string; screen: string }> = [];
 
   if (role === 'retailer') {
-    menuItems.push({ icon: 'storefront-outline', label: 'Retailer Dashboard', screen: 'RetailerDashboard' });
+    menuItems.push({ icon: 'storefront-outline', label: 'Retailer Dashboard & Inventory', screen: 'RetailerDashboard' });
+    menuItems.push({ icon: 'receipt-outline', label: 'Store Orders CRM', screen: 'Orders' });
+  } else if (role === 'designer') {
+    menuItems.push({ icon: 'brush-outline', label: 'Designer Studio & Upload', screen: 'DesignerShowcase' });
+    menuItems.push({ icon: 'color-palette-outline', label: 'Color Voting & Trends', screen: 'ColorVoting' });
+    menuItems.push({ icon: 'videocam-outline', label: 'Style Feed', screen: 'SocialFeed' });
+  } else {
+    // Customer
+    menuItems.push({ icon: 'receipt-outline', label: 'My Orders', screen: 'Orders' });
+    menuItems.push({ icon: 'heart-outline', label: 'Wishlist', screen: 'Wishlist' });
+    menuItems.push({ icon: 'cart-outline', label: 'Cart', screen: 'Cart' });
+    menuItems.push({ icon: 'color-palette-outline', label: 'Color Voting', screen: 'ColorVoting' });
+    menuItems.push({ icon: 'brush-outline', label: 'Designer Showcase', screen: 'DesignerShowcase' });
+    menuItems.push({ icon: 'videocam-outline', label: 'Style Feed', screen: 'SocialFeed' });
   }
 
-  const roles: Array<{ key: 'customer' | 'designer' | 'retailer'; label: string; icon: string }> = [
-    { key: 'customer', label: 'Customer', icon: '🛍️' },
-    { key: 'designer', label: 'Designer', icon: '🎨' },
-    { key: 'retailer', label: 'Retailer', icon: '🏪' },
-  ];
+  menuItems.push({ icon: 'settings-outline', label: 'Settings', screen: 'Settings' });
 
   const headerPaddingTop = insets.top > 0 ? insets.top + Spacing.lg : 60;
   const gradientTop = isDark ? '#1a103d' : '#e0e7ff';
@@ -170,35 +166,6 @@ export default function ProfileScreen({ navigation }: any) {
           </View>
         )}
       </LinearGradient>
-
-      {/* Role Switcher */}
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Switch Role</Text>
-        <View style={styles.roleRow}>
-          {roles.map((r) => (
-            <TouchableOpacity
-              key={r.key}
-              style={[
-                styles.roleBtn,
-                { backgroundColor: colors.surface, borderColor: colors.border },
-                role === r.key && { borderColor: colors.primary, backgroundColor: colors.primaryFaded },
-              ]}
-              onPress={() => switchRole(r.key)}
-            >
-              <Text style={styles.roleIcon}>{r.icon}</Text>
-              <Text
-                style={[
-                  styles.roleLabel,
-                  { color: colors.textMuted },
-                  role === r.key && { color: colors.primary, fontWeight: FontWeight.bold },
-                ]}
-              >
-                {r.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
 
       {/* Style Profile Section */}
       <View style={styles.section}>

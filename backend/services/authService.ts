@@ -170,7 +170,15 @@ export const authService = {
     role?: UserRole;
     phone?: string;
   }) {
-    const role = (data.role || 'customer').toLowerCase() as UserRole;
+    const rawRole = (data.role || '').toLowerCase().trim();
+    if (rawRole === 'admin') {
+      throw new Error('Registration as admin is not permitted. Allowed roles: customer, designer, retailer.');
+    }
+    const ALLOWED_REGISTER_ROLES = ['customer', 'designer', 'retailer'] as const;
+    if (rawRole && !ALLOWED_REGISTER_ROLES.includes(rawRole as any)) {
+      throw new Error('Invalid registration role. Allowed roles: customer, designer, retailer.');
+    }
+    const role = (rawRole || 'customer') as UserRole;
     const passwordHash = await this.hashPassword(data.password);
     const email = data.email.toLowerCase().trim();
 
@@ -191,10 +199,40 @@ export const authService = {
         avatar: `https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80`,
         role,
         phone: data.phone || null,
-        approvalStatus: role === 'customer' ? 'Approved' : 'Pending',
+        approvalStatus: 'Approved',
         status: 'Active',
       },
     });
+
+    // If designer role, ensure a linked Designer record exists in Designer table
+    if (role === 'designer') {
+      try {
+        const existingDesigner = await prisma.designer.findFirst({
+          where: { OR: [{ id: user.id }, { email: user.email }] },
+        });
+        if (!existingDesigner) {
+          await prisma.designer.create({
+            data: {
+              id: user.id,
+              name: user.name,
+              handle: `@${user.name.toLowerCase().replace(/[^a-z0-9_]/g, '') || 'designer'}`,
+              avatar: user.avatar,
+              bio: 'Fashion Designer & Creator',
+              followers: 0,
+              avgRating: 5.0,
+              totalVotes: 0,
+              badges: ['Verified Creator'],
+              verified: true,
+              email: user.email,
+              approvalStatus: 'Approved',
+              status: 'Active',
+            },
+          });
+        }
+      } catch (designerErr) {
+        console.warn('Could not auto-create designer entity in db:', designerErr);
+      }
+    }
 
     const tokens = this.generateTokens({
       userId: user.id,

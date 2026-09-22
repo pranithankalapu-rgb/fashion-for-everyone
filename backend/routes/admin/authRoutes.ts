@@ -21,6 +21,7 @@ router.post('/login', (req, res) => {
   if ((isEmailMatch || isUsernameMatch) && password === expectedPassword) {
     const token = jwt.sign(
       {
+        userId: 'admin_root',
         email: expectedEmail,
         role: 'admin',
       },

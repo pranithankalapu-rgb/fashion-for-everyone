@@ -123,10 +123,10 @@ router.post('/ai/try-on', aiController.virtualTryOn);
 // Product Management Routes
 router.get('/products', productController.getAll);
 router.get('/products/:id', productController.getById);
-router.post('/products', upload.single('image'), productController.create);
-router.put('/products/:id', upload.single('image'), productController.update);
-router.delete('/products/:id', productController.delete);
-router.patch('/products/:id/stock', productController.updateStock);
+router.post('/products', requireRole(['retailer']), upload.single('image'), productController.create);
+router.put('/products/:id', requireRole(['retailer']), upload.single('image'), productController.update);
+router.delete('/products/:id', requireRole(['retailer']), productController.delete);
+router.patch('/products/:id/stock', requireRole(['retailer']), productController.updateStock);
 
 // Store Stock Locations & Pickup Reservations
 router.get('/stores', async (req, res) => {
@@ -239,8 +239,8 @@ router.post('/stores/reserve', async (req, res) => {
 });
 
 // Order Routes (Customer placement & Retailer management)
-router.get('/orders', orderController.getAll);
-router.get('/orders/:id', orderController.getById);
+router.get('/orders', requireAuth, orderController.getAll);
+router.get('/orders/:id', requireAuth, orderController.getById);
 router.post('/orders', orderController.create);
 router.post('/orders/webhook', orderController.handlePaymentWebhook);
 router.patch('/orders/:id/status', requireRole(['retailer']), orderController.updateStatus);
@@ -298,6 +298,7 @@ router.get('/designers/:id', designerController.getDesignerById);
 router.get('/designs', designerController.getDesigns);
 router.get('/designs/:id', designerController.getDesignById);
 router.post('/designs', requireRole(['designer', 'retailer']), designerController.createDesign);
+router.delete('/designs/:id', requireRole(['designer', 'retailer']), designerController.deleteDesign);
 router.post('/designs/:id/vote', designerController.voteDesign);
 
 // Color Arena & Social Outfit Feed Routes

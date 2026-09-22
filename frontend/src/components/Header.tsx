@@ -11,16 +11,19 @@ import {
   Truck,
   Clock,
   ChevronDown,
-  ExternalLink,
+  User,
+  LogOut,
 } from 'lucide-react';
-import type { UserProfile, CustomerOrder } from '../types/fashion';
-import type { UserRole } from './Sidebar';
+import type { UserProfile, CustomerOrder, UserRole } from '../types/fashion';
 import { api } from '../services/api';
 import { INITIAL_ORDERS } from '../data/fashionData';
 import { OrderDetailsModal } from './OrderDetailsModal';
 
 interface HeaderProps {
-  userProfile: UserProfile;
+  userProfile: UserProfile | null;
+  isAuthenticated: boolean;
+  onOpenAuth: () => void;
+  onLogout: () => void;
   onOpenOnboarding: () => void;
   userRole?: UserRole;
   searchQuery?: string;
@@ -32,6 +35,9 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({
   userProfile,
+  isAuthenticated,
+  onOpenAuth,
+  onLogout,
   onOpenOnboarding,
   userRole = 'customer',
   searchQuery = '',
@@ -50,22 +56,22 @@ export const Header: React.FC<HeaderProps> = ({
   const isCustomerView = userRole === 'customer';
   const isWishlistActive = activeTab === 'wishlist';
 
-  // Fetch orders from API or fallback
+  // Fetch orders from API if authenticated customer
   useEffect(() => {
     async function loadOrders() {
       try {
-        const data = await api.getOrders();
-        if (data && data.length > 0) {
-          setOrders(data);
+        if (isAuthenticated && isCustomerView) {
+          const data = await api.getOrders();
+          if (data && Array.isArray(data)) {
+            setOrders(data);
+          }
         }
       } catch (err) {
-        console.warn('Using initial fallback orders:', err);
+        console.warn('Could not load customer orders:', err);
       }
     }
-    if (isCustomerView) {
-      loadOrders();
-    }
-  }, [isCustomerView]);
+    loadOrders();
+  }, [isAuthenticated, isCustomerView]);
 
   // Close profile dropdown when clicking outside
   useEffect(() => {
@@ -95,6 +101,9 @@ export const Header: React.FC<HeaderProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isCustomerView]);
 
+  const defaultAvatar =
+    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80';
+
   return (
     <>
       <header className="sticky top-0 z-40 bg-header-theme backdrop-blur-xl border-b border-theme-main px-4 lg:px-8 py-3 transition-colors duration-200">
@@ -119,18 +128,29 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
             </div>
 
-            {/* Mobile Profile Trigger Button */}
-            <button
-              onClick={() => setIsProfileOpen(!isProfileOpen)}
-              className="sm:hidden flex items-center gap-2 bg-gradient-to-r from-amber-500/10 to-rose-500/10 border border-amber-500/30 text-theme-secondary p-1.5 rounded-xl"
-              title="User Profile"
-            >
-              <img
-                src={userProfile.avatar}
-                alt={userProfile.name}
-                className="w-7 h-7 rounded-full object-cover ring-1 ring-amber-400/40"
-              />
-            </button>
+            {/* Mobile Profile / Auth Trigger */}
+            <div className="sm:hidden flex items-center gap-2">
+              {!isAuthenticated ? (
+                <button
+                  onClick={onOpenAuth}
+                  className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-rose-500 text-slate-950 font-bold text-xs shadow-md"
+                >
+                  Sign In
+                </button>
+              ) : (
+                <button
+                  onClick={() => setIsProfileOpen(!isProfileOpen)}
+                  className="flex items-center gap-2 bg-gradient-to-r from-amber-500/10 to-rose-500/10 border border-amber-500/30 text-theme-secondary p-1.5 rounded-xl"
+                  title="User Profile"
+                >
+                  <img
+                    src={userProfile?.avatar || defaultAvatar}
+                    alt={userProfile?.name || 'User'}
+                    className="w-7 h-7 rounded-full object-cover ring-1 ring-amber-400/40"
+                  />
+                </button>
+              )}
+            </div>
           </div>
 
           {/* CENTER: Search Bar (Customer View Only) */}
@@ -191,36 +211,49 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             )}
 
-            {/* User Profile Card Button */}
-            <button
-              onClick={() => setIsProfileOpen(!isProfileOpen)}
-              className={`hidden sm:flex items-center gap-2.5 bg-gradient-to-r from-amber-500/10 to-rose-500/10 border ${
-                isProfileOpen ? 'border-amber-400 ring-1 ring-amber-400/40' : 'border-amber-500/30 hover:border-amber-400'
-              } text-theme-secondary hover:text-amber-300 px-3.5 py-1.5 rounded-xl transition-all shadow-sm flex-shrink-0 cursor-pointer`}
-            >
-              <img
-                src={userProfile.avatar}
-                alt={userProfile.name}
-                className="w-7 h-7 rounded-full object-cover ring-1 ring-amber-400/40"
-              />
-              <div className="text-left hidden lg:block">
-                <div className="text-xs font-semibold leading-tight text-theme-heading flex items-center gap-1">
-                  <span>{userProfile.name}</span>
-                  <ShieldCheck className="w-3 h-3 text-amber-400" />
+            {/* If NOT Authenticated: Show Sign In Button */}
+            {!isAuthenticated ? (
+              <button
+                onClick={onOpenAuth}
+                className="hidden sm:flex items-center gap-2 bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-400 hover:to-rose-400 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs shadow-md shadow-amber-500/20 transition-all cursor-pointer hover:scale-105"
+              >
+                <User className="w-4 h-4" />
+                <span>Sign In / Register</span>
+              </button>
+            ) : (
+              /* If Authenticated: Show User Profile Card */
+              <button
+                onClick={() => setIsProfileOpen(!isProfileOpen)}
+                className={`hidden sm:flex items-center gap-2.5 bg-gradient-to-r from-amber-500/10 to-rose-500/10 border ${
+                  isProfileOpen ? 'border-amber-400 ring-1 ring-amber-400/40' : 'border-amber-500/30 hover:border-amber-400'
+                } text-theme-secondary hover:text-amber-300 px-3.5 py-1.5 rounded-xl transition-all shadow-sm flex-shrink-0 cursor-pointer`}
+              >
+                <img
+                  src={userProfile?.avatar || defaultAvatar}
+                  alt={userProfile?.name || 'User'}
+                  className="w-7 h-7 rounded-full object-cover ring-1 ring-amber-400/40"
+                />
+                <div className="text-left hidden lg:block">
+                  <div className="text-xs font-semibold leading-tight text-theme-heading flex items-center gap-1">
+                    <span>{userProfile?.name || 'User Account'}</span>
+                    <ShieldCheck className="w-3 h-3 text-amber-400" />
+                  </div>
+                  <div className="text-[10px] text-theme-muted uppercase font-mono tracking-wider">
+                    {userRole}
+                  </div>
                 </div>
-                <div className="text-[10px] text-theme-muted">{userProfile.skinTone} • {userProfile.bodyShape}</div>
-              </div>
-              <ChevronDown className={`w-4 h-4 text-amber-400 transition-transform ${isProfileOpen ? 'rotate-180' : ''}`} />
-            </button>
+                <ChevronDown className={`w-4 h-4 text-amber-400 transition-transform ${isProfileOpen ? 'rotate-180' : ''}`} />
+              </button>
+            )}
 
-            {/* CUSTOMER PROFILE PANEL / DROPDOWN */}
-            {isProfileOpen && (
+            {/* USER PROFILE PANEL / DROPDOWN */}
+            {isProfileOpen && isAuthenticated && userProfile && (
               <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 glass-panel rounded-3xl p-4 shadow-2xl border border-theme-main z-50 text-left space-y-4 animate-fadeIn">
                 
-                {/* 1. Customer Avatar & Account Info Header */}
+                {/* 1. User Avatar & Account Info Header */}
                 <div className="flex items-center gap-3 pb-3 border-b border-theme-subtle">
                   <img
-                    src={userProfile.avatar}
+                    src={userProfile.avatar || defaultAvatar}
                     alt={userProfile.name}
                     className="w-12 h-12 rounded-full object-cover ring-2 ring-amber-400/40 flex-shrink-0"
                   />
@@ -230,15 +263,17 @@ export const Header: React.FC<HeaderProps> = ({
                         {userProfile.name}
                       </h4>
                       <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-amber-400/10 text-amber-300 border border-amber-400/30">
-                        {isCustomerView ? 'Customer' : userRole}
+                        {userRole}
                       </span>
                     </div>
                     <p className="text-[11px] text-theme-muted truncate">
-                      {userProfile.name.toLowerCase().replace(/\s+/g, '.')}@example.com
+                      {userProfile.email || 'authenticated@fashionforeveryone.com'}
                     </p>
-                    <p className="text-[10px] text-amber-400 font-semibold mt-0.5">
-                      {userProfile.skinTone} • {userProfile.bodyShape}
-                    </p>
+                    {userProfile.skinTone && (
+                      <p className="text-[10px] text-amber-400 font-semibold mt-0.5">
+                        {userProfile.skinTone} • {userProfile.bodyShape}
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -249,10 +284,10 @@ export const Header: React.FC<HeaderProps> = ({
                       onOpenOnboarding();
                       setIsProfileOpen(false);
                     }}
-                    className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-surface-theme hover:bg-surface-subtle-theme border border-theme-main text-xs font-bold text-theme-heading transition-all"
+                    className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-surface-theme hover:bg-surface-subtle-theme border border-theme-main text-xs font-bold text-theme-heading transition-all cursor-pointer"
                   >
                     <Sliders className="w-3.5 h-3.5 text-amber-400" />
-                    <span>Edit Profile</span>
+                    <span>Edit Style Profile</span>
                   </button>
 
                   {isCustomerView && (
@@ -261,7 +296,7 @@ export const Header: React.FC<HeaderProps> = ({
                         onNavigateTab?.('wishlist');
                         setIsProfileOpen(false);
                       }}
-                      className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-surface-theme hover:bg-surface-subtle-theme border border-theme-main text-xs font-bold text-theme-heading transition-all"
+                      className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-surface-theme hover:bg-surface-subtle-theme border border-theme-main text-xs font-bold text-theme-heading transition-all cursor-pointer"
                     >
                       <Heart className="w-3.5 h-3.5 text-rose-400" />
                       <span>Wishlist ({wishlistCount})</span>
@@ -275,91 +310,95 @@ export const Header: React.FC<HeaderProps> = ({
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5 text-xs font-bold text-theme-heading">
                         <Package className="w-4 h-4 text-amber-400" />
-                        <span>Previous Orders</span>
+                        <span>My Orders</span>
                       </div>
                       <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-surface-theme text-theme-muted border border-theme-subtle">
-                        {orders.length} Recent
+                        {orders.length} Total
                       </span>
                     </div>
 
                     {/* Orders List */}
-                    <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                      {orders.slice(0, 3).map((order) => {
-                        const firstItem = order.items[0];
-                        return (
-                          <div
-                            key={order.id}
-                            onClick={() => {
-                              setSelectedOrderModal(order);
-                              setIsProfileOpen(false);
-                            }}
-                            className="p-2.5 rounded-2xl bg-surface-theme hover:bg-surface-subtle-theme border border-theme-main transition-all cursor-pointer group space-y-2 shadow-xs"
-                          >
-                            <div className="flex items-center justify-between gap-2">
-                              <div className="flex items-center gap-2.5 min-w-0">
-                                <img
-                                  src={firstItem?.imageUrl}
-                                  alt={firstItem?.title}
-                                  className="w-11 h-12 object-cover rounded-xl border border-theme-subtle flex-shrink-0"
-                                />
-                                <div className="min-w-0 flex-1">
-                                  <div className="text-xs font-bold text-theme-heading truncate group-hover:text-amber-300 transition-colors">
-                                    {firstItem?.title}
+                    {orders.length > 0 ? (
+                      <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                        {orders.slice(0, 3).map((order) => {
+                          const firstItem = order.items?.[0];
+                          return (
+                            <div
+                              key={order.id}
+                              onClick={() => {
+                                setSelectedOrderModal(order);
+                                setIsProfileOpen(false);
+                              }}
+                              className="p-2.5 rounded-2xl bg-surface-theme hover:bg-surface-subtle-theme border border-theme-main transition-all cursor-pointer group space-y-2 shadow-xs"
+                            >
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  {firstItem?.imageUrl && (
+                                    <img
+                                      src={firstItem.imageUrl}
+                                      alt={firstItem.title}
+                                      className="w-10 h-10 object-cover rounded-xl border border-theme-subtle flex-shrink-0"
+                                    />
+                                  )}
+                                  <div className="min-w-0 flex-1">
+                                    <div className="text-xs font-bold text-theme-heading truncate group-hover:text-amber-300 transition-colors">
+                                      {firstItem?.title || `Order #${order.orderNumber}`}
+                                    </div>
+                                    <div className="text-[10px] text-theme-muted">
+                                      #{order.orderNumber} • {order.date}
+                                    </div>
                                   </div>
-                                  <div className="text-[10px] text-theme-muted">
-                                    Order #{order.orderNumber} • {order.date}
-                                  </div>
+                                </div>
+
+                                {/* Status Badge */}
+                                <div
+                                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold border flex-shrink-0 flex items-center gap-1 ${
+                                    order.status === 'Delivered'
+                                      ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                                      : order.status === 'Shipped'
+                                      ? 'bg-blue-500/10 border-blue-500/30 text-blue-400'
+                                      : 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+                                  }`}
+                                >
+                                  <span>{order.status}</span>
+                                  {order.status === 'Delivered' && <CheckCircle2 className="w-3 h-3 text-emerald-400" />}
+                                  {order.status === 'Shipped' && <Truck className="w-3 h-3 text-blue-400" />}
+                                  {order.status === 'Processing' && <Clock className="w-3 h-3 text-amber-400" />}
                                 </div>
                               </div>
 
-                              {/* Status Badge */}
-                              <div
-                                className={`px-2 py-0.5 rounded-full text-[10px] font-bold border flex-shrink-0 flex items-center gap-1 ${
-                                  order.status === 'Delivered'
-                                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
-                                    : order.status === 'Shipped'
-                                    ? 'bg-blue-500/10 border-blue-500/30 text-blue-400'
-                                    : 'bg-amber-500/10 border-amber-500/30 text-amber-300'
-                                }`}
-                              >
-                                <span>{order.status}</span>
-                                {order.status === 'Delivered' && <CheckCircle2 className="w-3 h-3 text-emerald-400" />}
-                                {order.status === 'Shipped' && <Truck className="w-3 h-3 text-blue-400" />}
-                                {order.status === 'Processing' && <Clock className="w-3 h-3 text-amber-400" />}
+                              <div className="flex items-center justify-between text-[11px] pt-1 border-t border-theme-subtle">
+                                <span className="text-theme-muted">Items: {order.items?.length || 1}</span>
+                                <span className="font-bold text-amber-300">
+                                  {order.currency || '$'}{order.totalAmount.toLocaleString()}
+                                </span>
                               </div>
                             </div>
-
-                            <div className="flex items-center justify-between text-[11px] pt-1.5 border-t border-theme-subtle">
-                              <span className="text-theme-muted">Qty: {firstItem?.quantity || 1}</span>
-                              <span className="font-bold text-amber-300">
-                                {order.currency}{order.totalAmount.toLocaleString()}
-                              </span>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    {/* View All Orders Button */}
-                    <button
-                      onClick={() => {
-                        if (orders.length > 0) setSelectedOrderModal(orders[0]);
-                        setIsProfileOpen(false);
-                      }}
-                      className="w-full py-2 px-3 rounded-xl border border-amber-400/30 bg-amber-400/5 hover:bg-amber-400/15 text-amber-300 text-xs font-bold transition-all flex items-center justify-center gap-1.5 group"
-                    >
-                      <span>View All Orders</span>
-                      <ExternalLink className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-                    </button>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-theme-muted italic py-2">No orders placed yet.</p>
+                    )}
                   </div>
                 )}
 
-                {/* Footer Action */}
-                <div className="pt-2 border-t border-theme-main flex items-center justify-between text-xs text-theme-muted">
-                  <span>Logged in as Customer</span>
+                {/* Footer Action / Sign Out */}
+                <div className="pt-2 border-t border-theme-main flex items-center justify-between text-xs">
+                  <button
+                    onClick={() => {
+                      setIsProfileOpen(false);
+                      onLogout();
+                    }}
+                    className="flex items-center gap-1.5 text-rose-400 hover:text-rose-300 font-bold transition-colors cursor-pointer"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span>Sign Out</span>
+                  </button>
+
                   <button
                     onClick={() => setIsProfileOpen(false)}
-                    className="hover:text-theme-heading transition-colors font-semibold"
+                    className="text-theme-muted hover:text-theme-heading transition-colors font-semibold cursor-pointer"
                   >
                     Close
                   </button>

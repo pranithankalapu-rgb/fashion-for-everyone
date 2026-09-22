@@ -143,7 +143,7 @@ async function testAll() {
   await assertTest('Update Product Stock in PostgreSQL', async () => {
     const res = await fetch(`${BASE_URL}/products/${createdProductId}/stock`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
       body: JSON.stringify({ stockQuantity: 4 }),
     });
     const data = await res.json();
@@ -153,6 +153,7 @@ async function testAll() {
   await assertTest('Delete Product from PostgreSQL', async () => {
     const res = await fetch(`${BASE_URL}/products/${createdProductId}`, {
       method: 'DELETE',
+      headers: { Authorization: `Bearer ${adminToken}` },
     });
     const inDb = await prisma.retailProduct.findUnique({ where: { id: createdProductId } });
     return res.status === 200 && inDb === null;
@@ -161,7 +162,9 @@ async function testAll() {
   // 5. Orders & Checkout Transaction
   let createdOrderId = '';
   await assertTest('Get Orders from PostgreSQL', async () => {
-    const res = await fetch(`${BASE_URL}/orders`);
+    const res = await fetch(`${BASE_URL}/orders`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
     const data = await res.json();
     return Array.isArray(data) && data.length > 0 && !!data[0].items;
   });

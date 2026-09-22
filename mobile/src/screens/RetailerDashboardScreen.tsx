@@ -22,7 +22,7 @@ import type { RetailProduct, CustomerOrder, RetailerCustomer } from '../types/fa
 export default function RetailerDashboardScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
-  const { role, switchRole } = useAuth();
+  const { role } = useAuth();
   const isRetailer = role === 'retailer' || role === 'admin';
 
   const [products, setProducts] = useState<RetailProduct[]>([]);
@@ -129,9 +129,9 @@ export default function RetailerDashboardScreen({ navigation }: any) {
           </Text>
           <TouchableOpacity
             style={styles.switchRoleBtn}
-            onPress={() => switchRole('retailer')}
+            onPress={() => navigation.navigate('Login')}
           >
-            <Text style={styles.switchRoleBtnText}>Switch to Retailer Mode</Text>
+            <Text style={styles.switchRoleBtnText}>Sign In as Retailer</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.goBackBtn} onPress={() => navigation.goBack()}>
             <Text style={[styles.goBackBtnText, { color: colors.textMuted }]}>Go Back</Text>

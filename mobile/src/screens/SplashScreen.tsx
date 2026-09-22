@@ -6,21 +6,27 @@ import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
 
 export default function SplashScreen({ navigation }: any) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, role } = useAuth();
   const { colors, isDark } = useTheme();
 
   useEffect(() => {
     if (!isLoading) {
       const timer = setTimeout(() => {
         if (isAuthenticated) {
-          navigation.replace('Main');
+          if (role === 'retailer') {
+            navigation.replace('RetailerDashboard');
+          } else if (role === 'designer') {
+            navigation.replace('DesignerShowcase');
+          } else {
+            navigation.replace('Main');
+          }
         } else {
           navigation.replace('Login');
         }
       }, 1500);
       return () => clearTimeout(timer);
     }
-  }, [isLoading, isAuthenticated, navigation]);
+  }, [isLoading, isAuthenticated, role, navigation]);
 
   const gradientMid = isDark ? '#1a103d' : '#e0e7ff';
 

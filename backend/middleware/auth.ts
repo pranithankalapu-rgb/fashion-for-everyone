@@ -28,7 +28,7 @@ export function authenticateRole(req: AuthenticatedRequest, res: Response, next:
     if (payload) {
       req.user = payload;
       req.userRole = payload.role;
-      req.userId = payload.userId;
+      req.userId = payload.userId || (payload.role === 'admin' ? 'admin_root' : undefined);
       return next();
     }
     // Token supplied but invalid or expired - do NOT fall back to fake users
@@ -81,7 +81,14 @@ export function requireAuth(req: AuthenticatedRequest, res: Response, next: Next
  */
 export function requireRole(allowedRoles: UserRole[]) {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    const currentRole = (req.userRole || 'customer').toLowerCase() as UserRole;
+    if (!req.user || !req.userId || !req.userRole) {
+      return res.status(401).json({
+        error: 'Unauthorized',
+        message: 'Authentication is required to access this resource.',
+      });
+    }
+
+    const currentRole = req.userRole.toLowerCase() as UserRole;
 
     if (currentRole === 'admin') {
       // Super admin has omnipotent privileges

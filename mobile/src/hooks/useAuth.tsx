@@ -7,8 +7,6 @@ import {
   setRefreshToken,
   setCurrentRole,
   setCurrentUserId,
-  getSavedRole,
-  getSavedUserId,
   setSessionExpiredHandler,
 } from '../services/api';
 import type { UserProfile, UserRole } from '../types/fashion';
@@ -21,10 +19,9 @@ interface AuthState {
 }
 
 interface AuthContextType extends AuthState {
-  login: (emailOrUsername: string, password: string, role?: string) => Promise<void>;
-  register: (name: string, email: string, password: string, role?: string) => Promise<void>;
+  login: (emailOrUsername: string, password: string, role?: string) => Promise<{ user: any; role: UserRole }>;
+  register: (name: string, email: string, password: string, role?: string) => Promise<{ user: any; role: UserRole }>;
   logout: () => Promise<void>;
-  switchRole: (role: UserRole) => void;
   refreshUser: () => Promise<void>;
   updateUser: (partial: Partial<UserProfile>) => void;
 }
@@ -39,7 +36,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isLoading: true,
   });
 
-  // Check for existing token and role on mount
+  // Check for existing token and restore authoritative role on mount
   useEffect(() => {
     let isMounted = true;
 
@@ -47,25 +44,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const token = await getToken();
         const refreshToken = await getRefreshToken();
-        const savedRole = await getSavedRole();
-        const savedUserId = await getSavedUserId();
-
-        if (savedUserId) {
-          setCurrentUserId(savedUserId);
-        }
-        if (savedRole) {
-          setCurrentRole(savedRole);
-        }
 
         if (token || refreshToken) {
           try {
-            // If access token is expired, the API interceptor automatically uses refreshToken
+            // Validate session and retrieve authoritative database profile
             const { user } = await api.getMe();
             if (isMounted && user) {
-              const role = savedRole || (user?.role as UserRole) || 'customer';
-              setCurrentRole(role);
+              const authoritativeRole = (user?.role as UserRole) || 'customer';
+              setCurrentRole(authoritativeRole);
               if (user?.id) setCurrentUserId(user.id);
-              setState({ user, role, isAuthenticated: true, isLoading: false });
+              setState({ user, role: authoritativeRole, isAuthenticated: true, isLoading: false });
               return;
             }
           } catch (meErr) {
@@ -73,18 +61,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         }
 
-        // If no tokens or restore failed
+        // If no tokens or restore failed, purge state
         if (isMounted) {
           await setToken(null);
           await setRefreshToken(null);
           setCurrentUserId(null);
-          setState({ user: null, role: savedRole || 'customer', isAuthenticated: false, isLoading: false });
+          setCurrentRole('customer');
+          setState({ user: null, role: 'customer', isAuthenticated: false, isLoading: false });
         }
       } catch {
         if (isMounted) {
           await setToken(null);
           await setRefreshToken(null);
           setCurrentUserId(null);
+          setCurrentRole('customer');
           setState({ user: null, role: 'customer', isAuthenticated: false, isLoading: false });
         }
       }
@@ -106,10 +96,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setState((s) => ({ ...s, isLoading: true }));
     try {
       const res = await api.login({ emailOrUsername, password, role });
-      const userRole = (role as UserRole) || (res.user?.role as UserRole) || 'customer';
-      setCurrentRole(userRole);
+      const authoritativeRole = (res.user?.role as UserRole) || 'customer';
+      setCurrentRole(authoritativeRole);
       if (res.user?.id) setCurrentUserId(res.user.id);
-      setState({ user: res.user, role: userRole, isAuthenticated: true, isLoading: false });
+      setState({ user: res.user, role: authoritativeRole, isAuthenticated: true, isLoading: false });
+      return { user: res.user, role: authoritativeRole };
     } catch (err) {
       setState((s) => ({ ...s, isLoading: false }));
       throw err;
@@ -120,10 +111,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setState((s) => ({ ...s, isLoading: true }));
     try {
       const res = await api.register({ name, email, password, role });
-      const userRole = (role as UserRole) || (res.user?.role as UserRole) || 'customer';
-      setCurrentRole(userRole);
+      const authoritativeRole = (res.user?.role as UserRole) || (role as UserRole) || 'customer';
+      setCurrentRole(authoritativeRole);
       if (res.user?.id) setCurrentUserId(res.user.id);
-      setState({ user: res.user, role: userRole, isAuthenticated: true, isLoading: false });
+      setState({ user: res.user, role: authoritativeRole, isAuthenticated: true, isLoading: false });
+      return { user: res.user, role: authoritativeRole };
     } catch (err) {
       setState((s) => ({ ...s, isLoading: false }));
       throw err;
@@ -140,16 +132,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const switchRole = useCallback((role: UserRole) => {
-    setCurrentRole(role);
-    setState((s) => ({ ...s, role }));
-  }, []);
-
   const refreshUser = useCallback(async () => {
     try {
       const { user } = await api.getMe();
       if (user) {
-        setState((s) => ({ ...s, user }));
+        const authoritativeRole = (user?.role as UserRole) || 'customer';
+        setCurrentRole(authoritativeRole);
+        setState((s) => ({ ...s, user, role: authoritativeRole }));
       }
     } catch {}
   }, []);
@@ -162,7 +151,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ ...state, login, register, logout, switchRole, refreshUser, updateUser }}>
+    <AuthContext.Provider value={{ ...state, login, register, logout, refreshUser, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

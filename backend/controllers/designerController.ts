@@ -110,7 +110,7 @@ export const designerController = {
       const occasion = sanitizeString(req.body.occasion);
       const rawPalette = req.body.palette;
       const price = Number(req.body.price);
-      const designerId = sanitizeString(req.body.designerId) || 'des_1';
+      const designerId = req.userId || sanitizeString(req.body.designerId) || 'des_1';
 
       if (!title || !imageUrl) {
         return res.status(400).json({ error: 'Title and image URL are required' });
@@ -119,13 +119,18 @@ export const designerController = {
       const sanitizedPalette = Array.isArray(rawPalette) ? rawPalette.map((c: string) => sanitizeString(c)) : ['#1E293B', '#D97706'];
 
       // Look up the designer to populate denormalized fields
-      const designer = await prisma.designer.findUnique({ where: { id: designerId } });
+      let designer = await prisma.designer.findUnique({ where: { id: designerId } });
+      if (!designer && req.user) {
+        designer = await prisma.designer.findFirst({
+          where: { OR: [{ email: req.user.email }, { name: req.user.name }] },
+        });
+      }
 
       const newDesign = await prisma.design.create({
         data: {
-          designerId,
-          designerName: designer?.name || 'Unknown Designer',
-          designerAvatar: designer?.avatar || '',
+          designerId: designer?.id || designerId,
+          designerName: designer?.name || req.user?.name || 'Creator',
+          designerAvatar: designer?.avatar || req.user?.avatar || '',
           title,
           collection: collection || 'Spring / Summer Collection',
           imageUrl,
@@ -142,7 +147,7 @@ export const designerController = {
       // Update designer's total votes
       if (designer) {
         await prisma.designer.update({
-          where: { id: designerId },
+          where: { id: designer.id },
           data: { totalVotes: { increment: 1 } },
         });
       }
@@ -151,6 +156,29 @@ export const designerController = {
     } catch (err) {
       console.error('Error creating design:', err);
       res.status(500).json({ error: 'Failed to create design' });
+    }
+  },
+
+  async deleteDesign(req: AuthenticatedRequest, res: Response) {
+    try {
+      const id = sanitizeString(req.params.id);
+      const userRole = (req.userRole || 'customer').toLowerCase();
+      const userId = req.userId;
+
+      const design = await prisma.design.findUnique({ where: { id } });
+      if (!design) {
+        return res.status(404).json({ error: 'Design not found' });
+      }
+
+      if (userRole !== 'admin' && design.designerId !== userId) {
+        return res.status(403).json({ error: 'Forbidden: You do not have permission to delete this design.' });
+      }
+
+      await prisma.design.delete({ where: { id } });
+      res.json({ message: 'Design deleted successfully' });
+    } catch (err) {
+      console.error('Error deleting design:', err);
+      res.status(500).json({ error: 'Failed to delete design' });
     }
   },
 

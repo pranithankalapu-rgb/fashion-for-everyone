@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Header } from './components/Header';
 import { Sidebar, type UserRole } from './components/Sidebar';
+import { AuthModal } from './components/AuthModal';
 import { OnboardingModal } from './components/OnboardingModal';
 import { AIEngineView } from './components/AIEngineView';
 import { ColorVotingView } from './components/ColorVotingView';
@@ -14,7 +15,6 @@ import { VirtualTryOnModal } from './components/VirtualTryOnModal';
 import { AdminGuard } from './components/admin/AdminGuard';
 import type { AdminTab } from './components/admin/AdminLayout';
 import type { UserProfile, RetailProduct } from './types/fashion';
-import { INITIAL_USER_PROFILE } from './data/fashionData';
 import { api, setCurrentRole } from './services/api';
 import { subscribeToNotifications } from './services/socket';
 import { X, ShoppingBag, Heart, Sparkles, Wand2, Bell } from 'lucide-react';
@@ -40,8 +40,11 @@ export function App() {
     return 'dashboard';
   });
 
-  const [userProfile, setUserProfile] = useState<UserProfile>(INITIAL_USER_PROFILE);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [userRole, setUserRole] = useState<UserRole>('customer');
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
+
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isOnboardingOpen, setIsOnboardingOpen] = useState<boolean>(false);
   const [isStylistOpen, setIsStylistOpen] = useState<boolean>(false);
@@ -77,16 +80,29 @@ export function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
+  // Restore authenticated session on app mount
   useEffect(() => {
-    async function loadInitialProfile() {
+    async function loadInitialSession() {
       try {
-        const p = await api.getProfile();
-        if (p) setUserProfile(p);
-      } catch (err) {
-        console.error('Error fetching user profile:', err);
+        const res = await api.getMe();
+        if (res && res.user) {
+          setUserProfile(res.user);
+          const role = (res.user.role as UserRole) || 'customer';
+          setUserRole(role);
+          setCurrentRole(role);
+          setIsAuthenticated(true);
+        } else {
+          setUserProfile(null);
+          setIsAuthenticated(false);
+          setUserRole('customer');
+        }
+      } catch {
+        setUserProfile(null);
+        setIsAuthenticated(false);
+        setUserRole('customer');
       }
     }
-    loadInitialProfile();
+    loadInitialSession();
   }, []);
 
   // Subscribe to real-time notifications for active role
@@ -102,17 +118,36 @@ export function App() {
     };
   }, [userRole]);
 
-  const handleRoleChange = (role: UserRole) => {
+  // Handle successful login or registration with authoritative role redirect
+  const handleAuthSuccess = (user: UserProfile, role: UserRole) => {
+    setUserProfile(user);
     setUserRole(role);
-    setCurrentRole(role as any);
+    setCurrentRole(role);
+    setIsAuthenticated(true);
+    setIsAuthModalOpen(false);
+
+    // Role-Specific Redirect
     if (role === 'retailer') {
-      if (!activeTab.startsWith('retailer-')) {
-        setActiveTab('retailer-dashboard');
-      }
+      setActiveTab('retailer-dashboard');
     } else if (role === 'designer') {
       setActiveTab('designer-showcase');
+    } else if (role === 'admin') {
+      setActiveTab('admin');
     } else {
-      if (activeTab.startsWith('retailer-')) {
+      setActiveTab('ai-engine');
+    }
+  };
+
+  // Handle Logout
+  const handleLogout = async () => {
+    try {
+      await api.logout();
+    } finally {
+      setUserProfile(null);
+      setUserRole('customer');
+      setCurrentRole('customer');
+      setIsAuthenticated(false);
+      if (activeTab.startsWith('retailer-') || activeTab.startsWith('admin')) {
         setActiveTab('ai-engine');
       }
     }
@@ -147,6 +182,9 @@ export function App() {
       {/* Top Header */}
       <Header
         userProfile={userProfile}
+        isAuthenticated={isAuthenticated}
+        onOpenAuth={() => setIsAuthModalOpen(true)}
+        onLogout={handleLogout}
         onOpenOnboarding={() => setIsOnboardingOpen(true)}
         userRole={userRole}
         searchQuery={searchQuery}
@@ -164,7 +202,8 @@ export function App() {
             activeTab={activeTab}
             setActiveTab={setActiveTab}
             userRole={userRole}
-            setUserRole={handleRoleChange}
+            isAuthenticated={isAuthenticated}
+            onOpenAuth={() => setIsAuthModalOpen(true)}
           />
 
           {/* MAIN APPLICATION CONTENT */}
@@ -179,7 +218,24 @@ export function App() {
               <>
                 {activeTab === 'ai-engine' && (
                   <AIEngineView
-                    userProfile={userProfile}
+                    userProfile={
+                      userProfile || {
+                        id: 'guest',
+                        name: 'Guest Explorer',
+                        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
+                        skinTone: 'Warm Golden',
+                        undertone: 'Warm',
+                        hairColor: 'Chestnut Brown',
+                        bodyShape: 'Hourglass',
+                        measurements: { heightCm: 170, chestCm: 88, waistCm: 68, hipsCm: 94 },
+                        selectedOccasions: [],
+                        styleVibes: [],
+                        completedOnboarding: true,
+                        role: 'customer',
+                        approvalStatus: 'Approved',
+                        status: 'Active',
+                      }
+                    }
                     onSelectProduct={handleSelectProduct}
                     onNavigateTab={setActiveTab}
                     searchQuery={searchQuery}
@@ -290,13 +346,23 @@ export function App() {
         <p>Built with React 19, Express 5, TypeScript, Prisma PostgreSQL & Socket.io</p>
       </footer>
 
-      {/* Modals & Drawers */}
-      <OnboardingModal
-        isOpen={isOnboardingOpen}
-        onClose={() => setIsOnboardingOpen(false)}
-        userProfile={userProfile}
-        onSaveProfile={setUserProfile}
+      {/* Auth Modal (Sign In & Register) */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onAuthSuccess={handleAuthSuccess}
+        initialRole={userRole}
       />
+
+      {/* Profile Onboarding Modal */}
+      {userProfile && (
+        <OnboardingModal
+          isOpen={isOnboardingOpen}
+          onClose={() => setIsOnboardingOpen(false)}
+          userProfile={userProfile}
+          onSaveProfile={setUserProfile}
+        />
+      )}
 
       <AIStylistDrawer
         isOpen={isStylistOpen}
@@ -370,7 +436,7 @@ export function App() {
       )}
 
       {/* Real Customer Order Checkout Modal */}
-      {checkoutProduct && (
+      {checkoutProduct && userProfile && (
         <OrderCheckoutModal
           product={checkoutProduct}
           userProfile={userProfile}

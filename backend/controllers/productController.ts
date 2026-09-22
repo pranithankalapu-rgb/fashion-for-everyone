@@ -1,6 +1,6 @@
 import type { Response } from 'express';
 import type { AuthenticatedRequest } from '../middleware/auth';
-import { prisma, getDb, saveDb } from '../db';
+import { prisma, getDb } from '../db';
 import { sanitizeString } from '../security';
 
 export const productController = {

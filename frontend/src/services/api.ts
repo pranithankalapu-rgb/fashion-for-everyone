@@ -119,7 +119,6 @@ async function fetchJson<T>(url: string, options?: RequestInit, isRetry = false)
   const token = getAuthToken();
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    'x-user-role': currentActiveRole,
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...(options?.headers as Record<string, string>),
   };
@@ -301,7 +300,6 @@ export const api = {
       const res = await fetch(`${BASE_URL}/products`, {
         method: 'POST',
         headers: {
-          'x-user-role': currentActiveRole,
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: data,
@@ -321,7 +319,6 @@ export const api = {
       const res = await fetch(`${BASE_URL}/products/${id}`, {
         method: 'PUT',
         headers: {
-          'x-user-role': currentActiveRole,
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: data,

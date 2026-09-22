@@ -1,6 +1,6 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import * as SecureStore from 'expo-secure-store';
-import { API_BASE_URL, PRODUCTION_API_URL, FALLBACK_API_URL } from '../constants/config';
+import { API_BASE_URL, FALLBACK_API_URL } from '../constants/config';
 import { resolveMediaUrl } from '../utils/media';
 import type {
   UserProfile,
@@ -71,10 +71,8 @@ export function setSessionExpiredHandler(handler: (() => void) | null) {
 // ---- Axios client ----
 
 const ROLE_KEY = 'user_role';
-const USER_ID_KEY = 'user_id';
 
 let currentRole: UserRole = 'customer';
-let currentUserId: string | null = null;
 
 export function setCurrentRole(role: UserRole) {
   currentRole = role;
@@ -127,17 +125,11 @@ const client: AxiosInstance = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-// Request interceptor – attach auth token & role
+// Request interceptor – attach Bearer JWT auth token
 client.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
   const token = await getToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
-  }
-  if (currentRole) {
-    config.headers['x-user-role'] = currentRole;
-  }
-  if (currentUserId) {
-    config.headers['x-user-id'] = currentUserId;
   }
   return config;
 });
@@ -360,9 +352,7 @@ export const api = {
       await setToken(null);
       await setRefreshToken(null);
       await SecureStore.deleteItemAsync(ROLE_KEY).catch(() => {});
-      await SecureStore.deleteItemAsync(USER_ID_KEY).catch(() => {});
       currentRole = 'customer';
-      currentUserId = null;
     }
   },
 

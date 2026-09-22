@@ -9,12 +9,15 @@ export const orderController = {
   // GET /api/orders
   async getAll(req: AuthenticatedRequest, res: Response) {
     try {
-      const userRole = req.userRole || 'customer';
+      const userRole = (req.userRole || 'customer').toLowerCase();
       const userEmail = req.user?.email;
 
       // Customers can only see their own orders unless admin or retailer
       const whereClause: any = {};
-      if (userRole === 'customer' && userEmail && userEmail !== 'user@fashionforeveryone.com' && req.headers.authorization) {
+      if (userRole !== 'retailer' && userRole !== 'admin') {
+        if (!userEmail) {
+          return res.json([]);
+        }
         whereClause.customerEmail = { equals: userEmail, mode: 'insensitive' };
       }
 
@@ -27,7 +30,7 @@ export const orderController = {
         return res.json(orders);
       } catch {
         const db = getDb();
-        const orders = userRole === 'customer' && userEmail
+        const orders = (userRole !== 'retailer' && userRole !== 'admin' && userEmail)
           ? db.orders.filter(o => o.customerEmail?.toLowerCase() === userEmail.toLowerCase())
           : db.orders;
         return res.json(orders);
@@ -42,31 +45,33 @@ export const orderController = {
   async getById(req: AuthenticatedRequest, res: Response) {
     try {
       const id = sanitizeString(req.params.id);
+      const userRole = (req.userRole || 'customer').toLowerCase();
+      const userEmail = req.user?.email;
+
+      let order: any = null;
       try {
-        const order = await prisma.customerOrder.findFirst({
+        order = await prisma.customerOrder.findFirst({
           where: {
             OR: [{ id }, { orderNumber: id }],
           },
           include: { items: true },
         });
-
-        if (!order) {
-          return res.status(404).json({ error: 'Order not found' });
-        }
-
-        if (req.userRole === 'customer' && req.user?.email && order.customerEmail) {
-          if (order.customerEmail.toLowerCase() !== req.user.email.toLowerCase()) {
-            return res.status(403).json({ error: 'Forbidden: You cannot view another customer’s order.' });
-          }
-        }
-
-        return res.json(order);
       } catch {
         const db = getDb();
-        const order = db.orders.find(o => o.id === id || o.orderNumber === id);
-        if (!order) return res.status(404).json({ error: 'Order not found' });
-        return res.json(order);
+        order = db.orders.find(o => o.id === id || o.orderNumber === id);
       }
+
+      if (!order) {
+        return res.status(404).json({ error: 'Order not found' });
+      }
+
+      if (userRole !== 'retailer' && userRole !== 'admin') {
+        if (!userEmail || !order.customerEmail || order.customerEmail.toLowerCase() !== userEmail.toLowerCase()) {
+          return res.status(403).json({ error: 'Forbidden: You cannot view another customer’s order.' });
+        }
+      }
+
+      return res.json(order);
     } catch (err) {
       console.error('Error fetching order by ID:', err);
       res.status(500).json({ error: 'Failed to fetch order' });
@@ -327,15 +332,38 @@ export const orderController = {
   async delete(req: AuthenticatedRequest, res: Response) {
     try {
       const id = sanitizeString(req.params.id);
+      const userRole = (req.userRole || 'customer').toLowerCase();
+      const userEmail = req.user?.email;
+
+      let order: any = null;
       try {
-        await prisma.customerOrder.delete({ where: { id } });
-        return res.json({ message: 'Order deleted successfully' });
+        order = await prisma.customerOrder.findFirst({
+          where: { OR: [{ id }, { orderNumber: id }] },
+        });
       } catch {
         const db = getDb();
-        db.orders = db.orders.filter(o => o.id !== id);
-        saveDb(db);
-        return res.json({ message: 'Order deleted successfully' });
+        order = db.orders.find(o => o.id === id || o.orderNumber === id);
       }
+
+      if (!order) {
+        return res.status(404).json({ error: 'Order not found' });
+      }
+
+      if (userRole !== 'retailer' && userRole !== 'admin') {
+        if (!userEmail || !order.customerEmail || order.customerEmail.toLowerCase() !== userEmail.toLowerCase()) {
+          return res.status(403).json({ error: 'Forbidden: You cannot delete another customer’s order.' });
+        }
+      }
+
+      try {
+        await prisma.customerOrder.delete({ where: { id: order.id } });
+      } catch {
+        const db = getDb();
+        db.orders = db.orders.filter(o => o.id !== order.id && o.orderNumber !== order.orderNumber);
+        saveDb(db);
+      }
+
+      return res.json({ message: 'Order deleted successfully' });
     } catch (err) {
       console.error('Error deleting order:', err);
       res.status(500).json({ error: 'Failed to delete order' });
