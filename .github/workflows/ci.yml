@@ -28,7 +28,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node.js-version: 20
+          node-version: 20
           cache: 'npm'
 
       - name: Install Dependencies
@@ -42,6 +42,16 @@ jobs:
 
       - name: Generate Prisma Client
         run: npx prisma generate
+        env:
+          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/fashion_db?schema=public"
+
+      - name: Deploy Database Migrations
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/fashion_db?schema=public"
+
+      - name: Seed Database
+        run: npx prisma db seed
         env:
           DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/fashion_db?schema=public"
 

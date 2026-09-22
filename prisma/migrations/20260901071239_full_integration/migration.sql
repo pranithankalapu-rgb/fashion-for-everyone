@@ -2,18 +2,48 @@
 CREATE TABLE "UserProfile" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
+    "email" TEXT,
+    "passwordHash" TEXT,
+    "refreshToken" TEXT,
+    "refreshTokenExpiry" TIMESTAMP(3),
     "avatar" TEXT NOT NULL,
     "photoUrl" TEXT,
-    "skinTone" TEXT NOT NULL,
-    "undertone" TEXT NOT NULL,
-    "hairColor" TEXT NOT NULL,
-    "bodyShape" TEXT NOT NULL,
-    "measurements" JSONB NOT NULL,
-    "selectedOccasions" TEXT[],
-    "styleVibes" TEXT[],
+    "skinTone" TEXT NOT NULL DEFAULT 'Warm Golden',
+    "undertone" TEXT NOT NULL DEFAULT 'Warm',
+    "hairColor" TEXT NOT NULL DEFAULT 'Chestnut Brown',
+    "bodyShape" TEXT NOT NULL DEFAULT 'Hourglass',
+    "measurements" JSONB NOT NULL DEFAULT '{"heightCm": 170, "chestCm": 88, "waistCm": 68, "hipsCm": 94}',
+    "selectedOccasions" TEXT[] DEFAULT ARRAY[]::TEXT[],
+    "styleVibes" TEXT[] DEFAULT ARRAY[]::TEXT[],
     "completedOnboarding" BOOLEAN NOT NULL DEFAULT true,
+    "role" TEXT NOT NULL DEFAULT 'customer',
+    "approvalStatus" TEXT NOT NULL DEFAULT 'Approved',
+    "status" TEXT NOT NULL DEFAULT 'Active',
+    "requestedRole" TEXT,
+    "rejectionReason" TEXT,
+    "phone" TEXT,
+    "bio" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "UserProfile_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "VerificationCode" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "target" TEXT NOT NULL,
+    "type" TEXT NOT NULL,
+    "codeHash" TEXT NOT NULL,
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "attempts" INTEGER NOT NULL DEFAULT 0,
+    "maxAttempts" INTEGER NOT NULL DEFAULT 5,
+    "resendAfter" TIMESTAMP(3) NOT NULL,
+    "consumedAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "VerificationCode_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -33,6 +63,17 @@ CREATE TABLE "ColorCombo" (
 );
 
 -- CreateTable
+CREATE TABLE "ColorVote" (
+    "id" TEXT NOT NULL,
+    "colorComboId" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "voteType" TEXT NOT NULL DEFAULT 'up',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "ColorVote_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "Designer" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
@@ -44,6 +85,12 @@ CREATE TABLE "Designer" (
     "totalVotes" INTEGER NOT NULL DEFAULT 0,
     "badges" TEXT[],
     "verified" BOOLEAN NOT NULL DEFAULT false,
+    "approvalStatus" TEXT NOT NULL DEFAULT 'Approved',
+    "status" TEXT NOT NULL DEFAULT 'Active',
+    "email" TEXT,
+    "rejectionReason" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "Designer_pkey" PRIMARY KEY ("id")
 );
@@ -63,7 +110,11 @@ CREATE TABLE "Design" (
     "palette" TEXT[],
     "price" DOUBLE PRECISION NOT NULL,
     "inStock" BOOLEAN NOT NULL DEFAULT true,
+    "approvalStatus" TEXT NOT NULL DEFAULT 'Approved',
+    "rejectionReason" TEXT,
+    "status" TEXT NOT NULL DEFAULT 'Active',
     "createdAt" TEXT NOT NULL,
+    "submittedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "Design_pkey" PRIMARY KEY ("id")
 );
@@ -119,7 +170,8 @@ CREATE TABLE "OutfitLook" (
     "reshares" INTEGER NOT NULL DEFAULT 0,
     "occasion" TEXT NOT NULL,
     "taggedProducts" JSONB NOT NULL,
-    "userLiked" BOOLEAN,
+    "userLiked" BOOLEAN DEFAULT false,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "OutfitLook_pkey" PRIMARY KEY ("id")
 );
@@ -129,7 +181,7 @@ CREATE TABLE "CustomerOrder" (
     "id" TEXT NOT NULL,
     "orderNumber" TEXT NOT NULL,
     "date" TEXT NOT NULL,
-    "status" TEXT NOT NULL,
+    "status" TEXT NOT NULL DEFAULT 'Pending',
     "totalAmount" DOUBLE PRECISION NOT NULL,
     "currency" TEXT NOT NULL DEFAULT '$',
     "shippingAddress" TEXT NOT NULL,
@@ -138,7 +190,11 @@ CREATE TABLE "CustomerOrder" (
     "customerName" TEXT,
     "customerEmail" TEXT,
     "customerPhone" TEXT,
-    "paymentMethod" TEXT,
+    "paymentMethod" TEXT DEFAULT 'Credit Card',
+    "paymentStatus" TEXT NOT NULL DEFAULT 'PAID',
+    "paymentIntentId" TEXT,
+    "paymentGateway" TEXT NOT NULL DEFAULT 'MOCK',
+    "idempotencyKey" TEXT,
 
     CONSTRAINT "CustomerOrder_pkey" PRIMARY KEY ("id")
 );
@@ -196,22 +252,28 @@ CREATE TABLE "Promotion" (
 
 -- CreateTable
 CREATE TABLE "StoreSettings" (
-    "id" TEXT NOT NULL DEFAULT 'default',
+    "id" TEXT NOT NULL,
     "storeName" TEXT NOT NULL,
-    "logoUrl" TEXT NOT NULL,
-    "taxId" TEXT NOT NULL,
+    "logoUrl" TEXT NOT NULL DEFAULT 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=300&q=80',
+    "taxId" TEXT NOT NULL DEFAULT 'TAX-998877',
     "currency" TEXT NOT NULL DEFAULT '$',
     "managerName" TEXT NOT NULL,
     "managerEmail" TEXT NOT NULL,
     "managerPhone" TEXT NOT NULL,
     "address" TEXT NOT NULL,
-    "supportEmail" TEXT NOT NULL,
-    "supportPhone" TEXT NOT NULL,
+    "supportEmail" TEXT NOT NULL DEFAULT 'support@store.com',
+    "supportPhone" TEXT NOT NULL DEFAULT '+1 (555) 000-0000',
     "autoFulfill" BOOLEAN NOT NULL DEFAULT false,
     "lowStockThreshold" INTEGER NOT NULL DEFAULT 5,
     "emailNotifications" BOOLEAN NOT NULL DEFAULT true,
     "smsAlerts" BOOLEAN NOT NULL DEFAULT true,
     "weeklyReport" BOOLEAN NOT NULL DEFAULT true,
+    "approvalStatus" TEXT NOT NULL DEFAULT 'Approved',
+    "status" TEXT NOT NULL DEFAULT 'Active',
+    "rejectionReason" TEXT,
+    "businessType" TEXT DEFAULT 'Boutique Flagship',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "StoreSettings_pkey" PRIMARY KEY ("id")
 );
@@ -256,11 +318,65 @@ CREATE TABLE "AiAnalysisRequest" (
     CONSTRAINT "AiAnalysisRequest_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "Notification" (
+    "id" TEXT NOT NULL,
+    "recipientRole" TEXT NOT NULL DEFAULT 'retailer',
+    "recipientId" TEXT,
+    "title" TEXT NOT NULL,
+    "message" TEXT NOT NULL,
+    "type" TEXT NOT NULL DEFAULT 'info',
+    "read" BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "Notification_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "TryOnJob" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "garmentId" TEXT,
+    "userPhotoUrl" TEXT NOT NULL,
+    "garmentUrl" TEXT,
+    "resultUrl" TEXT,
+    "status" TEXT NOT NULL DEFAULT 'PENDING',
+    "provider" TEXT NOT NULL DEFAULT 'virtual-tryon-v1',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "TryOnJob_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "UserProfile_email_key" ON "UserProfile"("email");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "UserProfile_phone_key" ON "UserProfile"("phone");
+
+-- CreateIndex
+CREATE INDEX "VerificationCode_userId_type_idx" ON "VerificationCode"("userId", "type");
+
+-- CreateIndex
+CREATE INDEX "VerificationCode_target_idx" ON "VerificationCode"("target");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "ColorVote_colorComboId_userId_key" ON "ColorVote"("colorComboId", "userId");
+
+-- CreateIndex
+CREATE INDEX "OutfitLook_occasion_idx" ON "OutfitLook"("occasion");
+
+-- CreateIndex
+CREATE INDEX "OutfitLook_likes_idx" ON "OutfitLook"("likes");
+
 -- CreateIndex
 CREATE UNIQUE INDEX "CustomerOrder_orderNumber_key" ON "CustomerOrder"("orderNumber");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Promotion_code_key" ON "Promotion"("code");
+
+-- AddForeignKey
+ALTER TABLE "ColorVote" ADD CONSTRAINT "ColorVote_colorComboId_fkey" FOREIGN KEY ("colorComboId") REFERENCES "ColorCombo"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Design" ADD CONSTRAINT "Design_designerId_fkey" FOREIGN KEY ("designerId") REFERENCES "Designer"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -273,3 +389,4 @@ ALTER TABLE "OrderItem" ADD CONSTRAINT "OrderItem_orderId_fkey" FOREIGN KEY ("or
 
 -- AddForeignKey
 ALTER TABLE "OrderItem" ADD CONSTRAINT "OrderItem_productId_fkey" FOREIGN KEY ("productId") REFERENCES "RetailProduct"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
