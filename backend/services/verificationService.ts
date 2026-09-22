@@ -2,9 +2,9 @@ import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import { prisma } from '../db';
 import { communicationService, ProviderNotConfiguredError, DeliveryFailedError } from './communicationService';
+import { normalizePhoneNumber } from '../utils/phoneUtils';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const PHONE_REGEX = /^\+?[0-9\s\-()]{7,20}$/;
 
 const OTP_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
 const RESEND_COOLDOWN_MS = 60 * 1000; // 60 seconds
@@ -23,7 +23,7 @@ export class VerificationError extends Error {
 }
 
 export function sanitizeContact(raw: string): string {
-  return raw.replace(/[\x00-\x1F\x7F]/g, '').trim();
+  return raw.replace(/[\u0000-\u001F\u007F]/g, '').trim();
 }
 
 export const verificationService = {
@@ -137,10 +137,22 @@ export const verificationService = {
       await prisma.verificationCode.delete({ where: { id: record.id } }).catch(() => {});
 
       if (err instanceof ProviderNotConfiguredError) {
-        throw new VerificationError(err.message, 503, 'PROVIDER_NOT_CONFIGURED');
+        console.error(
+          `[VerificationService] EMAIL provider not configured. Missing required environment variables: ${err.requiredVars.join(', ')}`
+        );
+        throw new VerificationError(
+          'Verification service is temporarily unavailable. Please try again later.',
+          503,
+          'PROVIDER_NOT_CONFIGURED'
+        );
       }
       if (err instanceof DeliveryFailedError) {
-        throw new VerificationError(err.message, 502, 'DELIVERY_FAILED');
+        console.error('[VerificationService] EMAIL delivery failed:', err.message);
+        throw new VerificationError(
+          'Unable to deliver verification email. Please try again later.',
+          502,
+          'DELIVERY_FAILED'
+        );
       }
       throw new VerificationError('Failed to dispatch verification code. Please try again.', 500);
     }
@@ -276,10 +288,16 @@ export const verificationService = {
       throw new VerificationError('A valid mobile number is required.', 400);
     }
 
-    const newPhone = sanitizeContact(newPhoneRaw);
-    if (!PHONE_REGEX.test(newPhone)) {
-      throw new VerificationError('Invalid mobile number format. Please enter a valid 7-15 digit phone number.', 400);
+    const normResult = normalizePhoneNumber(newPhoneRaw);
+    if (!normResult.valid || !normResult.normalized) {
+      throw new VerificationError(
+        normResult.error || 'Invalid mobile number format. Please enter a valid 10-digit mobile number or full international format with country code.',
+        400
+      );
     }
+
+    const newPhone = normResult.normalized;
+    const rawSanitized = sanitizeContact(newPhoneRaw);
 
     // 1. Check current user
     const currentUser = await prisma.userProfile.findUnique({
@@ -290,14 +308,24 @@ export const verificationService = {
       throw new VerificationError('User account not found.', 404);
     }
 
-    if (currentUser.phone && currentUser.phone.trim() === newPhone) {
-      throw new VerificationError('New mobile number must be different from your current mobile number.', 400);
+    if (currentUser.phone) {
+      const currentNorm = normalizePhoneNumber(currentUser.phone);
+      if (
+        (currentNorm.valid && currentNorm.normalized === newPhone) ||
+        currentUser.phone.trim() === newPhone ||
+        currentUser.phone.trim() === rawSanitized
+      ) {
+        throw new VerificationError('New mobile number must be different from your current mobile number.', 400);
+      }
     }
 
     // 2. Check if mobile number is already taken
     const existing = await prisma.userProfile.findFirst({
       where: {
-        phone: newPhone,
+        OR: [
+          { phone: newPhone },
+          { phone: rawSanitized },
+        ],
         NOT: { id: userId },
       },
     });
@@ -365,10 +393,22 @@ export const verificationService = {
       await prisma.verificationCode.delete({ where: { id: record.id } }).catch(() => {});
 
       if (err instanceof ProviderNotConfiguredError) {
-        throw new VerificationError(err.message, 503, 'PROVIDER_NOT_CONFIGURED');
+        console.error(
+          `[VerificationService] SMS provider not configured. Missing required environment variables: ${err.requiredVars.join(', ')}`
+        );
+        throw new VerificationError(
+          'Verification service is temporarily unavailable. Please try again later.',
+          503,
+          'PROVIDER_NOT_CONFIGURED'
+        );
       }
       if (err instanceof DeliveryFailedError) {
-        throw new VerificationError(err.message, 502, 'DELIVERY_FAILED');
+        console.error('[VerificationService] SMS delivery failed:', err.message);
+        throw new VerificationError(
+          'Unable to deliver verification code. Please try again later.',
+          502,
+          'DELIVERY_FAILED'
+        );
       }
       throw new VerificationError('Failed to dispatch verification code. Please try again.', 500);
     }
@@ -396,7 +436,16 @@ export const verificationService = {
       throw new VerificationError('Verification code is required.', 400);
     }
 
-    const newPhone = sanitizeContact(newPhoneRaw);
+    const normResult = normalizePhoneNumber(newPhoneRaw);
+    if (!normResult.valid || !normResult.normalized) {
+      throw new VerificationError(
+        normResult.error || 'Invalid mobile number format.',
+        400
+      );
+    }
+
+    const newPhone = normResult.normalized;
+    const rawSanitized = sanitizeContact(newPhoneRaw);
     const code = codeRaw.trim();
 
     if (!/^\d{6}$/.test(code)) {
@@ -407,7 +456,7 @@ export const verificationService = {
     const record = await prisma.verificationCode.findFirst({
       where: {
         userId,
-        target: newPhone,
+        target: { in: [newPhone, rawSanitized] },
         type: 'PHONE_CHANGE',
         consumedAt: null,
       },
@@ -465,7 +514,10 @@ export const verificationService = {
       // Re-check phone uniqueness
       const conflict = await tx.userProfile.findFirst({
         where: {
-          phone: newPhone,
+          OR: [
+            { phone: newPhone },
+            { phone: rawSanitized },
+          ],
           NOT: { id: userId },
         },
       });
@@ -491,3 +543,4 @@ export const verificationService = {
     };
   },
 };
+

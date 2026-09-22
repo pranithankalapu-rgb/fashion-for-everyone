@@ -236,10 +236,17 @@ export default function DesignerShowcaseScreen({ navigation }: any) {
         </ScrollView>
       ) : tab === 'designers' ? (
         <FlatList
+          key="flatlist_showcase_designers"
           data={designers}
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ padding: Spacing.lg, paddingBottom: 110 + insets.bottom }}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Ionicons name="people-outline" size={56} color={colors.textMuted} />
+              <Text style={[styles.emptyText, { color: colors.textMuted }]}>No designers found</Text>
+            </View>
+          }
           renderItem={({ item }) => (
             <View style={[styles.designerCard, { backgroundColor: colors.surface }]}>
               <Image source={{ uri: resolveMediaUrl(item.avatar) }} style={styles.designerAvatar} />
@@ -271,12 +278,19 @@ export default function DesignerShowcaseScreen({ navigation }: any) {
         />
       ) : (
         <FlatList
+          key="flatlist_showcase_designs_2col"
           data={designs}
           numColumns={2}
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ padding: Spacing.lg, paddingBottom: 110 + insets.bottom }}
           columnWrapperStyle={{ gap: Spacing.md }}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Ionicons name="sparkles-outline" size={56} color={colors.textMuted} />
+              <Text style={[styles.emptyText, { color: colors.textMuted }]}>No designs found</Text>
+            </View>
+          }
           renderItem={({ item }) => (
             <TouchableOpacity
               style={[styles.designCard, { backgroundColor: colors.surface }]}
@@ -524,4 +538,14 @@ const styles = StyleSheet.create({
   occPillActive: { borderColor: Colors.primary, backgroundColor: Colors.primaryFaded },
   occText: { color: Colors.textMuted, fontSize: FontSize.xs },
   occTextActive: { color: Colors.primary },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.xxxl,
+    gap: Spacing.md,
+  },
+  emptyText: {
+    fontSize: FontSize.md,
+    fontWeight: FontWeight.medium,
+  },
 });

@@ -20,6 +20,26 @@ import Button from '../components/Button';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+function formatEmailErrorMessage(err: any, defaultMsg: string): string {
+  const code = err.response?.data?.code;
+  const raw = err.response?.data?.error || err.message || '';
+  if (
+    code === 'PROVIDER_NOT_CONFIGURED' ||
+    raw.includes('SMTP_') ||
+    raw.includes('TWILIO_') ||
+    raw.includes('delivery provider is not configured')
+  ) {
+    return 'Verification service is temporarily unavailable. Please try again later.';
+  }
+  if (code === 'DELIVERY_FAILED') {
+    return 'Unable to deliver verification code. Please try again later.';
+  }
+  if (raw && typeof raw === 'string') {
+    return raw;
+  }
+  return defaultMsg;
+}
+
 export default function ChangeEmailScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
@@ -82,11 +102,7 @@ export default function ChangeEmailScreen({ navigation }: any) {
       setCooldown(res.resendCooldown || 60);
       setInfoMessage(`A 6-digit verification code was sent to ${trimmed}.`);
     } catch (err: any) {
-      const message =
-        err.response?.data?.error ||
-        err.message ||
-        'Failed to request verification code. Please try again.';
-      setError(message);
+      setError(formatEmailErrorMessage(err, 'Failed to request verification code. Please try again.'));
     } finally {
       setLoading(false);
     }
@@ -107,11 +123,7 @@ export default function ChangeEmailScreen({ navigation }: any) {
       setCooldown(res.resendCooldown || 60);
       setInfoMessage('A new verification code has been dispatched.');
     } catch (err: any) {
-      const message =
-        err.response?.data?.error ||
-        err.message ||
-        'Failed to resend verification code. Please try again.';
-      setError(message);
+      setError(formatEmailErrorMessage(err, 'Failed to resend verification code. Please try again.'));
     } finally {
       setResending(false);
     }
@@ -144,11 +156,7 @@ export default function ChangeEmailScreen({ navigation }: any) {
         [{ text: 'OK', onPress: () => navigation.goBack() }]
       );
     } catch (err: any) {
-      const message =
-        err.response?.data?.error ||
-        err.message ||
-        'Verification failed. Please check the code and try again.';
-      setError(message);
+      setError(formatEmailErrorMessage(err, 'Verification failed. Please check the code and try again.'));
     } finally {
       setLoading(false);
     }

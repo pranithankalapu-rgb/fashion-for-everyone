@@ -213,8 +213,8 @@ async function runTests() {
       });
       const data = await verifyRes.json();
       const inDb = await prisma.userProfile.findUnique({ where: { id: user1.id } });
-
-      return verifyRes.status === 200 && inDb?.phone === newPhone && data.profile?.phone === newPhone;
+      const expectedPhone = '+19876543210';
+      return verifyRes.status === 200 && inDb?.phone === expectedPhone && data.profile?.phone === expectedPhone;
     });
 
     // 7. POST /profile/avatar - preset URL update

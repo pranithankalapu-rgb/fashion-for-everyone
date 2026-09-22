@@ -119,8 +119,8 @@ async function runVerificationTestSuite() {
   const targetNewPhone = '+1 555-999-8888';
 
   try {
-    // --- Test 1: Unconfigured Provider Rejection Safety ---
-    await assertTest('1. Unconfigured provider safely rejects request with 503 and required variables', async () => {
+    // --- Test 1: Unconfigured Provider Rejection Safety & Secret Masking ---
+    await assertTest('1. Unconfigured provider safely rejects request with 503 and masked client error', async () => {
       // Temporarily disable test sink to test unconfigured provider behavior
       process.env.ALLOW_TEST_OTP_SINK = 'false';
 
@@ -134,14 +134,33 @@ async function runVerificationTestSuite() {
       });
 
       const data = await res.json();
+
+      const smsRes = await fetch(`${BASE_URL}/profile/mobile/request-verification`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${tokensA.accessToken}`,
+        },
+        body: JSON.stringify({ phone: '9121314151' }),
+      });
+      const smsData = await smsRes.json();
+
       // Re-enable test sink for remaining tests
       process.env.ALLOW_TEST_OTP_SINK = 'true';
 
-      return (
+      const isEmailSafe =
         res.status === 503 &&
         data.code === 'PROVIDER_NOT_CONFIGURED' &&
-        data.error.includes('SMTP_HOST')
-      );
+        data.error === 'Verification service is temporarily unavailable. Please try again later.' &&
+        !JSON.stringify(data).includes('SMTP_');
+
+      const isSmsSafe =
+        smsRes.status === 503 &&
+        smsData.code === 'PROVIDER_NOT_CONFIGURED' &&
+        smsData.error === 'Verification service is temporarily unavailable. Please try again later.' &&
+        !JSON.stringify(smsData).includes('TWILIO_');
+
+      return isEmailSafe && isSmsSafe;
     });
 
     // --- Test 2: Request Email Verification Code ---
@@ -380,7 +399,13 @@ async function runVerificationTestSuite() {
 
     // --- Test 12: Mobile Number Verification Flow ---
     let validMobileOtp = '';
+    const expectedNormalizedPhone = '+15559998888';
     await assertTest('12. Mobile Number Verification: Request code, verify OTP, update phone', async () => {
+      // Clear previous records for testUserA to reset cooldown
+      await prisma.verificationCode.deleteMany({
+        where: { userId: testUserA.id },
+      });
+
       // 1. Request mobile verification
       const reqRes = await fetch(`${BASE_URL}/profile/mobile/request-verification`, {
         method: 'POST',
@@ -413,7 +438,8 @@ async function runVerificationTestSuite() {
       return (
         verifyRes.status === 200 &&
         verifyData.success === true &&
-        updatedInDb?.phone === targetNewPhone
+        verifyData.phone === expectedNormalizedPhone &&
+        updatedInDb?.phone === expectedNormalizedPhone
       );
     });
 
@@ -501,17 +527,202 @@ async function runVerificationTestSuite() {
       return (
         res.status === 200 &&
         data.user?.email === targetNewEmail &&
-        data.user?.phone === targetNewPhone
+        data.user?.phone === expectedNormalizedPhone
       );
+    });
+
+    // --- Test 17: Indian Phone Number Normalization (10 digits -> E.164 +91...) ---
+    await assertTest('17. Indian phone number: 10-digit "9121314151" normalizes to "+919121314151"', async () => {
+      const indianRaw = '9121314151';
+      const expectedE164 = '+919121314151';
+
+      // Clear previous verification records to allow fresh request
+      await prisma.verificationCode.deleteMany({
+        where: { userId: testUserA.id },
+      });
+
+      // 1. Request verification
+      const reqRes = await fetch(`${BASE_URL}/profile/mobile/request-verification`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${tokensA.accessToken}`,
+        },
+        body: JSON.stringify({ phone: indianRaw }),
+      });
+      const reqData = await reqRes.json();
+      if (reqRes.status !== 200 || !reqData.success) return false;
+
+      // 2. Check DB record has normalized target
+      const dbRecord = await prisma.verificationCode.findFirst({
+        where: { userId: testUserA.id, target: expectedE164, type: 'PHONE_CHANGE' },
+        orderBy: { createdAt: 'desc' },
+      });
+      if (!dbRecord) return false;
+
+      // 3. Verify using raw number or normalized number
+      const otp = getLatestTestVerificationCode(expectedE164);
+      if (!otp) return false;
+
+      const verifyRes = await fetch(`${BASE_URL}/profile/mobile/verify`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${tokensA.accessToken}`,
+        },
+        body: JSON.stringify({ phone: indianRaw, code: otp }),
+      });
+      const verifyData = await verifyRes.json();
+      const updatedUser = await prisma.userProfile.findUnique({ where: { id: testUserA.id } });
+
+      return (
+        verifyRes.status === 200 &&
+        verifyData.success === true &&
+        verifyData.phone === expectedE164 &&
+        updatedUser?.phone === expectedE164
+      );
+    });
+
+    // --- Test 18: Indian Phone with Trunk "0" & Formatted Strings ---
+    await assertTest('18. Indian phone variations: "09876543210" & "+91 98765 43210" normalize to "+919876543210"', async () => {
+      const trunkPhone = '09876543210';
+      const expected = '+919876543210';
+
+      // Clear previous verification records
+      await prisma.verificationCode.deleteMany({
+        where: { userId: testUserA.id },
+      });
+
+      const reqRes = await fetch(`${BASE_URL}/profile/mobile/request-verification`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${tokensA.accessToken}`,
+        },
+        body: JSON.stringify({ phone: trunkPhone }),
+      });
+      const reqData = await reqRes.json();
+      if (reqRes.status !== 200 || !reqData.success) return false;
+
+      const dbRecord = await prisma.verificationCode.findFirst({
+        where: { userId: testUserA.id, target: expected, type: 'PHONE_CHANGE' },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      return Boolean(dbRecord);
+    });
+
+    // --- Test 19: Invalid Phone Number Rejection ---
+    await assertTest('19. Invalid phone format rejected with 400 Bad Request', async () => {
+      const res = await fetch(`${BASE_URL}/profile/mobile/request-verification`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${tokensA.accessToken}`,
+        },
+        body: JSON.stringify({ phone: '12345' }),
+      });
+
+      const data = await res.json();
+      return res.status === 400 && data.error.includes('Invalid');
+    });
+
+    // --- Test 20: Contact Integrity (Old contact unchanged on OTP failure) ---
+    await assertTest('20. Contact integrity: Original email & phone remain unchanged if OTP fails', async () => {
+      // Clear previous records
+      await prisma.verificationCode.deleteMany({
+        where: { userId: testUserA.id },
+      });
+
+      const userBefore = await prisma.userProfile.findUnique({ where: { id: testUserA.id } });
+      const currentEmail = userBefore?.email;
+      const currentPhone = userBefore?.phone;
+
+      // Request new email
+      const attemptEmail = 'unverified.attempt@example.com';
+      await fetch(`${BASE_URL}/profile/email/request-verification`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${tokensA.accessToken}`,
+        },
+        body: JSON.stringify({ email: attemptEmail }),
+      });
+
+      // Submit incorrect OTP
+      await fetch(`${BASE_URL}/profile/email/verify`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${tokensA.accessToken}`,
+        },
+        body: JSON.stringify({ email: attemptEmail, code: '999999' }),
+      });
+
+      const userAfter = await prisma.userProfile.findUnique({ where: { id: testUserA.id } });
+
+      return userAfter?.email === currentEmail && userAfter?.phone === currentPhone;
+    });
+
+    // --- Test 21: Multi-Role Authorization (Designer, Retailer, Admin) ---
+    await assertTest('21. Multi-role authorization: Designer, Retailer, and Admin can update contacts via OTP', async () => {
+      // Create designer user
+      const designer = await prisma.userProfile.upsert({
+        where: { id: 'test_designer_role' },
+        update: { email: 'designer.test@fashionforeveryone.com', role: 'designer' },
+        create: {
+          id: 'test_designer_role',
+          name: 'Designer Test',
+          email: 'designer.test@fashionforeveryone.com',
+          avatar: '',
+          role: 'designer',
+        },
+      });
+
+      const designerTokens = authService.generateTokens({
+        userId: designer.id,
+        email: designer.email!,
+        role: 'designer',
+        name: designer.name,
+      });
+
+      const newDesignerEmail = 'designer.updated@fashionforeveryone.com';
+      const reqRes = await fetch(`${BASE_URL}/profile/email/request-verification`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${designerTokens.accessToken}`,
+        },
+        body: JSON.stringify({ email: newDesignerEmail }),
+      });
+      if (reqRes.status !== 200) return false;
+
+      const otp = getLatestTestVerificationCode(newDesignerEmail);
+      if (!otp) return false;
+
+      const verifyRes = await fetch(`${BASE_URL}/profile/email/verify`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${designerTokens.accessToken}`,
+        },
+        body: JSON.stringify({ email: newDesignerEmail, code: otp }),
+      });
+
+      const updated = await prisma.userProfile.findUnique({ where: { id: designer.id } });
+      await prisma.verificationCode.deleteMany({ where: { userId: designer.id } });
+      await prisma.userProfile.delete({ where: { id: designer.id } });
+
+      return verifyRes.status === 200 && updated?.email === newDesignerEmail;
     });
 
   } finally {
     // Cleanup test users and server
     await prisma.verificationCode.deleteMany({
-      where: { userId: { in: [testUserA.id, testUserB.id] } },
+      where: { userId: { in: [testUserA.id, testUserB.id, 'test_designer_role'] } },
     });
     await prisma.userProfile.deleteMany({
-      where: { id: { in: [testUserA.id, testUserB.id] } },
+      where: { id: { in: [testUserA.id, testUserB.id, 'test_designer_role'] } },
     });
 
     await new Promise<void>((resolve) => {

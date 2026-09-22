@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -93,48 +92,6 @@ export default function SettingsScreen({ navigation }: any) {
                 <Text style={[styles.rowLabel, { color: colors.text }]}>Set Profile Picture</Text>
                 <Text style={[styles.rowSubtitle, { color: colors.textMuted }]}>
                   Update avatar or pick a photo
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-            </TouchableOpacity>
-
-            <View style={[styles.divider, { backgroundColor: colors.border }]} />
-
-            {/* Set Phone Number */}
-            <TouchableOpacity
-              style={styles.row}
-              onPress={() => navigation.navigate('ChangeMobile')}
-              activeOpacity={0.7}
-              accessibilityLabel="Set Phone Number"
-            >
-              <View style={[styles.iconBox, { backgroundColor: colors.primaryFaded }]}>
-                <Ionicons name="call-outline" size={20} color={colors.primary} />
-              </View>
-              <View style={styles.rowContent}>
-                <Text style={[styles.rowLabel, { color: colors.text }]}>Set Phone Number</Text>
-                <Text style={[styles.rowSubtitle, { color: colors.textMuted }]} numberOfLines={1}>
-                  {user?.phone || 'Not set'}
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-            </TouchableOpacity>
-
-            <View style={[styles.divider, { backgroundColor: colors.border }]} />
-
-            {/* Set Mail */}
-            <TouchableOpacity
-              style={styles.row}
-              onPress={() => navigation.navigate('ChangeEmail')}
-              activeOpacity={0.7}
-              accessibilityLabel="Set Mail"
-            >
-              <View style={[styles.iconBox, { backgroundColor: colors.primaryFaded }]}>
-                <Ionicons name="mail-outline" size={20} color={colors.primary} />
-              </View>
-              <View style={styles.rowContent}>
-                <Text style={[styles.rowLabel, { color: colors.text }]}>Set Mail</Text>
-                <Text style={[styles.rowSubtitle, { color: colors.textMuted }]} numberOfLines={1}>
-                  {user?.email || 'Set your email address'}
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />

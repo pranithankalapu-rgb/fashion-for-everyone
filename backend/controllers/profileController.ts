@@ -4,9 +4,9 @@ import { prisma } from '../db';
 import { sanitizeObject, sanitizeString } from '../security';
 import { mediaService, resolveMediaUrl } from '../services/mediaService';
 import { verificationService, VerificationError, sanitizeContact } from '../services/verificationService';
+import { normalizePhoneNumber } from '../utils/phoneUtils';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const PHONE_REGEX = /^\+?[0-9\s\-()]{7,20}$/;
 
 export const VALID_BODY_SHAPES = [
   'Hourglass',
@@ -298,15 +298,21 @@ export const profileController = {
       return res.status(400).json({ error: 'A valid mobile number is required.' });
     }
 
-    const sanitizedPhone = sanitizeContact(phone);
-    if (!PHONE_REGEX.test(sanitizedPhone)) {
-      return res.status(400).json({ error: 'Invalid phone number format.' });
+    const normResult = normalizePhoneNumber(phone);
+    if (!normResult.valid || !normResult.normalized) {
+      return res.status(400).json({ error: normResult.error || 'Invalid phone number format.' });
     }
+
+    const normalizedPhone = normResult.normalized;
+    const sanitizedPhone = sanitizeContact(phone);
 
     // Check duplicate phone
     const existing = await prisma.userProfile.findFirst({
       where: {
-        phone: sanitizedPhone,
+        OR: [
+          { phone: normalizedPhone },
+          { phone: sanitizedPhone },
+        ],
         NOT: { id: userId },
       },
     });

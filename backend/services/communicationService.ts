@@ -198,9 +198,15 @@ export function getLatestTestVerificationCode(target: string): string | null {
   }
 
   const normalized = target.toLowerCase().trim();
+  const digitsOnly = target.replace(/\D/g, '');
   const match = [...testMessageSink]
     .reverse()
-    .find((m) => m.target === normalized);
+    .find(
+      (m) =>
+        m.target === normalized ||
+        (digitsOnly.length >= 7 && m.target.replace(/\D/g, '').endsWith(digitsOnly)) ||
+        (digitsOnly.length >= 7 && digitsOnly.endsWith(m.target.replace(/\D/g, '')))
+    );
 
   return match ? match.code : null;
 }

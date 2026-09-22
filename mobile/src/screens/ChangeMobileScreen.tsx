@@ -20,6 +20,26 @@ import Button from '../components/Button';
 
 const PHONE_REGEX = /^\+?[0-9\s\-()]{7,20}$/;
 
+function formatMobileErrorMessage(err: any, defaultMsg: string): string {
+  const code = err.response?.data?.code;
+  const raw = err.response?.data?.error || err.message || '';
+  if (
+    code === 'PROVIDER_NOT_CONFIGURED' ||
+    raw.includes('SMTP_') ||
+    raw.includes('TWILIO_') ||
+    raw.includes('delivery provider is not configured')
+  ) {
+    return 'Verification service is temporarily unavailable. Please try again later.';
+  }
+  if (code === 'DELIVERY_FAILED') {
+    return 'Unable to deliver verification code. Please try again later.';
+  }
+  if (raw && typeof raw === 'string') {
+    return raw;
+  }
+  return defaultMsg;
+}
+
 export default function ChangeMobileScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
@@ -66,7 +86,7 @@ export default function ChangeMobileScreen({ navigation }: any) {
     }
 
     if (!PHONE_REGEX.test(trimmed)) {
-      setError('Please enter a valid phone number (7-15 digits, optional + prefix).');
+      setError('Please enter a valid phone number (e.g. 9121314151 or +91 91213 14151).');
       return;
     }
 
@@ -82,11 +102,7 @@ export default function ChangeMobileScreen({ navigation }: any) {
       setCooldown(res.resendCooldown || 60);
       setInfoMessage(`A 6-digit verification code was sent to ${trimmed}.`);
     } catch (err: any) {
-      const message =
-        err.response?.data?.error ||
-        err.message ||
-        'Failed to request verification code. Please try again.';
-      setError(message);
+      setError(formatMobileErrorMessage(err, 'Failed to request verification code. Please try again.'));
     } finally {
       setLoading(false);
     }
@@ -107,11 +123,7 @@ export default function ChangeMobileScreen({ navigation }: any) {
       setCooldown(res.resendCooldown || 60);
       setInfoMessage('A new verification code has been dispatched.');
     } catch (err: any) {
-      const message =
-        err.response?.data?.error ||
-        err.message ||
-        'Failed to resend verification code. Please try again.';
-      setError(message);
+      setError(formatMobileErrorMessage(err, 'Failed to resend verification code. Please try again.'));
     } finally {
       setResending(false);
     }
@@ -144,11 +156,7 @@ export default function ChangeMobileScreen({ navigation }: any) {
         [{ text: 'OK', onPress: () => navigation.goBack() }]
       );
     } catch (err: any) {
-      const message =
-        err.response?.data?.error ||
-        err.message ||
-        'Verification failed. Please check the code and try again.';
-      setError(message);
+      setError(formatMobileErrorMessage(err, 'Verification failed. Please check the code and try again.'));
     } finally {
       setLoading(false);
     }
