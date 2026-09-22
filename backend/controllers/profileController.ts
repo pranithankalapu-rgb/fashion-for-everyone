@@ -46,24 +46,24 @@ export const VALID_UNDERTONES = [
 export const profileController = {
   async getProfile(req: AuthenticatedRequest, res: Response) {
     try {
-      const userId = req.userId || 'user_01';
-      let profile = await prisma.userProfile.findFirst({
+      const userId = req.userId;
+      if (!userId) {
+        return res.status(401).json({ error: 'Unauthorized: Authentication required to access profile.' });
+      }
+
+      const profile = await prisma.userProfile.findUnique({
         where: { id: userId },
       });
 
       if (!profile) {
-        // Fallback if initial demo user
-        profile = await prisma.userProfile.findFirst();
+        return res.status(404).json({ error: 'No user profile found. Please complete onboarding or login.' });
       }
 
-      if (!profile) {
-        return res.status(404).json({ error: 'No user profile found. Complete onboarding first.' });
-      }
-
+      const { passwordHash: _ph, refreshToken: _rt, ...cleanUser } = profile as any;
       const cleanProfile = {
-        ...profile,
-        avatar: resolveMediaUrl(profile.avatar, req),
-        photoUrl: profile.photoUrl ? resolveMediaUrl(profile.photoUrl, req) : resolveMediaUrl(profile.avatar, req),
+        ...cleanUser,
+        avatar: resolveMediaUrl(cleanUser.avatar, req),
+        photoUrl: cleanUser.photoUrl ? resolveMediaUrl(cleanUser.photoUrl, req) : resolveMediaUrl(cleanUser.avatar, req),
       };
 
       res.json(cleanProfile);
@@ -75,7 +75,11 @@ export const profileController = {
 
   async updateProfile(req: AuthenticatedRequest, res: Response) {
     try {
-      const userId = req.userId || 'user_01';
+      const userId = req.userId;
+      if (!userId) {
+        return res.status(401).json({ error: 'Unauthorized: Authentication required to update profile.' });
+      }
+
       const sanitizedBody = sanitizeObject(req.body);
 
       // Prevent unauthorized updates: users can only update their own profile

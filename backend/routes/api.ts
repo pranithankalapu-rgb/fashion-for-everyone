@@ -102,9 +102,9 @@ router.use('/admin/designers', adminDesignerRouter);
 router.use('/admin/dashboard', adminDashboardRouter);
 
 // Profile Routes
-router.get('/profile', profileController.getProfile);
-router.put('/profile', profileController.updateProfile);
-router.patch('/profile', profileController.updateProfile);
+router.get('/profile', requireAuth, profileController.getProfile);
+router.put('/profile', requireAuth, profileController.updateProfile);
+router.patch('/profile', requireAuth, profileController.updateProfile);
 router.post('/profile/email/request-verification', requireAuth, profileController.requestEmailVerification);
 router.post('/profile/email/verify', requireAuth, profileController.verifyEmail);
 router.post('/profile/mobile/request-verification', requireAuth, profileController.requestMobileVerification);

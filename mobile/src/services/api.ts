@@ -44,6 +44,14 @@ export async function setToken(token: string | null): Promise<void> {
   }
 }
 
+export async function getRefreshToken(): Promise<string | null> {
+  try {
+    return await SecureStore.getItemAsync(REFRESH_KEY);
+  } catch {
+    return null;
+  }
+}
+
 export async function setRefreshToken(token: string | null): Promise<void> {
   try {
     if (token) {
@@ -54,13 +62,19 @@ export async function setRefreshToken(token: string | null): Promise<void> {
   } catch {}
 }
 
+// Session expired event callback
+let onSessionExpiredCallback: (() => void) | null = null;
+export function setSessionExpiredHandler(handler: (() => void) | null) {
+  onSessionExpiredCallback = handler;
+}
+
 // ---- Axios client ----
 
 const ROLE_KEY = 'user_role';
 const USER_ID_KEY = 'user_id';
 
 let currentRole: UserRole = 'customer';
-let currentUserId: string = 'user_01';
+let currentUserId: string | null = null;
 
 export function setCurrentRole(role: UserRole) {
   currentRole = role;
@@ -71,9 +85,13 @@ export function getCurrentRole(): UserRole {
   return currentRole;
 }
 
-export function setCurrentUserId(userId: string) {
+export function setCurrentUserId(userId: string | null) {
   currentUserId = userId;
-  SecureStore.setItemAsync(USER_ID_KEY, userId).catch(() => {});
+  if (userId) {
+    SecureStore.setItemAsync(USER_ID_KEY, userId).catch(() => {});
+  } else {
+    SecureStore.deleteItemAsync(USER_ID_KEY).catch(() => {});
+  }
 }
 
 export async function getSavedRole(): Promise<UserRole | null> {
@@ -115,8 +133,12 @@ client.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
-  config.headers['x-user-role'] = currentRole;
-  config.headers['x-user-id'] = currentUserId || 'user_01';
+  if (currentRole) {
+    config.headers['x-user-role'] = currentRole;
+  }
+  if (currentUserId) {
+    config.headers['x-user-id'] = currentUserId;
+  }
   return config;
 });
 
@@ -137,7 +159,7 @@ function parseApiError(error: any): string {
   // 2. HTTP status specific handling
   if (status) {
     if (status === 400) return 'Invalid request. Please check the entered information.';
-    if (status === 401) return 'Invalid credentials. Please verify your email and password.';
+    if (status === 401) return 'Session expired or invalid credentials. Please log in again.';
     if (status === 403) return 'Access denied. You do not have permission for this action.';
     if (status === 404) return 'Requested service or resource not found.';
     if (status === 429) return 'Too many requests. Please wait a few moments and try again.';
@@ -172,13 +194,107 @@ function parseApiError(error: any): string {
   return error?.message || 'Network error occurred while connecting to the server.';
 }
 
-// Response interceptor – diagnostic error handling with automatic fallback retry
+// Token refresh mutex queue
+let isRefreshing = false;
+let failedQueue: Array<{
+  resolve: (value?: any) => void;
+  reject: (reason?: any) => void;
+}> = [];
+
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
+// Response interceptor – handles automatic token refresh and fallback proxy retry
 client.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
-    // If request failed at network level (no response) and hasn't retried fallback yet
+    // 1. Check for 401 Unauthorized for token refresh
+    if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
+      // Avoid infinite loop if refresh endpoint itself returned 401 or auth login/register endpoints
+      const url = originalRequest.url || '';
+      if (
+        url.includes('/auth/login') ||
+        url.includes('/auth/register') ||
+        url.includes('/auth/refresh')
+      ) {
+        const detailedMessage = parseApiError(error);
+        return Promise.reject(new Error(detailedMessage));
+      }
+
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        })
+          .then((token) => {
+            originalRequest.headers.Authorization = `Bearer ${token}`;
+            return client(originalRequest);
+          })
+          .catch((err) => Promise.reject(err));
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      try {
+        const refreshToken = await getRefreshToken();
+        if (!refreshToken) {
+          throw new Error('No refresh token available');
+        }
+
+        // Direct call to refresh endpoint
+        const res = await axios.post<{
+          success: boolean;
+          accessToken: string;
+          refreshToken: string;
+          user?: any;
+        }>(
+          `${API_BASE_URL}/auth/refresh`,
+          { refreshToken },
+          { timeout: 30000, headers: { 'Content-Type': 'application/json' } }
+        );
+
+        if (res.data.accessToken) {
+          await setToken(res.data.accessToken);
+          if (res.data.refreshToken) {
+            await setRefreshToken(res.data.refreshToken);
+          }
+          if (res.data.user?.id) {
+            setCurrentUserId(res.data.user.id);
+          }
+
+          processQueue(null, res.data.accessToken);
+          originalRequest.headers.Authorization = `Bearer ${res.data.accessToken}`;
+          return client(originalRequest);
+        } else {
+          throw new Error('Invalid token refresh response');
+        }
+      } catch (refreshErr) {
+        processQueue(refreshErr, null);
+        // Refresh failed (e.g. revoked session or expired refresh token) - purge stored tokens
+        await setToken(null);
+        await setRefreshToken(null);
+        await SecureStore.deleteItemAsync(ROLE_KEY).catch(() => {});
+        await SecureStore.deleteItemAsync(USER_ID_KEY).catch(() => {});
+        currentUserId = null;
+        currentRole = 'customer';
+        onSessionExpiredCallback?.();
+        return Promise.reject(new Error('Session expired. Please log in again.'));
+      } finally {
+        isRefreshing = false;
+      }
+    }
+
+    // 2. If request failed at network level (no response) and hasn't retried fallback yet
     if (
       !error.response &&
       originalRequest &&
@@ -238,14 +354,15 @@ export const api = {
 
   async logout() {
     try {
-      await client.post('/auth/logout');
+      const refreshToken = await getRefreshToken();
+      await client.post('/auth/logout', { refreshToken });
     } finally {
       await setToken(null);
       await setRefreshToken(null);
       await SecureStore.deleteItemAsync(ROLE_KEY).catch(() => {});
       await SecureStore.deleteItemAsync(USER_ID_KEY).catch(() => {});
       currentRole = 'customer';
-      currentUserId = 'user_01';
+      currentUserId = null;
     }
   },
 

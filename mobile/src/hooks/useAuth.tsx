@@ -1,5 +1,16 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import { api, getToken, setToken, setCurrentRole, setCurrentUserId, getSavedRole } from '../services/api';
+import {
+  api,
+  getToken,
+  getRefreshToken,
+  setToken,
+  setRefreshToken,
+  setCurrentRole,
+  setCurrentUserId,
+  getSavedRole,
+  getSavedUserId,
+  setSessionExpiredHandler,
+} from '../services/api';
 import type { UserProfile, UserRole } from '../types/fashion';
 
 interface AuthState {
@@ -30,24 +41,65 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Check for existing token and role on mount
   useEffect(() => {
+    let isMounted = true;
+
     (async () => {
       try {
         const token = await getToken();
+        const refreshToken = await getRefreshToken();
         const savedRole = await getSavedRole();
-        if (token) {
-          const { user } = await api.getMe();
-          const role = savedRole || (user?.role as UserRole) || 'customer';
-          setCurrentRole(role);
-          if (user?.id) setCurrentUserId(user.id);
-          setState({ user, role, isAuthenticated: true, isLoading: false });
-        } else {
-          setState((s) => ({ ...s, role: savedRole || 'customer', isLoading: false }));
+        const savedUserId = await getSavedUserId();
+
+        if (savedUserId) {
+          setCurrentUserId(savedUserId);
+        }
+        if (savedRole) {
+          setCurrentRole(savedRole);
+        }
+
+        if (token || refreshToken) {
+          try {
+            // If access token is expired, the API interceptor automatically uses refreshToken
+            const { user } = await api.getMe();
+            if (isMounted && user) {
+              const role = savedRole || (user?.role as UserRole) || 'customer';
+              setCurrentRole(role);
+              if (user?.id) setCurrentUserId(user.id);
+              setState({ user, role, isAuthenticated: true, isLoading: false });
+              return;
+            }
+          } catch (meErr) {
+            console.warn('Persistent session restore attempt failed:', meErr);
+          }
+        }
+
+        // If no tokens or restore failed
+        if (isMounted) {
+          await setToken(null);
+          await setRefreshToken(null);
+          setCurrentUserId(null);
+          setState({ user: null, role: savedRole || 'customer', isAuthenticated: false, isLoading: false });
         }
       } catch {
-        await setToken(null);
-        setState({ user: null, role: 'customer', isAuthenticated: false, isLoading: false });
+        if (isMounted) {
+          await setToken(null);
+          await setRefreshToken(null);
+          setCurrentUserId(null);
+          setState({ user: null, role: 'customer', isAuthenticated: false, isLoading: false });
+        }
       }
     })();
+
+    setSessionExpiredHandler(() => {
+      if (isMounted) {
+        setState({ user: null, role: 'customer', isAuthenticated: false, isLoading: false });
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      setSessionExpiredHandler(null);
+    };
   }, []);
 
   const login = useCallback(async (emailOrUsername: string, password: string, role?: string) => {
@@ -83,6 +135,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await api.logout();
     } finally {
       setCurrentRole('customer');
+      setCurrentUserId(null);
       setState({ user: null, role: 'customer', isAuthenticated: false, isLoading: false });
     }
   }, []);
@@ -95,7 +148,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const refreshUser = useCallback(async () => {
     try {
       const { user } = await api.getMe();
-      setState((s) => ({ ...s, user }));
+      if (user) {
+        setState((s) => ({ ...s, user }));
+      }
     } catch {}
   }, []);
 

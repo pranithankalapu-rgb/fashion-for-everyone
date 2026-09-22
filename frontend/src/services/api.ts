@@ -57,12 +57,69 @@ export function getAuthToken(): string | null {
   return localStorage.getItem('auth_token') || localStorage.getItem('admin_jwt_token');
 }
 
-async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
+export function setRefreshToken(token: string | null) {
+  if (token) {
+    localStorage.setItem('refresh_token', token);
+  } else {
+    localStorage.removeItem('refresh_token');
+  }
+}
+
+export function getRefreshToken(): string | null {
+  return localStorage.getItem('refresh_token');
+}
+
+let isRefreshingWeb = false;
+let refreshPromise: Promise<string | null> | null = null;
+
+async function refreshAccessToken(): Promise<string | null> {
+  if (isRefreshingWeb && refreshPromise) {
+    return refreshPromise;
+  }
+
+  isRefreshingWeb = true;
+  refreshPromise = (async () => {
+    try {
+      const refreshToken = getRefreshToken();
+      if (!refreshToken) return null;
+
+      const res = await fetch(`${BASE_URL}/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken }),
+      });
+
+      if (!res.ok) {
+        setAuthToken(null);
+        setRefreshToken(null);
+        return null;
+      }
+
+      const data = await res.json();
+      if (data.accessToken) {
+        setAuthToken(data.accessToken);
+        if (data.refreshToken) {
+          setRefreshToken(data.refreshToken);
+        }
+        return data.accessToken;
+      }
+      return null;
+    } catch {
+      return null;
+    } finally {
+      isRefreshingWeb = false;
+      refreshPromise = null;
+    }
+  })();
+
+  return refreshPromise;
+}
+
+async function fetchJson<T>(url: string, options?: RequestInit, isRetry = false): Promise<T> {
   const token = getAuthToken();
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     'x-user-role': currentActiveRole,
-    'x-user-id': 'user_01',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...(options?.headers as Record<string, string>),
   };
@@ -72,6 +129,13 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
     credentials: 'include',
     headers,
   });
+
+  if (res.status === 401 && !isRetry && !url.includes('/auth/login') && !url.includes('/auth/register') && !url.includes('/auth/refresh')) {
+    const newToken = await refreshAccessToken();
+    if (newToken) {
+      return fetchJson<T>(url, options, true);
+    }
+  }
 
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}));
@@ -94,6 +158,7 @@ export const api = {
     });
     if (res.accessToken) {
       setAuthToken(res.accessToken);
+      if (res.refreshToken) setRefreshToken(res.refreshToken);
     }
     return res;
   },
@@ -112,15 +177,21 @@ export const api = {
     const token = res.accessToken || res.token;
     if (token) {
       setAuthToken(token);
+      if (res.refreshToken) setRefreshToken(res.refreshToken);
     }
     return res;
   },
 
   async logout() {
     try {
-      await fetchJson('/auth/logout', { method: 'POST' });
+      const refreshToken = getRefreshToken();
+      await fetchJson('/auth/logout', {
+        method: 'POST',
+        body: JSON.stringify({ refreshToken }),
+      });
     } finally {
       setAuthToken(null);
+      setRefreshToken(null);
     }
   },
 

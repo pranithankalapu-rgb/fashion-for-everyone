@@ -1,6 +1,24 @@
+import jwt from 'jsonwebtoken';
 import { prisma } from './db';
 
 const BASE_URL = 'http://localhost:5000/api';
+const JWT_SECRET = process.env.JWT_SECRET || 'fashion-for-everyone-super-secret-key-2026';
+
+const userToken = jwt.sign(
+  { userId: 'user_01', email: 'sophia@example.com', role: 'customer', name: 'Sophia Laurent' },
+  JWT_SECRET,
+  { expiresIn: '1h' }
+);
+const retailerToken = jwt.sign(
+  { userId: 'user_05', email: 'elena@vogueboutique.com', role: 'retailer', name: 'Elena Rostova' },
+  JWT_SECRET,
+  { expiresIn: '1h' }
+);
+const designerToken = jwt.sign(
+  { userId: 'user_03', email: 'marcus@atelier.com', role: 'designer', name: 'Marcus Vance' },
+  JWT_SECRET,
+  { expiresIn: '1h' }
+);
 
 async function testAll() {
   console.log('🧪 Starting End-to-End Test Suite against real PostgreSQL Database...\n');
@@ -78,7 +96,7 @@ async function testAll() {
 
   await assertTest('Get User Profile from PostgreSQL', async () => {
     const res = await fetch(`${BASE_URL}/profile`, {
-      headers: { 'x-user-id': 'user_01' },
+      headers: { Authorization: `Bearer ${userToken}` },
     });
     const data = await res.json();
     return res.status === 200 && data.name === 'Sophia Laurent';
@@ -87,7 +105,7 @@ async function testAll() {
   await assertTest('Update User Profile in PostgreSQL', async () => {
     const res = await fetch(`${BASE_URL}/profile`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json', 'x-user-id': 'user_01' },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userToken}` },
       body: JSON.stringify({ skinTone: 'Warm Golden', hairColor: 'Chestnut Brown' }),
     });
     const data = await res.json();
@@ -149,6 +167,9 @@ async function testAll() {
   });
 
   await assertTest('Create Order with Transaction (Order + Items + Stock + CRM)', async () => {
+    const existingProduct = await prisma.retailProduct.findFirst();
+    const testProdId = existingProduct?.id || 'prod_101';
+
     const res = await fetch(`${BASE_URL}/orders`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -160,9 +181,10 @@ async function testAll() {
         paymentMethod: 'Credit Card',
         items: [
           {
-            productId: 'prod_101',
-            title: 'Double-Breasted Italian Wool Trench Coat',
-            price: 340,
+            productId: testProdId,
+            title: existingProduct?.title || 'Double-Breasted Italian Wool Trench Coat',
+            imageUrl: existingProduct?.imageUrl || 'https://images.unsplash.com/photo-1539533018447-63fcce2678e3?auto=format&fit=crop&w=600&q=80',
+            price: existingProduct?.price || 340,
             quantity: 1,
             size: 'M',
           },
@@ -170,6 +192,7 @@ async function testAll() {
       }),
     });
     const data = await res.json();
+    if (!data.order) return false;
     createdOrderId = data.order.id;
     const dbOrder = await prisma.customerOrder.findUnique({
       where: { id: createdOrderId },
@@ -184,7 +207,7 @@ async function testAll() {
   await assertTest('Update Order Status in PostgreSQL', async () => {
     const res = await fetch(`${BASE_URL}/orders/${createdOrderId}/status`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', 'x-user-role': 'retailer' },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${retailerToken}` },
       body: JSON.stringify({ status: 'Delivered', trackingNumber: 'TRK-E2E-12345' }),
     });
     const data = await res.json();
@@ -194,7 +217,7 @@ async function testAll() {
   await assertTest('Delete Order from PostgreSQL', async () => {
     const res = await fetch(`${BASE_URL}/orders/${createdOrderId}`, {
       method: 'DELETE',
-      headers: { 'x-user-role': 'retailer' },
+      headers: { Authorization: `Bearer ${retailerToken}` },
     });
     const inDb = await prisma.customerOrder.findUnique({ where: { id: createdOrderId } });
     return res.status === 200 && inDb === null;
@@ -251,7 +274,7 @@ async function testAll() {
   let createdCustId = '';
   await assertTest('Get Retailer Customers from PostgreSQL', async () => {
     const res = await fetch(`${BASE_URL}/retailer/customers`, {
-      headers: { 'x-user-role': 'retailer' },
+      headers: { Authorization: `Bearer ${retailerToken}` },
     });
     const data = await res.json();
     return Array.isArray(data) && data.length > 0;
@@ -260,7 +283,7 @@ async function testAll() {
   await assertTest('Create Retailer Customer in PostgreSQL', async () => {
     const res = await fetch(`${BASE_URL}/retailer/customers`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-user-role': 'retailer' },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${retailerToken}` },
       body: JSON.stringify({
         name: 'Jane Doe',
         email: `jane.doe.${Date.now()}@e2e.com`,
@@ -276,7 +299,7 @@ async function testAll() {
   await assertTest('Delete Retailer Customer from PostgreSQL', async () => {
     const res = await fetch(`${BASE_URL}/retailer/customers/${createdCustId}`, {
       method: 'DELETE',
-      headers: { 'x-user-role': 'retailer' },
+      headers: { Authorization: `Bearer ${retailerToken}` },
     });
     return res.status === 200;
   });
@@ -293,7 +316,7 @@ async function testAll() {
     const code = `PROMO${Date.now()}`;
     const res = await fetch(`${BASE_URL}/promotions`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-user-role': 'retailer' },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${retailerToken}` },
       body: JSON.stringify({
         code,
         title: 'E2E 20% Discount',
@@ -309,7 +332,7 @@ async function testAll() {
   await assertTest('Toggle Deactivate Promotion in PostgreSQL', async () => {
     const res = await fetch(`${BASE_URL}/promotions/${createdPromoId}/deactivate`, {
       method: 'PATCH',
-      headers: { 'x-user-role': 'retailer' },
+      headers: { Authorization: `Bearer ${retailerToken}` },
     });
     const data = await res.json();
     return res.status === 200 && data.status === 'Inactive';
@@ -318,7 +341,7 @@ async function testAll() {
   await assertTest('Delete Promotion from PostgreSQL', async () => {
     const res = await fetch(`${BASE_URL}/promotions/${createdPromoId}`, {
       method: 'DELETE',
-      headers: { 'x-user-role': 'retailer' },
+      headers: { Authorization: `Bearer ${retailerToken}` },
     });
     return res.status === 200;
   });
@@ -326,12 +349,12 @@ async function testAll() {
   // 8. Store Settings
   await assertTest('Get & Update Store Settings in PostgreSQL', async () => {
     const res = await fetch(`${BASE_URL}/store-settings`, {
-      headers: { 'x-user-role': 'retailer' },
+      headers: { Authorization: `Bearer ${retailerToken}` },
     });
     const data = await res.json();
     const updateRes = await fetch(`${BASE_URL}/store-settings`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json', 'x-user-role': 'retailer' },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${retailerToken}` },
       body: JSON.stringify({ storeName: 'Updated Flagship Store' }),
     });
     const updateData = await updateRes.json();
@@ -349,7 +372,7 @@ async function testAll() {
   await assertTest('Create & Vote Design in PostgreSQL', async () => {
     const res = await fetch(`${BASE_URL}/designs`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-user-role': 'designer' },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${designerToken}` },
       body: JSON.stringify({
         designerId: 'des_1',
         title: 'E2E Haute Couture Gown',

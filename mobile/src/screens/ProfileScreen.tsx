@@ -64,10 +64,18 @@ export default function ProfileScreen({ navigation }: any) {
   const [activeModalCategory, setActiveModalCategory] = useState<StyleCategory | null>(null);
   const [isSavingStyle, setIsSavingStyle] = useState<boolean>(false);
 
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setProfile(null);
+    }
+  }, [isAuthenticated]);
+
   useFocusEffect(
     useCallback(() => {
       if (isAuthenticated) {
         api.getProfile().then(setProfile).catch(() => {});
+      } else {
+        setProfile(null);
       }
     }, [isAuthenticated])
   );
@@ -78,15 +86,16 @@ export default function ProfileScreen({ navigation }: any) {
       {
         text: 'Logout',
         style: 'destructive',
-        onPress: () => {
-          logout();
+        onPress: async () => {
+          setProfile(null);
+          await logout();
           (navigation as any).reset({ index: 0, routes: [{ name: 'Login' }] });
         },
       },
     ]);
   };
 
-  const displayProfile = profile || user;
+  const displayProfile = isAuthenticated ? (profile || user) : null;
 
   const handleSaveStyleOption = async (category: StyleCategory, value: string) => {
     setIsSavingStyle(true);

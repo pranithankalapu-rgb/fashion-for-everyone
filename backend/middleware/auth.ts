@@ -11,7 +11,7 @@ export interface AuthenticatedRequest extends Request {
 
 /**
  * Extracts and verifies JWT from Bearer token or HttpOnly cookie.
- * Seamlessly backwards compatible with dev header fallback during transition.
+ * Does NOT set fake default users or fallback to user_01.
  */
 export function authenticateRole(req: AuthenticatedRequest, res: Response, next: NextFunction): void {
   // 1. Check Authorization Header: Bearer <token>
@@ -31,24 +31,35 @@ export function authenticateRole(req: AuthenticatedRequest, res: Response, next:
       req.userId = payload.userId;
       return next();
     }
+    // Token supplied but invalid or expired - do NOT fall back to fake users
+    req.user = undefined;
+    req.userId = undefined;
+    req.userRole = undefined;
+    return next();
   }
 
-  // 3. Fallback to header during migration/dev only if explicitly present
-  const roleHeader = req.headers['x-user-role'] as string;
-  if (roleHeader && ['customer', 'designer', 'retailer', 'admin'].includes(roleHeader.toLowerCase())) {
-    req.userRole = roleHeader.toLowerCase() as UserRole;
-  } else {
-    req.userRole = 'customer';
+  // 3. Fallback header allowed ONLY in automated testing environments when explicitly enabled
+  if (process.env.NODE_ENV === 'test' && process.env.ALLOW_TEST_HEADER_AUTH === 'true') {
+    const roleHeader = req.headers['x-user-role'] as string;
+    const testUserId = req.headers['x-user-id'] as string;
+    if (testUserId) {
+      req.userId = testUserId;
+      req.userRole = (roleHeader && ['customer', 'designer', 'retailer', 'admin'].includes(roleHeader.toLowerCase()))
+        ? (roleHeader.toLowerCase() as UserRole)
+        : 'customer';
+      req.user = {
+        userId: testUserId,
+        email: `${testUserId}@fashionforeveryone.com`,
+        role: req.userRole,
+        name: 'Test User',
+      };
+      return next();
+    }
   }
 
-  req.userId = (req.headers['x-user-id'] as string) || 'user_01';
-  req.user = {
-    userId: req.userId,
-    email: 'user@fashionforeveryone.com',
-    role: req.userRole,
-    name: 'Fashion User',
-  };
-
+  req.user = undefined;
+  req.userId = undefined;
+  req.userRole = undefined;
   next();
 }
 
@@ -105,3 +116,4 @@ export function requireOwnership(getOwnerId: (req: AuthenticatedRequest) => stri
     next();
   };
 }
+

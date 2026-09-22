@@ -57,7 +57,7 @@ export const aiController = {
       }
 
       const job = await aiStylistService.createTryOnJob({
-        userId: req.userId || 'user_01',
+        userId: req.userId || 'guest_user',
         garmentId,
         userPhotoUrl,
         garmentUrl,
@@ -75,24 +75,17 @@ export const aiController = {
 
   async getStyling(req: AuthenticatedRequest, res: Response) {
     try {
-      const userId = req.userId || 'user_01';
+      const userId = req.userId;
       const reqProfile = req.body.profile ? sanitizeObject(req.body.profile) : null;
       const occasion = sanitizeString(req.body.occasion) || 'Work';
 
-      // Fetch profile from database if not provided in request
+      // Fetch profile from database if not provided in request and user is authenticated
       let profile: any = reqProfile;
-      if (!profile) {
+      if (!profile && userId) {
         try {
-          profile = await prisma.userProfile.findFirst({ where: { id: userId } });
+          profile = await prisma.userProfile.findUnique({ where: { id: userId } });
         } catch {
-          profile = getDb().userProfile;
-        }
-      }
-      if (!profile) {
-        try {
-          profile = await prisma.userProfile.findFirst();
-        } catch {
-          profile = getDb().userProfile;
+          profile = null;
         }
       }
 

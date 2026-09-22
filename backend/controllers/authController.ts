@@ -2,7 +2,6 @@ import type { Request, Response } from 'express';
 import { authService, type UserRole } from '../services/authService';
 import { sanitizeString } from '../security';
 import type { AuthenticatedRequest } from '../middleware/auth';
-
 import { prisma } from '../db';
 import { resolveMediaUrl } from '../services/mediaService';
 
@@ -10,7 +9,7 @@ const COOKIE_OPTIONS = {
   httpOnly: true,
   secure: process.env.NODE_ENV === 'production',
   sameSite: 'lax' as const,
-  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days sliding window
 };
 
 export const authController = {
@@ -35,10 +34,12 @@ export const authController = {
       res.cookie('refreshToken', tokens.refreshToken, COOKIE_OPTIONS);
       res.cookie('accessToken', tokens.accessToken, { ...COOKIE_OPTIONS, maxAge: 15 * 60 * 1000 });
 
+      const { passwordHash: _ph, refreshToken: _rt, ...cleanProfile } = user as any;
+
       return res.status(201).json({
         success: true,
         message: 'Registration successful',
-        user,
+        user: cleanProfile,
         accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken,
       });
@@ -85,27 +86,43 @@ export const authController = {
         return res.status(401).json({ error: 'Refresh token is missing.' });
       }
 
-      const session = authService.verifyRefreshToken(refreshToken);
+      const session = await authService.verifyRefreshToken(refreshToken);
       if (!session) {
         return res.status(401).json({ error: 'Invalid or expired refresh token.' });
       }
 
-      // Rotate token
-      authService.revokeRefreshToken(refreshToken);
-      const newTokens = authService.generateTokens({
-        userId: session.userId,
-        email: 'user@fashionforeveryone.com',
-        role: session.role,
-        name: 'Authenticated User',
+      // Fetch user profile from DB to get accurate details & ensure account is still active
+      const user = await prisma.userProfile.findUnique({
+        where: { id: session.userId },
       });
+
+      if (!user || user.status === 'Inactive' || user.status === 'Banned') {
+        await authService.revokeRefreshToken(session.userId, refreshToken);
+        return res.status(401).json({ error: 'Account is no longer active or valid.' });
+      }
+
+      // Rotate token: revoke old one, generate new access & rolling refresh tokens
+      await authService.revokeRefreshToken(session.userId, refreshToken);
+      const newTokens = authService.generateTokens({
+        userId: user.id,
+        email: user.email || '',
+        role: (user.role as UserRole) || 'customer',
+        name: user.name,
+      });
+      await authService.persistRefreshToken(user.id, newTokens.refreshToken);
 
       res.cookie('refreshToken', newTokens.refreshToken, COOKIE_OPTIONS);
       res.cookie('accessToken', newTokens.accessToken, { ...COOKIE_OPTIONS, maxAge: 15 * 60 * 1000 });
+
+      const { passwordHash: _ph, refreshToken: _rt, ...cleanProfile } = user as any;
+      if (cleanProfile.avatar) cleanProfile.avatar = resolveMediaUrl(cleanProfile.avatar, req);
+      if (cleanProfile.photoUrl) cleanProfile.photoUrl = resolveMediaUrl(cleanProfile.photoUrl, req);
 
       return res.json({
         success: true,
         accessToken: newTokens.accessToken,
         refreshToken: newTokens.refreshToken,
+        user: cleanProfile,
       });
     } catch (err: any) {
       console.error('Token refresh error:', err);
@@ -115,8 +132,9 @@ export const authController = {
 
   async logout(req: Request, res: Response) {
     const refreshToken = req.cookies?.refreshToken || req.body?.refreshToken;
+    const userId = (req as any).userId;
     if (refreshToken) {
-      authService.revokeRefreshToken(refreshToken);
+      await authService.revokeRefreshToken(userId, refreshToken);
     }
     res.clearCookie('refreshToken');
     res.clearCookie('accessToken');
@@ -129,30 +147,32 @@ export const authController = {
     }
 
     try {
-      const profile = await prisma.userProfile.findFirst({
+      const profile = await prisma.userProfile.findUnique({
         where: { id: req.userId },
       });
 
-      if (profile) {
-        const { passwordHash: _ph, refreshToken: _rt, ...cleanProfile } = profile as any;
-        if (cleanProfile.avatar) {
-          cleanProfile.avatar = resolveMediaUrl(cleanProfile.avatar, req);
-        }
-        if (cleanProfile.photoUrl) {
-          cleanProfile.photoUrl = resolveMediaUrl(cleanProfile.photoUrl, req);
-        }
-        return res.json({
-          success: true,
-          user: cleanProfile,
-        });
+      if (!profile) {
+        return res.status(404).json({ error: 'User profile not found.' });
       }
-    } catch (err) {
-      console.warn('Could not fetch user profile from DB, falling back to session user:', err);
-    }
 
-    return res.json({
-      success: true,
-      user: req.user,
-    });
+      if (profile.status === 'Inactive' || profile.status === 'Banned') {
+        return res.status(403).json({ error: 'Account is disabled.' });
+      }
+
+      const { passwordHash: _ph, refreshToken: _rt, ...cleanProfile } = profile as any;
+      if (cleanProfile.avatar) {
+        cleanProfile.avatar = resolveMediaUrl(cleanProfile.avatar, req);
+      }
+      if (cleanProfile.photoUrl) {
+        cleanProfile.photoUrl = resolveMediaUrl(cleanProfile.photoUrl, req);
+      }
+      return res.json({
+        success: true,
+        user: cleanProfile,
+      });
+    } catch (err) {
+      console.error('Error fetching me:', err);
+      return res.status(500).json({ error: 'Failed to retrieve profile' });
+    }
   },
 };
