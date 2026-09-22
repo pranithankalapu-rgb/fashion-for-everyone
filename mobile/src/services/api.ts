@@ -71,8 +71,10 @@ export function setSessionExpiredHandler(handler: (() => void) | null) {
 // ---- Axios client ----
 
 const ROLE_KEY = 'user_role';
+const USER_ID_KEY = 'user_id';
 
 let currentRole: UserRole = 'customer';
+let currentUserId: string | null = null;
 
 export function setCurrentRole(role: UserRole) {
   currentRole = role;

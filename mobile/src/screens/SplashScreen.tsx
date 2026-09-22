@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontSize, FontWeight } from '../constants/theme';
@@ -6,27 +6,30 @@ import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
 
 export default function SplashScreen({ navigation }: any) {
-  const { isAuthenticated, isLoading, role } = useAuth();
+  const { isAuthenticated, role } = useAuth();
   const { colors, isDark } = useTheme();
 
+  const authStateRef = useRef({ isAuthenticated, role });
+  authStateRef.current = { isAuthenticated, role };
+
   useEffect(() => {
-    if (!isLoading) {
-      const timer = setTimeout(() => {
-        if (isAuthenticated) {
-          if (role === 'retailer') {
-            navigation.replace('RetailerDashboard');
-          } else if (role === 'designer') {
-            navigation.replace('DesignerShowcase');
-          } else {
-            navigation.replace('Main');
-          }
+    const timer = setTimeout(() => {
+      const { isAuthenticated: isAuth, role: currentRole } = authStateRef.current;
+      if (isAuth) {
+        if (currentRole === 'retailer') {
+          navigation.replace('RetailerDashboard');
+        } else if (currentRole === 'designer') {
+          navigation.replace('DesignerShowcase');
         } else {
-          navigation.replace('Login');
+          navigation.replace('Main');
         }
-      }, 1500);
-      return () => clearTimeout(timer);
-    }
-  }, [isLoading, isAuthenticated, role, navigation]);
+      } else {
+        navigation.replace('Login');
+      }
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, [navigation]);
 
   const gradientMid = isDark ? '#1a103d' : '#e0e7ff';
 
