@@ -567,6 +567,11 @@ export const api = {
     return res.data;
   },
 
+  async getDesignerById(id: string): Promise<Designer> {
+    const res = await client.get<Designer>(`/designers/${id}`);
+    return res.data;
+  },
+
   async getDesigns(occasion?: string): Promise<Design[]> {
     const params = occasion && occasion !== 'All' ? { occasion } : undefined;
     const res = await client.get<Design[]>('/designs', { params });

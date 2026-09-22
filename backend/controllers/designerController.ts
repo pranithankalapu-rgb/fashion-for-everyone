@@ -1,6 +1,6 @@
 import type { Response } from 'express';
 import type { AuthenticatedRequest } from '../middleware/auth';
-import { prisma } from '../db';
+import { prisma, getDb } from '../db';
 import { sanitizeString } from '../security';
 
 export const designerController = {
@@ -14,6 +14,39 @@ export const designerController = {
     } catch (err) {
       console.error('Error fetching designers:', err);
       res.status(500).json({ error: 'Failed to fetch designers' });
+    }
+  },
+
+  async getDesignerById(req: AuthenticatedRequest, res: Response) {
+    try {
+      const id = sanitizeString(req.params.id);
+      if (!id) {
+        return res.status(400).json({ error: 'Designer ID is required' });
+      }
+
+      try {
+        const designer = await prisma.designer.findUnique({
+          where: { id },
+          include: { designs: true },
+        });
+
+        if (!designer) {
+          return res.status(404).json({ error: 'Designer not found' });
+        }
+
+        return res.json(designer);
+      } catch {
+        const db = getDb();
+        const designer = db.designers.find((d) => d.id === id);
+        if (!designer) {
+          return res.status(404).json({ error: 'Designer not found' });
+        }
+        const designerDesigns = db.designs.filter((dsg) => dsg.designerId === id);
+        return res.json({ ...designer, designs: designerDesigns });
+      }
+    } catch (err) {
+      console.error('Error fetching designer by id:', err);
+      res.status(500).json({ error: 'Failed to fetch designer' });
     }
   },
 
@@ -40,15 +73,29 @@ export const designerController = {
   async getDesignById(req: AuthenticatedRequest, res: Response) {
     try {
       const id = sanitizeString(req.params.id);
-      const design = await prisma.design.findUnique({
-        where: { id },
-      });
-
-      if (!design) {
-        return res.status(404).json({ error: 'Design not found' });
+      if (!id) {
+        return res.status(400).json({ error: 'Design ID is required' });
       }
 
-      res.json(design);
+      try {
+        const design = await prisma.design.findUnique({
+          where: { id },
+          include: { designer: true },
+        });
+
+        if (!design) {
+          return res.status(404).json({ error: 'Design not found' });
+        }
+
+        return res.json(design);
+      } catch {
+        const db = getDb();
+        const design = db.designs.find((d) => d.id === id);
+        if (!design) {
+          return res.status(404).json({ error: 'Design not found' });
+        }
+        return res.json(design);
+      }
     } catch (err) {
       console.error('Error fetching design by id:', err);
       res.status(500).json({ error: 'Failed to fetch design' });

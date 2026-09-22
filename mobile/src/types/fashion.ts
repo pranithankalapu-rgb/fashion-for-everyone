@@ -81,6 +81,7 @@ export interface Designer {
   totalVotes: number;
   badges: ('Top Rated' | 'Trending' | 'New')[];
   verified: boolean;
+  designs?: Design[];
 }
 
 export interface Design {

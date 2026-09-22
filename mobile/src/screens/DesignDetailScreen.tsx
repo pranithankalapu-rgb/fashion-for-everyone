@@ -142,7 +142,16 @@ export default function DesignDetailScreen({ route, navigation }: any) {
           </View>
 
           {/* Designer Card */}
-          <View style={[styles.designerCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <TouchableOpacity
+            style={[styles.designerCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+            onPress={() => {
+              if (design.designerId) {
+                navigation.navigate('DesignerDetail', { designerId: design.designerId });
+              }
+            }}
+            activeOpacity={0.8}
+            accessibilityLabel={`View ${design.designerName || 'designer'} profile`}
+          >
             <Avatar
               uri={design.designerAvatar}
               name={design.designerName || 'Designer'}
@@ -159,7 +168,8 @@ export default function DesignDetailScreen({ route, navigation }: any) {
               </View>
               <Text style={[styles.designerRole, { color: colors.textMuted }]}>Verified Fashion Creator ✦</Text>
             </View>
-          </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+          </TouchableOpacity>
 
           {/* Rating and Community Stats */}
           <View style={[styles.statsRow, { backgroundColor: colors.surfaceLight, borderColor: colors.border }]}>

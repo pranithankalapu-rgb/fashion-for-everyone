@@ -77,7 +77,16 @@ export default function DesignerShowcaseScreen({ navigation }: any) {
   };
 
   const lastPressRef = React.useRef(0);
+  const handleOpenDesigner = (item: Designer) => {
+    if (!item?.id) return;
+    const now = Date.now();
+    if (now - lastPressRef.current < 600) return;
+    lastPressRef.current = now;
+    navigation.navigate('DesignerDetail', { designerId: item.id, designer: item });
+  };
+
   const handleOpenDesign = (item: Design) => {
+    if (!item?.id) return;
     const now = Date.now();
     if (now - lastPressRef.current < 600) return;
     lastPressRef.current = now;
@@ -248,7 +257,12 @@ export default function DesignerShowcaseScreen({ navigation }: any) {
             </View>
           }
           renderItem={({ item }) => (
-            <View style={[styles.designerCard, { backgroundColor: colors.surface }]}>
+            <TouchableOpacity
+              style={[styles.designerCard, { backgroundColor: colors.surface }]}
+              onPress={() => handleOpenDesigner(item)}
+              activeOpacity={0.8}
+              accessibilityLabel={`View ${item.name}'s designer profile`}
+            >
               <Image source={{ uri: resolveMediaUrl(item.avatar) }} style={styles.designerAvatar} />
               <View style={styles.designerInfo}>
                 <View style={styles.nameRow}>
@@ -273,7 +287,8 @@ export default function DesignerShowcaseScreen({ navigation }: any) {
                   ))}
                 </View>
               </View>
-            </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} style={{ alignSelf: 'center', marginLeft: Spacing.xs }} />
+            </TouchableOpacity>
           )}
         />
       ) : (

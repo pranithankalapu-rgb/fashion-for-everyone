@@ -421,9 +421,17 @@ export const api = {
     return fetchJson<Designer[]>('/designers');
   },
 
+  async getDesignerById(id: string): Promise<Designer> {
+    return fetchJson<Designer>(`/designers/${id}`);
+  },
+
   async getDesigns(occasion?: string): Promise<Design[]> {
     const q = occasion && occasion !== 'All' ? `?occasion=${encodeURIComponent(occasion)}` : '';
     return fetchJson<Design[]>(`/designs${q}`);
+  },
+
+  async getDesignById(id: string): Promise<Design> {
+    return fetchJson<Design>(`/designs/${id}`);
   },
 
   async createDesign(data: {

@@ -3,7 +3,6 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { FontSize } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
 
 // Screens
@@ -28,9 +27,10 @@ import ChangeProfilePictureScreen from '../screens/ChangeProfilePictureScreen';
 import ChangeEmailScreen from '../screens/ChangeEmailScreen';
 import ChangeMobileScreen from '../screens/ChangeMobileScreen';
 import DesignDetailScreen from '../screens/DesignDetailScreen';
+import DesignerDetailScreen from '../screens/DesignerDetailScreen';
 
 import { useCart } from '../hooks/useCart';
-import type { ColorCombo, Design } from '../types/fashion';
+import type { ColorCombo, Design, Designer } from '../types/fashion';
 
 export type RootStackParamList = {
   Splash: undefined;
@@ -38,6 +38,7 @@ export type RootStackParamList = {
   Main: undefined;
   ProductDetail: { productId: string };
   DesignDetail: { designId: string; design?: Design };
+  DesignerDetail: { designerId: string; designer?: Designer };
   Cart: undefined;
   Checkout: undefined;
   Orders: undefined;
@@ -139,6 +140,7 @@ export default function AppNavigator() {
       <Stack.Screen name="Main" component={MainTabs} />
       <Stack.Screen name="ProductDetail" component={ProductDetailScreen} />
       <Stack.Screen name="DesignDetail" component={DesignDetailScreen} />
+      <Stack.Screen name="DesignerDetail" component={DesignerDetailScreen} />
       <Stack.Screen name="Cart" component={CartScreen} options={{ animation: 'slide_from_bottom' }} />
       <Stack.Screen name="Checkout" component={CheckoutScreen} />
       <Stack.Screen name="Orders" component={OrdersScreen} />
